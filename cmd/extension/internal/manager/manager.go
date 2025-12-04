@@ -14,6 +14,7 @@ import (
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	glogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/urfave/cli/v3"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -70,6 +71,7 @@ func (f *flags) getManager(ctx context.Context) (ctrl.Manager, error) {
 		mgr.WithContext(ctx),
 		mgr.WithAddToScheme(clientgoscheme.AddToScheme),
 		mgr.WithAddToScheme(extensionscontroller.AddToScheme),
+		mgr.WithAddToScheme(resourcesv1alpha1.AddToScheme),
 		mgr.WithInstallScheme(configinstall.Install),
 		mgr.WithMetricsAddress(f.metricsBindAddr),
 		mgr.WithHealthProbeAddress(f.healthProbeBindAddr),

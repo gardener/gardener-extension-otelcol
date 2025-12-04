@@ -11,6 +11,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,6 +47,7 @@ var _ = BeforeSuite(func() {
 
 	Expect(corev1beta1.AddToScheme(scheme.Scheme)).To(Succeed())
 	Expect(extensionscontroller.AddToScheme(scheme.Scheme)).To(Succeed())
+	Expect(resourcesv1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
 	configinstall.Install(scheme.Scheme)
 
 	By("bootstrapping test environment")
@@ -53,6 +55,7 @@ var _ = BeforeSuite(func() {
 		Scheme: scheme.Scheme,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "test", "manifests", "crd", "extensions.gardener.cloud", "v1alpha1"),
+			filepath.Join("..", "..", "test", "manifests", "crd", "resources.gardener.cloud", "v1alpha1"),
 		},
 		ErrorIfCRDPathMissing: true,
 	}
