@@ -34,10 +34,8 @@ var _ = Describe("Actuator", Ordered, func() {
 
 		featureGates   = make(map[featuregate.Feature]bool)
 		actuatorOpts   []actuator.Option
-		providerConfig = config.ExampleConfig{
-			Spec: config.ExampleConfigSpec{
-				Foo: "bar",
-			},
+		providerConfig = config.CollectorConfig{
+			Spec: config.CollectorConfigSpec{},
 		}
 
 		projectNamespace = &corev1.Namespace{
