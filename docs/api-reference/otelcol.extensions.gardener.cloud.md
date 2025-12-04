@@ -148,7 +148,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `insecure` _boolean_ | Insecure specifies whether to enable client transport security for<br />the exporter's HTTPs or gRPC connection. Default is false. |  |  |
+| `insecure` _boolean_ | Insecure specifies whether to disable client transport security for<br />the exporter's HTTPs or gRPC connection. Default is false. |  |  |
 | `curve_preferences` _string array_ | CurvePreferences specifies the curve preferences that will be used in<br />an ECDHE handshake, in preference order.<br />Accepted values by OTLP are: X25519, P521, P256, and P384. |  |  |
 | `cert_file` _string_ | CertFile specifies the path to the TLS cert to use for TLS required connections. |  |  |
 | `cert_pem` _string_ | CertPEM is an alternative to CertFile, which provides the certificate<br />contents as a string instead of a filepath. |  |  |
