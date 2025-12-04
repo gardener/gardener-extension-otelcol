@@ -6,6 +6,9 @@
 package v1alpha1
 
 import (
+	time "time"
+	unsafe "unsafe"
+
 	config "github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -18,69 +21,261 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*ExampleConfig)(nil), (*config.ExampleConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ExampleConfig_To_config_ExampleConfig(a.(*ExampleConfig), b.(*config.ExampleConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*CollectorConfig)(nil), (*config.CollectorConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CollectorConfig_To_config_CollectorConfig(a.(*CollectorConfig), b.(*config.CollectorConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.ExampleConfig)(nil), (*ExampleConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_ExampleConfig_To_v1alpha1_ExampleConfig(a.(*config.ExampleConfig), b.(*ExampleConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*config.CollectorConfig)(nil), (*CollectorConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig(a.(*config.CollectorConfig), b.(*CollectorConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ExampleConfigSpec)(nil), (*config.ExampleConfigSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec(a.(*ExampleConfigSpec), b.(*config.ExampleConfigSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*CollectorConfigSpec)(nil), (*config.CollectorConfigSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(a.(*CollectorConfigSpec), b.(*config.CollectorConfigSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.ExampleConfigSpec)(nil), (*ExampleConfigSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec(a.(*config.ExampleConfigSpec), b.(*ExampleConfigSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*config.CollectorConfigSpec)(nil), (*CollectorConfigSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(a.(*config.CollectorConfigSpec), b.(*CollectorConfigSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CollectorExportersConfig)(nil), (*config.CollectorExportersConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(a.(*CollectorExportersConfig), b.(*config.CollectorExportersConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.CollectorExportersConfig)(nil), (*CollectorExportersConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(a.(*config.CollectorExportersConfig), b.(*CollectorExportersConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OTLPHTTPExporterConfig)(nil), (*config.OTLPHTTPExporterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(a.(*OTLPHTTPExporterConfig), b.(*config.OTLPHTTPExporterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.OTLPHTTPExporterConfig)(nil), (*OTLPHTTPExporterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(a.(*config.OTLPHTTPExporterConfig), b.(*OTLPHTTPExporterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RetryOnFailureConfig)(nil), (*config.RetryOnFailureConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(a.(*RetryOnFailureConfig), b.(*config.RetryOnFailureConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.RetryOnFailureConfig)(nil), (*RetryOnFailureConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(a.(*config.RetryOnFailureConfig), b.(*RetryOnFailureConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TLSConfig)(nil), (*config.TLSConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TLSConfig_To_config_TLSConfig(a.(*TLSConfig), b.(*config.TLSConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.TLSConfig)(nil), (*TLSConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TLSConfig_To_v1alpha1_TLSConfig(a.(*config.TLSConfig), b.(*TLSConfig), scope)
 	}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1alpha1_ExampleConfig_To_config_ExampleConfig(in *ExampleConfig, out *config.ExampleConfig, s conversion.Scope) error {
-	if err := Convert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec(&in.Spec, &out.Spec, s); err != nil {
+func autoConvert_v1alpha1_CollectorConfig_To_config_CollectorConfig(in *CollectorConfig, out *config.CollectorConfig, s conversion.Scope) error {
+	if err := Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha1_ExampleConfig_To_config_ExampleConfig is an autogenerated conversion function.
-func Convert_v1alpha1_ExampleConfig_To_config_ExampleConfig(in *ExampleConfig, out *config.ExampleConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ExampleConfig_To_config_ExampleConfig(in, out, s)
+// Convert_v1alpha1_CollectorConfig_To_config_CollectorConfig is an autogenerated conversion function.
+func Convert_v1alpha1_CollectorConfig_To_config_CollectorConfig(in *CollectorConfig, out *config.CollectorConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CollectorConfig_To_config_CollectorConfig(in, out, s)
 }
 
-func autoConvert_config_ExampleConfig_To_v1alpha1_ExampleConfig(in *config.ExampleConfig, out *ExampleConfig, s conversion.Scope) error {
-	if err := Convert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec(&in.Spec, &out.Spec, s); err != nil {
+func autoConvert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in *config.CollectorConfig, out *CollectorConfig, s conversion.Scope) error {
+	if err := Convert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_config_ExampleConfig_To_v1alpha1_ExampleConfig is an autogenerated conversion function.
-func Convert_config_ExampleConfig_To_v1alpha1_ExampleConfig(in *config.ExampleConfig, out *ExampleConfig, s conversion.Scope) error {
-	return autoConvert_config_ExampleConfig_To_v1alpha1_ExampleConfig(in, out, s)
+// Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig is an autogenerated conversion function.
+func Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in *config.CollectorConfig, out *CollectorConfig, s conversion.Scope) error {
+	return autoConvert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in, out, s)
 }
 
-func autoConvert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec(in *ExampleConfigSpec, out *config.ExampleConfigSpec, s conversion.Scope) error {
-	out.Foo = in.Foo
+func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *CollectorConfigSpec, out *config.CollectorConfigSpec, s conversion.Scope) error {
+	if err := Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(&in.Exporters, &out.Exporters, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec is an autogenerated conversion function.
-func Convert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec(in *ExampleConfigSpec, out *config.ExampleConfigSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ExampleConfigSpec_To_config_ExampleConfigSpec(in, out, s)
+// Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec is an autogenerated conversion function.
+func Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *CollectorConfigSpec, out *config.CollectorConfigSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in, out, s)
 }
 
-func autoConvert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec(in *config.ExampleConfigSpec, out *ExampleConfigSpec, s conversion.Scope) error {
-	out.Foo = in.Foo
+func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *config.CollectorConfigSpec, out *CollectorConfigSpec, s conversion.Scope) error {
+	if err := Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(&in.Exporters, &out.Exporters, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec is an autogenerated conversion function.
-func Convert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec(in *config.ExampleConfigSpec, out *ExampleConfigSpec, s conversion.Scope) error {
-	return autoConvert_config_ExampleConfigSpec_To_v1alpha1_ExampleConfigSpec(in, out, s)
+// Convert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec is an autogenerated conversion function.
+func Convert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *config.CollectorConfigSpec, out *CollectorConfigSpec, s conversion.Scope) error {
+	return autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(in *CollectorExportersConfig, out *config.CollectorExportersConfig, s conversion.Scope) error {
+	if err := Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(&in.OTLPHTTPExporter, &out.OTLPHTTPExporter, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig is an autogenerated conversion function.
+func Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(in *CollectorExportersConfig, out *config.CollectorExportersConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(in, out, s)
+}
+
+func autoConvert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(in *config.CollectorExportersConfig, out *CollectorExportersConfig, s conversion.Scope) error {
+	if err := Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(&in.OTLPHTTPExporter, &out.OTLPHTTPExporter, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig is an autogenerated conversion function.
+func Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(in *config.CollectorExportersConfig, out *CollectorExportersConfig, s conversion.Scope) error {
+	return autoConvert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in *OTLPHTTPExporterConfig, out *config.OTLPHTTPExporterConfig, s conversion.Scope) error {
+	out.Endpoint = in.Endpoint
+	out.TracesEndpoint = in.TracesEndpoint
+	out.MetricsEndpoint = in.MetricsEndpoint
+	out.LogsEndpoint = in.LogsEndpoint
+	out.ProfilesEndpoint = in.ProfilesEndpoint
+	if err := Convert_v1alpha1_TLSConfig_To_config_TLSConfig(&in.TLS, &out.TLS, s); err != nil {
+		return err
+	}
+	out.Timeout = time.Duration(in.Timeout)
+	out.ReadBufferSize = in.ReadBufferSize
+	out.WriteBufferSize = in.WriteBufferSize
+	out.Encoding = config.Encoding(in.Encoding)
+	if err := Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
+		return err
+	}
+	out.Compression = config.Compression(in.Compression)
+	return nil
+}
+
+// Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig is an autogenerated conversion function.
+func Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in *OTLPHTTPExporterConfig, out *config.OTLPHTTPExporterConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in, out, s)
+}
+
+func autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in *config.OTLPHTTPExporterConfig, out *OTLPHTTPExporterConfig, s conversion.Scope) error {
+	out.Endpoint = in.Endpoint
+	out.TracesEndpoint = in.TracesEndpoint
+	out.MetricsEndpoint = in.MetricsEndpoint
+	out.LogsEndpoint = in.LogsEndpoint
+	out.ProfilesEndpoint = in.ProfilesEndpoint
+	if err := Convert_config_TLSConfig_To_v1alpha1_TLSConfig(&in.TLS, &out.TLS, s); err != nil {
+		return err
+	}
+	out.Timeout = time.Duration(in.Timeout)
+	out.ReadBufferSize = in.ReadBufferSize
+	out.WriteBufferSize = in.WriteBufferSize
+	out.Encoding = Encoding(in.Encoding)
+	if err := Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
+		return err
+	}
+	out.Compression = Compression(in.Compression)
+	return nil
+}
+
+// Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig is an autogenerated conversion function.
+func Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in *config.OTLPHTTPExporterConfig, out *OTLPHTTPExporterConfig, s conversion.Scope) error {
+	return autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(in *RetryOnFailureConfig, out *config.RetryOnFailureConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.InitialInterval = time.Duration(in.InitialInterval)
+	out.MaxInterval = time.Duration(in.MaxInterval)
+	out.MaxElapsedTime = time.Duration(in.MaxElapsedTime)
+	out.Multiplier = in.Multiplier
+	return nil
+}
+
+// Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig is an autogenerated conversion function.
+func Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(in *RetryOnFailureConfig, out *config.RetryOnFailureConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(in, out, s)
+}
+
+func autoConvert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in *config.RetryOnFailureConfig, out *RetryOnFailureConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.InitialInterval = time.Duration(in.InitialInterval)
+	out.MaxInterval = time.Duration(in.MaxInterval)
+	out.MaxElapsedTime = time.Duration(in.MaxElapsedTime)
+	out.Multiplier = in.Multiplier
+	return nil
+}
+
+// Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig is an autogenerated conversion function.
+func Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in *config.RetryOnFailureConfig, out *RetryOnFailureConfig, s conversion.Scope) error {
+	return autoConvert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *config.TLSConfig, s conversion.Scope) error {
+	out.Insecure = (*bool)(unsafe.Pointer(in.Insecure))
+	out.CurvePreferences = *(*[]string)(unsafe.Pointer(&in.CurvePreferences))
+	out.CertFile = in.CertFile
+	out.CertPEM = in.CertPEM
+	out.KeyFile = in.KeyFile
+	out.KeyPEM = in.KeyPEM
+	out.CAFile = in.CAFile
+	out.CAPEM = in.CAPEM
+	out.IncludeSystemCACertsPool = (*bool)(unsafe.Pointer(in.IncludeSystemCACertsPool))
+	out.InsecureSkipVerify = (*bool)(unsafe.Pointer(in.InsecureSkipVerify))
+	out.MinVersion = in.MinVersion
+	out.MaxVersion = in.MaxVersion
+	out.CipherSuites = *(*[]string)(unsafe.Pointer(&in.CipherSuites))
+	out.ReloadInterval = time.Duration(in.ReloadInterval)
+	return nil
+}
+
+// Convert_v1alpha1_TLSConfig_To_config_TLSConfig is an autogenerated conversion function.
+func Convert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *config.TLSConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TLSConfig_To_config_TLSConfig(in, out, s)
+}
+
+func autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, out *TLSConfig, s conversion.Scope) error {
+	out.Insecure = (*bool)(unsafe.Pointer(in.Insecure))
+	out.CurvePreferences = *(*[]string)(unsafe.Pointer(&in.CurvePreferences))
+	out.CertFile = in.CertFile
+	out.CertPEM = in.CertPEM
+	out.KeyFile = in.KeyFile
+	out.KeyPEM = in.KeyPEM
+	out.CAFile = in.CAFile
+	out.CAPEM = in.CAPEM
+	out.IncludeSystemCACertsPool = (*bool)(unsafe.Pointer(in.IncludeSystemCACertsPool))
+	out.InsecureSkipVerify = (*bool)(unsafe.Pointer(in.InsecureSkipVerify))
+	out.MinVersion = in.MinVersion
+	out.MaxVersion = in.MaxVersion
+	out.CipherSuites = *(*[]string)(unsafe.Pointer(&in.CipherSuites))
+	out.ReloadInterval = time.Duration(in.ReloadInterval)
+	return nil
+}
+
+// Convert_config_TLSConfig_To_v1alpha1_TLSConfig is an autogenerated conversion function.
+func Convert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, out *TLSConfig, s conversion.Scope) error {
+	return autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in, out, s)
 }

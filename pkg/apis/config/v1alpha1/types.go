@@ -5,23 +5,327 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ExampleConfigSpec defines the desired state of [ExampleConfig]
-type ExampleConfigSpec struct {
-	// Foo is foo
-	Foo string `json:"foo,omitzero"`
+// Encoding specifies the encoding used by the collector exporters.
+//
+// +k8s:enum
+type Encoding string
 
-	// TODO(user): insert additional spec fields
+const (
+	// EncodingProto specifies that proto encoding is used for messages.
+	EncodingProto Encoding = "proto"
+	// EncodingJSON specifies that JSON is used for encoding messages.
+	EncodingJSON Encoding = "json"
+)
+
+// Compression specifies the compression used by the collector.
+//
+// +k8s:enum
+type Compression string
+
+const (
+	// CompressionGzip specifies that gzip compression is used.
+	CompressionGzip Compression = "gzip"
+	// CompressionZstd specifies that zstd compression is used.
+	CompressionZstd Compression = "zstd"
+	// CompressionSnappy specifies that snappy compression is used.
+	CompressionSnappy Compression = "snappy"
+	// CompressionNone specifies that no compression is used.
+	CompressionNone Compression = "none"
+)
+
+const (
+	// DefaultRetryInitialInterval specifies the default initial interval to
+	// wait after the first failure, before attempting a retry.
+	DefaultRetryInitialInterval = 5 * time.Second
+	// DefaultRetryMaxInterval specifies the default upper bound on backoff.
+	DefaultRetryMaxInterval = 30 * time.Second
+	// DefaultRetryMaxElapsedTime specifies the default maximum amount of
+	// time spent trying to send a batch.
+	DefaultRetryMaxElapsedTime = 300 * time.Second
+	// DefaultRetryMultiplier specifies the default factor by which the
+	// retry interval is multiplied on each attempt.
+	DefaultRetryMultiplier = 1.5
+
+	// DefaultExporterClientTimeout specifies the default client timeout for
+	// HTTP requests made by exporters.
+	DefaultExporterClientTimeout = 30 * time.Second
+	// DefaultExporterClientReadBufferSize specifies the default
+	// ReadBufferSize for the HTTP client used by exporters.
+	DefaultExporterClientReadBufferSize = 0
+	// DefaultExporterClientWriteBufferSize specifies the default
+	// WriteBufferSize for the HTTP client used by the exporters.
+	DefaultExporterClientWriteBufferSize = 512 * 1024
+)
+
+// TLSConfig provides the TLS settings used by exporters and receivers.
+//
+// See [OpenTelemetry TLS Configuration Settings] for more details.
+//
+// [OpenTelemetry TLS Configuration Settings]: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md
+type TLSConfig struct {
+	// Insecure specifies whether to disable client transport security for
+	// the exporter's HTTPs or gRPC connection. Default is false.
+	//
+	// +k8s:optional
+	// +default=false
+	Insecure *bool `json:"insecure,omitzero"`
+
+	// CurvePreferences specifies the curve preferences that will be used in
+	// an ECDHE handshake, in preference order.
+	//
+	// Accepted values by OTLP are: X25519, P521, P256, and P384.
+	//
+	// +k8s:optional
+	CurvePreferences []string `json:"curve_preferences,omitzero"`
+
+	// CertFile specifies the path to the TLS cert to use for TLS required connections.
+	//
+	// +k8s:optional
+	CertFile string `json:"cert_file,omitzero"`
+
+	// CertPEM is an alternative to CertFile, which provides the certificate
+	// contents as a string instead of a filepath.
+	//
+	// +k8s:optional
+	CertPEM string `json:"cert_pem,omitzero"`
+
+	// KeyFile specifies the path to the TLS key to use for TLS required
+	// connections.
+	//
+	// +k8s:optional
+	KeyFile string `json:"key_file,omitzero"`
+
+	// KeyPEM is an alternative to KeyFile, which provides the key contents
+	// as a string instead of a filepath.
+	//
+	// +k8s:optional
+	KeyPEM string `json:"key_pem,omitzero"`
+
+	// CAFile specifies the path to the CA cert. For a client this verifies
+	// the server certificate. For a server this verifies client
+	// certificates. If empty uses system root CA.
+	//
+	// +k8s:optional
+	CAFile string `json:"ca_file,omitzero"`
+
+	// CAPEM is an alternative to CAFile, which provides the CA cert
+	// contents as a string instead of a filepath.
+	//
+	// +k8s:optional
+	CAPEM string `json:"ca_pem,omitzero"`
+
+	// IncludeSystemCACertsPool specifies whether to load the system
+	// certificate authorities pool alongside the certificate authority.
+	//
+	// +k8s:optional
+	// +default=false
+	IncludeSystemCACertsPool *bool `json:"include_system_ca_certs_pool,omitzero"`
+
+	// InsecureSkipVerify specifies whether to skip verifying the
+	// certificate or not.
+	//
+	// Additionally you can configure TLS to be enabled but skip verifying
+	// the server's certificate chain. This cannot be combined with `Insecure'
+	// since `Insecure' won't use TLS at all.
+	//
+	// +k8s:optional
+	// +default=false
+	InsecureSkipVerify *bool `json:"insecure_skip_verify,omitzero"`
+
+	// MinVersion specifies the minimum acceptable TLS version.
+	//
+	// Valid values are 1.0, 1.1, 1.2, 1.3.
+	//
+	// The default value for this field is 1.2.
+	//
+	// Note, that TLS 1.0 and 1.1 are deprecated due to known
+	// vulnerabilities and should be avoided.
+	//
+	// +k8s:optional
+	// default="1.2"
+	MinVersion string `json:"min_version,omitzero"`
+
+	// MaxVersion specifies the maximum acceptable TLS version.
+	//
+	// +k8s:optional
+	MaxVersion string `json:"max_version,omitzero"`
+
+	// CipherSuites specifies the list of cipher suites to use.
+	//
+	// Explicit cipher suites can be set. If left blank, a safe default list
+	// is used. See https://go.dev/src/crypto/tls/cipher_suites.go for a
+	// list of supported cipher suites.
+	//
+	// +k8s:optional
+	CipherSuites []string `json:"cipher_suites,omitzero"`
+
+	// ReloadInterval specifies the duration after which the certificate
+	// will be reloaded. If not set, it will never be reloaded.
+	//
+	// +k8s:optional
+	ReloadInterval time.Duration `json:"reload_interval,omitzero"`
+}
+
+// RetryOnFailureConfig provides the retry policy for an exporter.
+type RetryOnFailureConfig struct {
+	// Enabled specifies whether retry on failure is enabled or not. Default
+	// is true.
+	//
+	// +k8s:optional
+	// +default=true
+	Enabled *bool `json:"enabled,omitzero"`
+
+	// InitialInterval specifies the time to wait after the first failure
+	// before retrying. The default value is [DefaultRetryInitialInterval].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultRetryInitialInterval)
+	InitialInterval time.Duration `json:"initial_interval,omitzero"`
+
+	// MaxInterval specifies the upper bound on backoff. Default value is
+	// [DefaultRetryMaxInterval].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultRetryMaxInterval)
+	MaxInterval time.Duration `json:"max_interval,omitzero"`
+
+	// MaxElapsedTime specifies the maximum amount of time spent trying to
+	// send a batch. If set to 0, the retries are never stopped. The default
+	// value is [DefaultRetryMaxElapsedTime].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultRetryMaxElapsedTime)
+	MaxElapsedTime time.Duration `json:"max_elapsed_time,omitzero"`
+
+	// Multiplier specifies the factor by which the retry interval is
+	// multiplied on each attempt. The default value is
+	// [DefaultRetryMultiplier].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultRetryMultiplier)
+	Multiplier float64 `json:"multiplier,omitzero"`
+}
+
+// OTLPHTTPExporterConfig provides the OTLP HTTP Exporter configuration settings.
+//
+// See [OTLP HTTP Exporter] for more details.
+//
+// [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+type OTLPHTTPExporterConfig struct {
+	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
+	//
+	// To send each signal a corresponding path will be added to this base
+	// URL, i.e. for traces "/v1/traces" will appended, for metrics
+	// "/v1/metrics" will be appended, for logs "/v1/logs" will be appended.
+	//
+	// +k8s:optional
+	Endpoint string `json:"endpoint,omitzero"`
+
+	// TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.
+	//
+	// When this setting is present the base endpoint setting is ignored for
+	// traces.
+	//
+	// +k8s:optional
+	TracesEndpoint string `json:"traces_endpoint,omitzero"`
+
+	// MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.
+	//
+	// When this setting is present the base endpoint setting is ignored for
+	// metrics.
+	//
+	// +k8s:optional
+	MetricsEndpoint string `json:"metrics_endpoint,omitzero"`
+
+	// LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs
+	//
+	// When this setting is present the base endpoint setting is ignored for
+	// logs.
+	//
+	// +k8s:optional
+	LogsEndpoint string `json:"logs_endpoint,omitzero"`
+
+	// ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.
+	//
+	// When this setting is present the endpoint setting is ignored for
+	// profile data.
+	//
+	// +k8s:optional
+	ProfilesEndpoint string `json:"profiles_endpoint,omitzero"`
+
+	// TLS specifies the TLS configuration settings for the exporter.
+	//
+	// +k8s:optional
+	TLS TLSConfig `json:"tls,omitzero"`
+
+	// Timeout specifies the HTTP request time limit. Default value is
+	// [DefaultExporterClientTimeout].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultExporterClientTimeout)
+	Timeout time.Duration `json:"timeout,omitzero"`
+
+	// ReadBufferSize specifies the ReadBufferSize for the HTTP
+	// client. Default value is [DefaultExporterClientReadBufferSize].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultExporterClientReadBufferSize)
+	ReadBufferSize int `json:"read_buffer_size,omitzero"`
+
+	// WriteBufferSize specifies the WriteBufferSize for the HTTP
+	// client. Default value is [DefaultExporterClientWriteBufferSize].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultExporterClientWriteBufferSize)
+	WriteBufferSize int `json:"write_buffer_size,omitzero"`
+
+	// Encoding specifies the encoding to use for the messages. The default
+	// value is [EncodingProto].
+	//
+	// +k8s:optional
+	// +default=ref(EncodingProto)
+	Encoding Encoding `json:"encoding,omitzero"`
+
+	// RetryOnFailure specifies the retry policy of the exporter.
+	//
+	// +k8s:optional
+	RetryOnFailure RetryOnFailureConfig `json:"retry_on_failure,omitzero"`
+
+	// Compression specifies the compression to use. The default value is
+	// [CompressionGzip].
+	//
+	// +k8s:optional
+	// +default=ref(CompressionGzip)
+	Compression Compression `json:"compression,omitzero"`
+}
+
+// CollectorExportersConfig provides the OTLP exporter settings.
+type CollectorExportersConfig struct {
+	// HTTPExporter provides the OTLP HTTP Exporter settings.
+	//
+	// +k8s:required
+	OTLPHTTPExporter OTLPHTTPExporterConfig `json:"otlphttp,omitzero"`
+}
+
+// CollectorConfigSpec specifies the desired state of [CollectorConfig]
+type CollectorConfigSpec struct {
+	// Exporters specify exporters configuration of the collector.
+	//
+	// +k8s:required
+	Exporters CollectorExportersConfig `json:"exporters,omitzero"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ExampleConfig is the schema for the exampleconfigs API
-type ExampleConfig struct {
+// CollectorConfig provides the OpenTelemetry Collector API configuration.
+type CollectorConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Spec provides the extension configuration spec.
-	Spec ExampleConfigSpec `json:"spec,omitzero"`
+	Spec CollectorConfigSpec `json:"spec,omitzero"`
 }

@@ -6,6 +6,8 @@
 package v1alpha1
 
 import (
+	time "time"
+
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -13,5 +15,52 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&CollectorConfig{}, func(obj interface{}) { SetObjectDefaults_CollectorConfig(obj.(*CollectorConfig)) })
 	return nil
+}
+
+func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
+	if in.Spec.Exporters.OTLPHTTPExporter.TLS.Insecure == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.OTLPHTTPExporter.TLS.Insecure = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.TLS.IncludeSystemCACertsPool == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.OTLPHTTPExporter.TLS.IncludeSystemCACertsPool = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.Timeout == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.Timeout = time.Duration(DefaultExporterClientTimeout)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize = int(DefaultExporterClientReadBufferSize)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize = int(DefaultExporterClientWriteBufferSize)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.Encoding == "" {
+		in.Spec.Exporters.OTLPHTTPExporter.Encoding = Encoding(EncodingProto)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Enabled == nil {
+		var ptrVar1 bool = true
+		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Enabled = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.InitialInterval == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxInterval == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Multiplier == 0 {
+		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
+	}
+	if in.Spec.Exporters.OTLPHTTPExporter.Compression == "" {
+		in.Spec.Exporters.OTLPHTTPExporter.Compression = Compression(CompressionGzip)
+	}
 }
