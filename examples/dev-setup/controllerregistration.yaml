@@ -2,7 +2,7 @@
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
-  name: gardener-extension-otelcol
+  name: otelcol
   annotations:
     security.gardener.cloud/pod-security-enforce: baseline
 spec:
@@ -10,7 +10,7 @@ spec:
   deployment:
     policy: OnDemand
     deploymentRefs:
-      - name: gardener-extension-otelcol
+      - name: otelcol
   # https://gardener.cloud/docs/gardener/extensions/registration/#extension-resource-configurations
   resources:
     - kind: Extension
