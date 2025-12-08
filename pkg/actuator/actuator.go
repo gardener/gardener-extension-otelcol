@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -20,7 +21,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerfeatures "github.com/gardener/gardener/pkg/features"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -94,6 +95,9 @@ const (
 	// targetAllocatorServicePort is the port on which the Target Allocator
 	// service listens to.
 	targetAllocatorServicePort = 80
+	// targetAllocatorHTTPSPort is the port on which Target Allocator's
+	// HTTPS service listens to.
+	targetAllocatorHTTPSPort = 8443
 	// targetAllocatorServiceAccountName is the name of the service account
 	// for the Target Allocator.
 	targetAllocatorServiceAccountName = baseResourceName + "-targetallocator"
@@ -324,6 +328,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
+		a.getTargetAllocatorHTTPSService(ex.Namespace),
 		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
 		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret),
@@ -424,15 +429,15 @@ func (a *Actuator) getLabels() map[string]string {
 	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets
 
 	items := map[string]string{
-		v1beta1constants.LabelRole:                                                               v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole:                                                              v1beta1constants.GardenRoleObservability,
-		v1beta1constants.LabelObservabilityApplication:                                           otelCollectorName,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                                 v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                    v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                     v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                      v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(targetAllocatorServiceName, targetAllocatorServicePort): v1beta1constants.LabelNetworkPolicyAllowed,
-		toAllScrapeTargetsLabel:                                                                  v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
+		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
+		v1beta1constants.LabelObservabilityApplication:        otelCollectorName,
+		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + targetAllocatorHTTPSServiceName + "-tcp-" + strconv.Itoa(targetAllocatorHTTPSPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		toAllScrapeTargetsLabel: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
 	return items
@@ -464,6 +469,29 @@ func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.Se
 	}
 
 	return obj
+}
+
+// getTargetAllocatorHTTPSService returns the [corev1.Service] for the
+// HTTPS communication of the Target Allocator.
+func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      targetAllocatorHTTPSServiceName,
+			Namespace: namespace,
+			Labels:    a.getLabels(),
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{{
+				Port:       443,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt32(targetAllocatorHTTPSPort),
+			}},
+			Selector: map[string]string{
+				"app.kubernetes.io/component": "opentelemetry-targetallocator",
+			},
+		},
+	}
 }
 
 // getTargetAllocatorRole returns the [rbacv1.Role] for the Target Allocator.
@@ -535,7 +563,6 @@ func (a *Actuator) getTargetAllocator(namespace string, caSecret, serverSecret *
 		// TODO(dnaeon): finish the rest of the spec
 		Spec: otelv1alpha1.TargetAllocatorSpec{
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				// TODO(dnaeon): add ports
 				Image:    "otel/target-allocator:v0.140.0", // TODO(dnaeon): this image should be configurable and vendored
 				Replicas: ptr.To(targetAllocatorReplicas),
 				Args: map[string]string{
