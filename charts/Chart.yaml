@@ -19,13 +19,3 @@ version: v0.1.0-dev
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "1.16.0"
-
-# Test dependencies:
-#
-# helm dependency build charts/
-
-# Enable dependencies
-# dependencies:
-#   - name: postgresql
-#     version: "18.1.13"
-#     repository: "oci://docker.io/bitnamicharts"
