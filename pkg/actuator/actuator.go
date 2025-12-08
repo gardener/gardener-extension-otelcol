@@ -286,7 +286,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	// generate CA and server certificate for target allocator
+	// Generate CA and server certificate for Target Allocator
 	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:       secretNameCACertificate,
 		CommonName: Name,
@@ -331,7 +331,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorHTTPSService(ex.Namespace),
 		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
-		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret),
+		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret, cfg),
 	)
 	if err != nil {
 		return err
@@ -622,7 +622,7 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
 // resource, which the extension manages.
-func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
+func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *corev1.Secret, cfg config.CollectorConfig) *otelv1beta1.OpenTelemetryCollector {
 	const (
 		volumeNameCACertificate      = "ca-cert"
 		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
@@ -630,6 +630,20 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
 	)
+
+	// TODO(dnaeon): authentication, tls, etc.
+	httpExporter := map[string]any{
+		"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
+	}
+	exporters := map[string]any{
+		"debug": map[string]any{
+			"verbosity": "basic", // basic, normal or detailed
+		},
+	}
+
+	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
+		exporters["otlphttp"] = httpExporter
+	}
 
 	return &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
@@ -711,11 +725,7 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 				Exporters: otelv1beta1.AnyConfig{
 					// TODO(dnaeon): Add the actual exporter here
 					// TODO(dnaeon): remove the debug exporter
-					Object: map[string]any{
-						"debug": map[string]any{
-							"verbosity": "basic", // basic, normal or detailed
-						},
-					},
+					Object: exporters,
 				},
 				Service: otelv1beta1.Service{
 					Telemetry: &otelv1beta1.AnyConfig{
