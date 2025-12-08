@@ -313,6 +313,8 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
 		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret),
+		a.getOtelCollectorServiceAccount(ex.Namespace),
+		a.getOtelCollector(ex.Namespace),
 	)
 	if err != nil {
 		return err
@@ -562,4 +564,136 @@ func (a *Actuator) getTargetAllocator(namespace string, caSecret, serverSecret *
 			},
 		},
 	}
+}
+
+// getOtelCollectorServiceAccount returns the [corev1.ServiceAccount] for the
+// the OTel Collector.
+func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.ServiceAccount {
+	obj := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      otelCollectorServiceAccountName,
+			Namespace: namespace,
+			Labels:    a.getLabels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+
+	return obj
+}
+
+// getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
+// resource, which the extension manages.
+func (a *Actuator) getOtelCollector(namespace string) *otelv1beta1.OpenTelemetryCollector {
+	obj := &otelv1beta1.OpenTelemetryCollector{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        otelCollectorName,
+			Namespace:   namespace,
+			Labels:      a.getLabels(),
+			Annotations: a.getAnnotations(),
+		},
+		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
+			// Note that the Target Allocator expects either a
+			// statefulset or a daemonset deployment mode, because
+			// it provides load-balancing of scrape targets between
+			// multiple OTel Collectors. In order to achieve this,
+			// the respective OTel collectors must have
+			// deterministic and stable IDs, hence the requirement
+			// for running in statefulset mode.
+			//
+			// https://github.com/open-telemetry/opentelemetry-operator/tree/main/cmd/otel-allocator
+			Mode:            otelv1beta1.ModeStatefulSet,
+			UpgradeStrategy: otelv1beta1.UpgradeStrategyNone,
+			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
+				Image:             "otel/opentelemetry-collector:0.141.0", // TODO(dnaeon): this image should be configurable
+				Replicas:          ptr.To(otelCollectorReplicas),
+				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("50Mi"),
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+				},
+				ServiceAccount: otelCollectorServiceAccountName,
+			},
+			// Explicitly configure the Prometheus receiver to point
+			// at an existing TargetAllocator.
+			Config: otelv1beta1.Config{
+				Receivers: otelv1beta1.AnyConfig{
+					Object: map[string]any{
+						// TODO(dnaeon): enable OTLP gRPC receiver for logs
+						"prometheus": map[string]any{
+							"target_allocator": map[string]any{
+								"collector_id": "${POD_NAME}",
+								// TODO: migrate to the HTTPS endpoint once we have mTLS
+								"endpoint": fmt.Sprintf("http://%s", targetAllocatorServiceName),
+								"interval": "30s",
+							},
+							"config": map[string]any{
+								"scrape_configs": []any{
+									map[string]any{
+										"job_name":        otelCollectorName,
+										"scrape_interval": "15s",
+									},
+								},
+							},
+						},
+					},
+				},
+				Processors: &otelv1beta1.AnyConfig{
+					Object: map[string]any{
+						"batch": map[string]any{
+							"timeout": "15s",
+						},
+					},
+				},
+				Exporters: otelv1beta1.AnyConfig{
+					// TODO(dnaeon): Add the actual exporter here
+					// TODO(dnaeon): remove the debug exporter
+					Object: map[string]any{
+						"debug": map[string]any{
+							"verbosity": "basic", // basic, normal or detailed
+						},
+					},
+				},
+				Service: otelv1beta1.Service{
+					Telemetry: &otelv1beta1.AnyConfig{
+						Object: map[string]any{
+							"metrics": map[string]any{
+								"level": "basic", // none, basic, normal and detailed levels
+								"readers": []any{
+									map[string]any{
+										"pull": map[string]any{
+											"exporter": map[string]any{
+												"prometheus": map[string]any{
+													"host": "0.0.0.0",
+													"port": otelCollectorMetricsPort,
+												},
+											},
+										},
+									},
+								},
+							},
+							"logs": map[string]any{
+								"level":    "INFO", // INFO, WARN, DEBUG and ERROR levels
+								"encoding": "json",
+							},
+						},
+					},
+					Pipelines: map[string]*otelv1beta1.Pipeline{
+						// TODO(dnaeon): add a pipeline for logs, once we have them enabled
+						"metrics": {
+							Receivers:  []string{"prometheus"},
+							Exporters:  []string{"debug"}, // TODO(dnaeon): Use actual exporter here
+							Processors: []string{"batch"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return obj
 }
