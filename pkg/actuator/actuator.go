@@ -645,6 +645,11 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 		exporters["otlphttp"] = httpExporter
 	}
 
+	exporterNames := make([]string, 0)
+	for k := range exporters {
+		exporterNames = append(exporterNames, k)
+	}
+
 	return &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        otelCollectorName,
@@ -754,8 +759,9 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						// TODO(dnaeon): add a pipeline for logs, once we have them enabled
 						"metrics": {
-							Receivers:  []string{"prometheus"},
-							Exporters:  []string{"debug"}, // TODO(dnaeon): Use actual exporter here
+							Receivers: []string{"prometheus"},
+							// TODO: enable debug
+							Exporters:  exporterNames,
 							Processors: []string{"batch"},
 						},
 					},
