@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opentelemetry-receiver
+  namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-receiver
+  namespace: default
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          http:
+            include_metadata: true
+            endpoint: 0.0.0.0:55690
+            compression_algorithms: ["", "gzip"]
+    exporters:
+      debug:
+        verbosity: basic
+    service:
+      telemetry:
+        logs:
+          encoding: json
+          level: info
+        metrics:
+          level: basic
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+      pipelines:
+        metrics:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-receiver
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 55690
+  selector:
+    app.kubernetes.io/component: opentelemetry-receiver
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-receiver
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: opentelemetry-receiver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: opentelemetry-receiver
+    spec:
+      containers:
+      - args:
+        - --config=/conf/collector.yaml
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        image: otel/opentelemetry-collector:0.141.0
+        imagePullPolicy: IfNotPresent
+        name: otc-container
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /conf
+          name: otc-internal
+      serviceAccountName: opentelemetry-receiver
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: collector.yaml
+            path: collector.yaml
+          name: opentelemetry-receiver
+        name: otc-internal
