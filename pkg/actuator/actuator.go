@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
@@ -20,7 +21,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerfeatures "github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
@@ -30,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,12 +73,22 @@ const (
 	// for the OTel Collector.
 	otelCollectorServiceAccountName = otelCollectorName + "-collector"
 
+	// secretsManagerIdentity is the identity used for secrets management.
+	secretsManagerIdentity = "gardener-extension-" + Name
+	// secretNameCACertificate is the name of the CA certificate secret.
+	secretNameCACertificate = "ca-" + Name
+	// secretNameServerCertificate is the name of the server certificate of the Target Allocator.
+	secretNameServerCertificate = Name + "-targetallocator-server"
+
 	// targetAllocatorName is the name of the [otelv1alpha1.TargetAllocator]
 	// resource created by the extension.
 	targetAllocatorName = baseResourceName
 	// targetAllocatorServiceName is the name of the Kubernetes service for
 	// the Target Allocator.
 	targetAllocatorServiceName = baseResourceName + "-targetallocator"
+	// targetAllocatorHTTPSServiceName is the name of the Kubernetes service for
+	// HTTPS communication of the Target Allocator.
+	targetAllocatorHTTPSServiceName = baseResourceName + "-targetallocator-https"
 	// targetAllocatorServicePort is the port on which the Target Allocator
 	// service listens to.
 	targetAllocatorServicePort = 80
@@ -229,6 +244,11 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 	// [extensionsv1alpha1.Extension] resource.
 	clusterName := ex.Namespace
 
+	secretsManager, err := a.newSecretsManager(ctx, logger, ex.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed creating a new secrets manager: %w", err)
+	}
+
 	// Increment our example metrics counter
 	defer func() {
 		metrics.ActuatorOperationTotal.WithLabelValues(clusterName, "reconcile").Inc()
@@ -260,6 +280,28 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
+	// generate CA and server certificate for target allocator
+	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:       secretNameCACertificate,
+		CommonName: Name,
+		CertType:   secretsutils.CACert,
+		Validity:   ptr.To(30 * 24 * time.Hour),
+	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
+		return fmt.Errorf("failed generating CA certificate secret: %w", err)
+	}
+	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
+
+	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        secretNameServerCertificate,
+		CommonName:                  targetAllocatorHTTPSServiceName,
+		DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
+		CertType:                    secretsutils.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(secretNameCACertificate), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
+	}
+
 	// Bundle things up in a managed resource
 	registry := managedresources.NewRegistry(
 		kubernetes.SeedScheme,
@@ -270,7 +312,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
-		a.getTargetAllocator(ex.Namespace),
+		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret),
 	)
 	if err != nil {
 		return err
@@ -298,7 +340,16 @@ func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extension
 		metrics.ActuatorOperationTotal.WithLabelValues(ex.Namespace, "delete").Inc()
 	}()
 
+	secretsManager, err := a.newSecretsManager(ctx, logger, ex.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed creating a new secrets manager: %w", err)
+	}
+
 	logger.Info("deleting resources managed by extension")
+
+	if err := secretsManager.Cleanup(ctx); err != nil {
+		return fmt.Errorf("failed cleaning up secrets managed by secrets manager: %w", err)
+	}
 
 	return client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, a.client, ex.Namespace, managedResourceName))
 }
@@ -338,6 +389,18 @@ func (a *Actuator) Migrate(ctx context.Context, logger logr.Logger, ex *extensio
 	}()
 
 	return a.Reconcile(ctx, logger, ex)
+}
+
+func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, namespace string) (secretsmanager.Interface, error) {
+	return secretsmanager.New(
+		ctx,
+		log,
+		clock.RealClock{},
+		a.client,
+		namespace,
+		secretsManagerIdentity,
+		secretsmanager.Config{CASecretAutoRotation: true},
+	)
 }
 
 // getLabels returns the common set of labels for the Collector and Target
@@ -440,8 +503,16 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 }
 
 // getTargetAllocator returns the [otelv1alpha1.TargetAllocator] resource.
-func (a *Actuator) getTargetAllocator(namespace string) *otelv1alpha1.TargetAllocator {
-	obj := &otelv1alpha1.TargetAllocator{
+func (a *Actuator) getTargetAllocator(namespace string, caSecret, serverSecret *corev1.Secret) *otelv1alpha1.TargetAllocator {
+	const (
+		volumeNameCACertificate      = "ca-cert"
+		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
+
+		volumeNameServerCertificate      = "server-cert"
+		volumeMountPathServerCertificate = "/etc/ssl/certs/server"
+	)
+
+	return &otelv1alpha1.TargetAllocator{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorName,
 			Namespace: namespace,
@@ -450,10 +521,23 @@ func (a *Actuator) getTargetAllocator(namespace string) *otelv1alpha1.TargetAllo
 		// TODO(dnaeon): finish the rest of the spec
 		Spec: otelv1alpha1.TargetAllocatorSpec{
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				// TODO(dnaeon): add args, ports and volumes for TLS config
-
-				Image:             "otel/target-allocator:v0.140.0", // TODO(dnaeon): this image should be configurable and vendored
-				Replicas:          ptr.To(targetAllocatorReplicas),
+				// TODO(dnaeon): add ports
+				Image:    "otel/target-allocator:v0.140.0", // TODO(dnaeon): this image should be configurable and vendored
+				Replicas: ptr.To(targetAllocatorReplicas),
+				Args: map[string]string{
+					"enable-https-server": "true",
+					"https-ca-file":       volumeMountPathCACertificate + "/" + secretsutils.DataKeyCertificateBundle,
+					"https-tls-cert-file": volumeMountPathServerCertificate + "/" + secretsutils.DataKeyCertificate,
+					"https-tls-key-file":  volumeMountPathServerCertificate + "/" + secretsutils.DataKeyPrivateKey,
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
+					{Name: volumeNameServerCertificate, MountPath: volumeMountPathServerCertificate, ReadOnly: true},
+				},
+				Volumes: []corev1.Volume{
+					{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
+					{Name: volumeNameServerCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: serverSecret.Name}}},
+				},
 				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -478,6 +562,4 @@ func (a *Actuator) getTargetAllocator(namespace string) *otelv1alpha1.TargetAllo
 			},
 		},
 	}
-
-	return obj
 }
