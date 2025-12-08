@@ -15,7 +15,8 @@ spec:
         spec:
           exporters:
             # OTLP gRPC exporter settings
-            otlp: {}
+            # TODO: implement OTLP gRPC as well
+            # otlp: {}
             # OTLP HTTP exporter settings
             otlphttp: {}
   cloudProfile:
