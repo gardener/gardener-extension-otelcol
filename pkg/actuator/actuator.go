@@ -409,7 +409,7 @@ func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, names
 // Allocator resources.
 func (a *Actuator) getLabels() map[string]string {
 	// The `networking.resources.gardener.cloud/to-all-scrape-targets' label
-	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to" + v1beta1constants.LabelNetworkPolicyScrapeTargets
+	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets
 
 	items := map[string]string{
 		v1beta1constants.LabelRole:                                                               v1beta1constants.LabelObservability,
