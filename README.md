@@ -1,35 +1,3 @@
-<!-- TODO(dnaeon): add the crds and schemas for gardener's managedresources -->
-<!-- TODO(dnaeon): review this document once again -->
-
-- DSM update:
-  - local operator setup done and tested
-    - also documented
-  - minor issue with gardenctl targeting a local seed: checked with Ismo, will probably submit a fix for it.
-
-  - local operator setup done, need to test it one more time and commit the doc changes
-  - to do: api ref docs generation and wrap up
-
-
-
-- created a kubernetes issue about the defaulter-gen generator: https://github.com/kubernetes/kubernetes/issues/135417
-  - additional pipelines to test - generate, shellcheck, etc.
-  - added a script to bootstrap a new repo
-  - add shellcheck
-  - review inventory PR
-
-  - continue with the local operator setup
-  - add API reference docs generation
-
-# Validating webhook
-# Mutating webhook
-
-<!-- TODO(dnaeon): add steps for deploying using the operator extension -->
-<!-- TODO(dnaeon): it seems the only way to deploy admission webhook is via the operator extension -->
-<!-- TODO(dnaeon): add note about webhook wrappers and admission implementations -->
-
-<!-- TODO(dnaeon): ... which makes sense, since seeds don't have the shoot
-resource at all (cluster only) and cannot watch it -->
-
 # gardener-extension-otelcol
 
 The `gardener-extension-otelcol` repo provides Gardener Extension for OpenTelemetry Collector.

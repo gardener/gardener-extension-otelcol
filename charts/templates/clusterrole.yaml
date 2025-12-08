@@ -41,54 +41,27 @@ rules:
   verbs:
   - list
   - watch
-
-# Enable the permissions below, if your extension needs to work with
-# ManagedResources, Deployments, Secrets, Webhooks, etc.
-#
-# - apiGroups:
-#   - apps
-#   resources:
-#   - deployments
-#   verbs:
-#   - get
-# - apiGroups:
-#   - ""
-#   resources:
-#   - pods
-#   verbs:
-#   - list
-# - apiGroups:
-#   - resources.gardener.cloud
-#   resources:
-#   - managedresources
-#   verbs:
-#   - get
-#   - list
-#   - watch
-#   - create
-#   - update
-#   - patch
-#   - delete
-# - apiGroups:
-#   - ""
-#   resources:
-#   - secrets
-#   verbs:
-#   - get
-#   - list
-#   - watch
-#   - create
-#   - update
-#   - patch
-#   - delete
-# - apiGroups:
-#   - admissionregistration.k8s.io
-#   resources:
-#   - mutatingwebhookconfigurations
-#   verbs:
-#   - get
-#   - list
-#   - watch
-#   - update
-#   - create
-#   - patch
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
