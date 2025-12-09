@@ -405,16 +405,25 @@ func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, names
 	)
 }
 
-// getLabels returns the common set of labels for the Collector and Target
+// getCommonLabels returns the common set of labels for the Collector and Target
 // Allocator resources.
-func (a *Actuator) getLabels() map[string]string {
+func (a *Actuator) getCommonLabels() map[string]string {
+	items := map[string]string{
+		v1beta1constants.LabelRole:                     v1beta1constants.LabelObservability,
+		v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleObservability,
+		v1beta1constants.LabelObservabilityApplication: otelCollectorName,
+	}
+
+	return items
+}
+
+// getNetworkLabels returns the set of labels related to Gardener Network
+// Policies.
+func (a *Actuator) getNetworkLabels() map[string]string {
 	// The `networking.resources.gardener.cloud/to-all-scrape-targets' label
 	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets
 
 	items := map[string]string{
-		v1beta1constants.LabelRole:                            v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleObservability,
-		v1beta1constants.LabelObservabilityApplication:        otelCollectorName,
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -446,7 +455,7 @@ func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.Se
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorServiceAccountName,
 			Namespace: namespace,
-			Labels:    a.getLabels(),
+			Labels:    a.getCommonLabels(),
 		},
 		AutomountServiceAccountToken: ptr.To(false),
 	}
@@ -461,7 +470,7 @@ func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Serv
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorHTTPSServiceName,
 			Namespace: namespace,
-			Labels:    a.getLabels(),
+			Labels:    a.getCommonLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -520,8 +529,8 @@ func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.Config
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorConfigMapName,
 			Namespace: namespace,
+			Labels:    a.getCommonLabels(),
 		},
-		// TODO(dnaeon): immutable?
 		Data: map[string]string{
 			"targetallocator.yaml": string(data),
 		},
@@ -536,7 +545,7 @@ func (a *Actuator) getTargetAllocatorRole(namespace string) *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorRoleName,
 			Namespace: namespace,
-			Labels:    a.getLabels(),
+			Labels:    a.getCommonLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -565,7 +574,7 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorRoleName,
 			Namespace: namespace,
-			Labels:    a.getLabels(),
+			Labels:    a.getCommonLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -593,26 +602,29 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 		volumeMountTargetAllocatorConfig = "/app/targetallocator"
 	)
 
-	// TODO(dnaeon): revisit these labels
-	labels := utils.MergeStringMaps(a.getLabels(), map[string]string{
-		"app.kubernetes.io/component": "opentelemetry-targetallocator",
-	})
+	allLabels := utils.MergeStringMaps(
+		a.getCommonLabels(),
+		a.getNetworkLabels(),
+		map[string]string{
+			"app.kubernetes.io/component": "opentelemetry-targetallocator",
+		},
+	)
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorDeploymentName,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    a.getCommonLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas:             ptr.To(targetAllocatorReplicas),
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: allLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: allLabels,
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
@@ -668,7 +680,7 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      otelCollectorServiceAccountName,
 			Namespace: namespace,
-			Labels:    a.getLabels(),
+			Labels:    a.getCommonLabels(),
 		},
 		AutomountServiceAccountToken: ptr.To(false),
 	}
@@ -715,11 +727,13 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 	exporters := a.getOtelExporters(cfg)
 	exporterNames := slices.Sorted(maps.Keys(exporters))
 
+	allLabels := utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
+
 	return &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        otelCollectorName,
 			Namespace:   namespace,
-			Labels:      a.getLabels(),
+			Labels:      allLabels,
 			Annotations: a.getAnnotations(),
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -758,7 +772,7 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 				ServiceAccount: otelCollectorServiceAccountName,
 			},
 			// Explicitly configure the Prometheus receiver to point
-			// at an existing TargetAllocator.
+			// at an existing Target Allocator.
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
