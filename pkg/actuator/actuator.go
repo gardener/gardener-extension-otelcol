@@ -30,6 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	"go.yaml.in/yaml/v4"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -108,6 +109,9 @@ const (
 	// targetAllocatorRoleName is the name of the Role and RoleBinding
 	// resource for the Target Allocator.
 	targetAllocatorRoleName = baseResourceName + "-targetallocator"
+	// targetAllocatorConfigMapName is the name of the ConfigMap for the
+	// Target Allocator.
+	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
 )
 
 // Actuator is an implementation of [extension.Actuator].
@@ -326,7 +330,14 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		kubernetes.SeedCodec,
 		kubernetes.SeedSerializer,
 	)
+
+	taConfigMap, err := a.getTargetAllocatorConfigMap(ex.Namespace)
+	if err != nil {
+		return err
+	}
+
 	data, err := registry.AddAllAndSerialize(
+		taConfigMap,
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
@@ -494,6 +505,59 @@ func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Serv
 			},
 		},
 	}
+}
+
+// getTargetAllocatorConfigMap returns the [corev1.ConfigMap] for the Target
+// Allocator.
+func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.ConfigMap, error) {
+	taConfig := map[string]any{
+		"allocation_strategy":              otelv1alpha1.OpenTelemetryTargetAllocatorAllocationStrategyConsistentHashing,
+		"collector_not_ready_grace_period": 30 * time.Second,
+		"collector_namespace":              namespace,
+		"collector_selector": map[string]any{
+			"matchLabels": map[string]any{
+				"app.kubernetes.io/component":  "opentelemetry-collector",
+				"app.kubernetes.io/instance":   fmt.Sprintf("%s.%s", namespace, baseResourceName),
+				"app.kubernetes.io/managed-by": "opentelemetry-operator",
+				"app.kubernetes.io/name":       fmt.Sprintf("%s-collector", baseResourceName),
+				"app.kubernetes.io/part-of":    "opentelemetry",
+			},
+		},
+		"filter_strategy": "relabel-config",
+		"prometheus_cr": map[string]any{
+			"enabled":                true,
+			"allow_namespaces":       []string{namespace},
+			"scrape_interval":        30 * time.Second,
+			"scrape_config_selector": nil,
+			"probe_selector":         nil,
+			"pod_monitor_selector":   nil,
+			"deny_namespaces":        nil,
+			"service_monitor_selector": map[string]any{
+				"matchLabels": map[string]any{
+					// TODO(dnaeon): additional labels
+					"prometheus": "shoot",
+				},
+			},
+		},
+	}
+
+	data, err := yaml.Marshal(taConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      targetAllocatorConfigMapName,
+			Namespace: namespace,
+		},
+		// TODO(dnaeon): immutable?
+		Data: map[string]string{
+			"targetallocator.yaml": string(data),
+		},
+	}
+
+	return configMap, nil
 }
 
 // getTargetAllocatorRole returns the [rbacv1.Role] for the Target Allocator.
