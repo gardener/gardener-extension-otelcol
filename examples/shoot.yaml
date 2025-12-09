@@ -19,36 +19,35 @@ spec:
             # otlp: {}
             # OTLP HTTP exporter settings
             otlphttp:
-              endpoint: "https://opentelemetry-receiver:8080"
+              endpoint: "https://opentelemetry-receiver:8443"
               token:
                 resourceRef:
                   name: otelcol-bearer-token
                   dataKey: token
-#              tls:
-#              # insecureSkipVerify: false
-#                ca:
-#                  resourceRef:
-#                    name: otelcol-tls
-#                    dataKey: ca.crt
-#                cert:
-#                  resourceRef:
-#                    name: otelcol-tls
-#                    dataKey: tls.crt
-#                key:
-#                  resourceRef:
-#                    name: otelcol-tls
-#                    dataKey: tls.key
+              tls:
+                ca:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: ca.crt
+                cert:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.crt
+                key:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.key
   resources:
   - name: otelcol-bearer-token
     resourceRef:
       apiVersion: v1
       kind: Secret
       name: my-otelcol-bearer-token
-#  - name: otelcol-tls
-#    resourceRef:
-#      apiVersion: v1
-#      kind: Secret
-#      name: my-otelcol-tls
+  - name: otelcol-tls
+    resourceRef:
+      apiVersion: v1
+      kind: Secret
+      name: my-otelcol-tls
   cloudProfile:
     name: local
     kind: CloudProfile

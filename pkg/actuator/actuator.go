@@ -696,12 +696,14 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 
 const (
 	bearerTokenAuthName = "bearertokenauth"
+
+	volumeNameTLS      = "tls"
+	volumeMountPathTLS = "/etc/ssl/tls"
 )
 
 // getOtelExporters returns the OpenTelemetry exporters based on the given
 // [config.CollectorConfig] spec.
 func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
-
 	// TODO(dnaeon): debug exporter should be configurable via the shoot
 	// provider config
 	exporters := map[string]any{
@@ -713,6 +715,25 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
 		exporters["otlphttp"] = map[string]any{
 			"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
+		}
+
+		if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
+			tlsConfig := map[string]any{}
+
+			if tls.InsecureSkipVerify != nil {
+				tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+			}
+			if tls.CA != nil {
+				tlsConfig["ca_file"] = volumeMountPathTLS + "/" + tls.CA.ResourceRef.DataKey
+			}
+			if tls.Cert != nil {
+				tlsConfig["cert_file"] = volumeMountPathTLS + "/" + tls.Cert.ResourceRef.DataKey
+			}
+			if tls.Key != nil {
+				tlsConfig["key_file"] = volumeMountPathTLS + "/" + tls.Key.ResourceRef.DataKey
+			}
+
+			exporters["otlphttp"].(map[string]any)["tls"] = tlsConfig
 		}
 
 		if cfg.Spec.Exporters.OTLPHTTPExporter.Token != nil {
@@ -861,6 +882,31 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 				},
 			},
 		},
+	}
+
+	// TLS
+	if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
+		volume := corev1.Volume{Name: volumeNameTLS, VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{}}}
+
+		addSecretToProjectedVolume := func(resourceRef config.ResourceReferenceDetails) {
+			volume.Projected.Sources = append(volume.Projected.Sources, corev1.VolumeProjection{Secret: &corev1.SecretProjection{
+				LocalObjectReference: corev1.LocalObjectReference{Name: secretNameForResource(resourceRef.Name, resources)},
+				Items:                []corev1.KeyToPath{{Key: resourceRef.DataKey, Path: resourceRef.DataKey}},
+			}})
+		}
+
+		if tls.CA != nil {
+			addSecretToProjectedVolume(tls.CA.ResourceRef)
+		}
+		if tls.Cert != nil {
+			addSecretToProjectedVolume(tls.Cert.ResourceRef)
+		}
+		if tls.Key != nil {
+			addSecretToProjectedVolume(tls.Key.ResourceRef)
+		}
+
+		obj.Spec.Volumes = append(obj.Spec.Volumes, volume)
+		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{Name: volumeNameTLS, MountPath: volumeMountPathTLS})
 	}
 
 	// Bearer Token Authentication
