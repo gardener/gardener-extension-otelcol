@@ -46,7 +46,6 @@ import (
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config/validation"
-	"github.com/gardener/gardener-extension-otelcol/pkg/metrics"
 )
 
 const (
@@ -257,11 +256,6 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return fmt.Errorf("failed creating a new secrets manager: %w", err)
 	}
 
-	// Increment our example metrics counter
-	defer func() {
-		metrics.ActuatorOperationTotal.WithLabelValues(clusterName, "reconcile").Inc()
-	}()
-
 	logger.Info("reconciling extension", "name", ex.Name, "cluster", clusterName)
 
 	cluster, err := extensionscontroller.GetCluster(ctx, a.client, clusterName)
@@ -363,11 +357,6 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 // Delete deletes any resources managed by the [Actuator]. This method
 // implements the [extension.Actuator] interface.
 func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	// Increment our example metrics counter
-	defer func() {
-		metrics.ActuatorOperationTotal.WithLabelValues(ex.Namespace, "delete").Inc()
-	}()
-
 	secretsManager, err := a.newSecretsManager(ctx, logger, ex.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed creating a new secrets manager: %w", err)
@@ -386,11 +375,6 @@ func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extension
 // because of a force-delete event of the shoot cluster. This method implements
 // the [extension.Actuator] interface.
 func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	// Increment our example metrics counter
-	defer func() {
-		metrics.ActuatorOperationTotal.WithLabelValues(ex.Namespace, "force_delete").Inc()
-	}()
-
 	logger.Info("shoot has been force-deleted, deleting resources managed by extension")
 
 	return a.Delete(ctx, logger, ex)
@@ -399,11 +383,6 @@ func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *exte
 // Restore restores the resources managed by the extension [Actuator]. This
 // method implements the [extension.Actuator] interface.
 func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	// Increment our example metrics counter
-	defer func() {
-		metrics.ActuatorOperationTotal.WithLabelValues(ex.Namespace, "restore").Inc()
-	}()
-
 	return a.Reconcile(ctx, logger, ex)
 }
 
@@ -411,11 +390,6 @@ func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensio
 // because of a shoot control-plane migration event. This method implements the
 // [extension.Actuator] interface.
 func (a *Actuator) Migrate(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	// Increment our example metrics counter
-	defer func() {
-		metrics.ActuatorOperationTotal.WithLabelValues(ex.Namespace, "migrate").Inc()
-	}()
-
 	return a.Reconcile(ctx, logger, ex)
 }
 
