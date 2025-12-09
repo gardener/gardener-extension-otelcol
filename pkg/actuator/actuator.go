@@ -244,6 +244,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 	otelcolFeature, ok := a.gardenletFeatureGates[gardenerfeatures.OpenTelemetryCollector]
 	if !ok || !otelcolFeature {
 		logger.Info("gardenlet feature gate OpenTelemetryCollector is either missing or disabled")
+
 		return a.Delete(ctx, logger, ex)
 	}
 
@@ -340,18 +341,14 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(
+	return managedresources.CreateForSeed(
 		ctx,
 		a.client,
 		ex.Namespace,
 		managedResourceName,
 		false,
 		data,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 // Delete deletes any resources managed by the [Actuator]. This method
