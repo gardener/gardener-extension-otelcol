@@ -341,13 +341,22 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	return managedresources.CreateForSeed(
+	if err := managedresources.CreateForSeed(
 		ctx,
 		a.client,
 		ex.Namespace,
 		managedResourceName,
 		false,
 		data,
+	); err != nil {
+		return err
+	}
+
+	return managedresources.WaitUntilHealthy(
+		ctx,
+		a.reader,
+		ex.Namespace,
+		managedResourceName,
 	)
 }
 
@@ -510,7 +519,6 @@ func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.Config
 			"deny_namespaces":        nil,
 			"service_monitor_selector": map[string]any{
 				"matchLabels": map[string]any{
-					// TODO(dnaeon): additional labels
 					"prometheus": "shoot",
 				},
 			},
