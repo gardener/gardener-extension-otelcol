@@ -88,19 +88,12 @@ const (
 	// secretNameClientCertificate is the name of the server certificate of the Target Allocator.
 	secretNameClientCertificate = Name + "-collector-client"
 
-	// targetAllocatorName is the name of the [otelv1alpha1.TargetAllocator]
-	// resource created by the extension.
-	targetAllocatorName           = baseResourceName
+	// targetAllocatorDeploymentName is the name of the deployment for the
+	// Target Allocator.
 	targetAllocatorDeploymentName = baseResourceName + "-targetallocator"
-	// targetAllocatorServiceName is the name of the Kubernetes service for
-	// the Target Allocator.
-	targetAllocatorServiceName = baseResourceName + "-targetallocator"
 	// targetAllocatorHTTPSServiceName is the name of the Kubernetes service for
 	// HTTPS communication of the Target Allocator.
 	targetAllocatorHTTPSServiceName = baseResourceName + "-targetallocator-https"
-	// targetAllocatorServicePort is the port on which the Target Allocator
-	// service listens to.
-	targetAllocatorServicePort = 80
 	// targetAllocatorHTTPSPort is the port on which Target Allocator's
 	// HTTPS service listens to.
 	targetAllocatorHTTPSPort = 8443
@@ -610,68 +603,6 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 			Name:      targetAllocatorServiceAccountName,
 			Namespace: namespace,
 		}},
-	}
-}
-
-// getTargetAllocator returns the [otelv1alpha1.TargetAllocator] resource.
-// TODO(dnaeon): get rid of the allocator CR
-func (a *Actuator) getTargetAllocator(namespace string, caSecret, serverSecret *corev1.Secret) *otelv1alpha1.TargetAllocator {
-	const (
-		volumeNameCACertificate      = "ca-cert"
-		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
-
-		volumeNameServerCertificate      = "server-cert"
-		volumeMountPathServerCertificate = "/etc/ssl/certs/server"
-	)
-
-	return &otelv1alpha1.TargetAllocator{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetAllocatorName,
-			Namespace: namespace,
-			Labels:    a.getLabels(),
-		},
-		// TODO(dnaeon): finish the rest of the spec
-		Spec: otelv1alpha1.TargetAllocatorSpec{
-			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				Image:    "otel/target-allocator:v0.140.0", // TODO(dnaeon): this image should be configurable and vendored
-				Replicas: ptr.To(targetAllocatorReplicas),
-				Args: map[string]string{
-					"enable-https-server": "true",
-					"https-ca-file":       volumeMountPathCACertificate + "/" + secretsutils.DataKeyCertificateBundle,
-					"https-tls-cert-file": volumeMountPathServerCertificate + "/" + secretsutils.DataKeyCertificate,
-					"https-tls-key-file":  volumeMountPathServerCertificate + "/" + secretsutils.DataKeyPrivateKey,
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
-					{Name: volumeNameServerCertificate, MountPath: volumeMountPathServerCertificate, ReadOnly: true},
-				},
-				Volumes: []corev1.Volume{
-					{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
-					{Name: volumeNameServerCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: serverSecret.Name}}},
-				},
-				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10m"),
-						corev1.ResourceMemory: resource.MustParse("50Mi"),
-					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-				},
-				ServiceAccount: targetAllocatorServiceAccountName,
-			},
-			PrometheusCR: otelv1beta1.TargetAllocatorPrometheusCR{
-				Enabled:         true,
-				AllowNamespaces: []string{namespace},
-				ServiceMonitorSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						// TODO(dnaeon): additional labels
-						"prometheus": "shoot",
-					},
-				},
-			},
-		},
 	}
 }
 
