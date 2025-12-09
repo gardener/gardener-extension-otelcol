@@ -1,5 +1,14 @@
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: opentelemetry-receiver-auth
+  namespace: default
+type: Opaque
+stringData:
+  bearertoken: "secret"
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: opentelemetry-receiver
@@ -12,6 +21,12 @@ metadata:
   namespace: default
 data:
   collector.yaml: |
+    extensions:
+      # Bearer token authentication extension
+      bearertokenauth/server:
+        tokens:
+          - ${env:BEARER_TOKEN}
+
     receivers:
       otlp:
         protocols:
@@ -19,10 +34,17 @@ data:
             include_metadata: true
             endpoint: 0.0.0.0:55690
             compression_algorithms: ["", "gzip"]
+            # Enable authentication for HTTP endpoint
+            auth:
+              authenticator: bearertokenauth/server
+
     exporters:
       debug:
         verbosity: basic
+
     service:
+      extensions:
+        - bearertokenauth/server
       telemetry:
         logs:
           encoding: json
@@ -79,7 +101,12 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: otel/opentelemetry-collector:0.141.0
+        - name: BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opentelemetry-receiver-auth
+              key: bearertoken
+        image: otel/opentelemetry-collector-contrib:0.141.0
         imagePullPolicy: IfNotPresent
         name: otc-container
         resources:
@@ -91,6 +118,9 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: otc-internal
+        - mountPath: /etc/otel/auth
+          name: auth-secret
+          readOnly: true
       serviceAccountName: opentelemetry-receiver
       volumes:
       - configMap:
@@ -100,3 +130,7 @@ spec:
             path: collector.yaml
           name: opentelemetry-receiver
         name: otc-internal
+      - name: auth-secret
+        secret:
+          secretName: opentelemetry-receiver-auth
+          defaultMode: 0444
