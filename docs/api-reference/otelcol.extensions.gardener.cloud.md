@@ -103,12 +103,47 @@ _Appears in:_
 | `logs_endpoint` _string_ | LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs<br />When this setting is present the base endpoint setting is ignored for<br />logs. |  |  |
 | `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  |  |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  |  |
+| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
 | `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultExporterClientTimeout]. |  |  |
 | `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientReadBufferSize]. |  |  |
 | `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientWriteBufferSize]. |  |  |
 | `encoding` _[Encoding](#encoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [EncodingProto]. |  |  |
 | `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
 | `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
+
+
+#### ResourceReference
+
+
+
+ResourceReference references data from a Secret.
+
+
+
+_Appears in:_
+- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [TLSConfig](#tlsconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `resourceRef` _[ResourceReferenceDetails](#resourcereferencedetails)_ | ResourceRef references a resource in the shoot. |  |  |
+
+
+#### ResourceReferenceDetails
+
+
+
+ResourceReferenceDetails references a resource (e.g., a Secret) in the garden cluster.
+
+
+
+_Appears in:_
+- [ResourceReference](#resourcereference)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of thresource e reference in `.spec.resources` in the Shoot resource. |  |  |
+| `dataKey` _string_ | DataKey is the key in the resource data map. |  |  |
 
 
 #### RetryOnFailureConfig
@@ -135,11 +170,7 @@ _Appears in:_
 
 
 
-TLSConfig provides the TLS settings used by exporters and receivers.
-
-See [OpenTelemetry TLS Configuration Settings] for more details.
-
-[OpenTelemetry TLS Configuration Settings]: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md
+TLSConfig provides the TLS settings used by exporters.
 
 
 
@@ -148,19 +179,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `insecure` _boolean_ | Insecure specifies whether to disable client transport security for<br />the exporter's HTTPs or gRPC connection. Default is false. |  |  |
-| `curve_preferences` _string array_ | CurvePreferences specifies the curve preferences that will be used in<br />an ECDHE handshake, in preference order.<br />Accepted values by OTLP are: X25519, P521, P256, and P384. |  |  |
-| `cert_file` _string_ | CertFile specifies the path to the TLS cert to use for TLS required connections. |  |  |
-| `cert_pem` _string_ | CertPEM is an alternative to CertFile, which provides the certificate<br />contents as a string instead of a filepath. |  |  |
-| `key_file` _string_ | KeyFile specifies the path to the TLS key to use for TLS required<br />connections. |  |  |
-| `key_pem` _string_ | KeyPEM is an alternative to KeyFile, which provides the key contents<br />as a string instead of a filepath. |  |  |
-| `ca_file` _string_ | CAFile specifies the path to the CA cert. For a client this verifies<br />the server certificate. For a server this verifies client<br />certificates. If empty uses system root CA. |  |  |
-| `ca_pem` _string_ | CAPEM is an alternative to CAFile, which provides the CA cert<br />contents as a string instead of a filepath. |  |  |
-| `include_system_ca_certs_pool` _boolean_ | IncludeSystemCACertsPool specifies whether to load the system<br />certificate authorities pool alongside the certificate authority. |  |  |
-| `insecure_skip_verify` _boolean_ | InsecureSkipVerify specifies whether to skip verifying the<br />certificate or not.<br />Additionally you can configure TLS to be enabled but skip verifying<br />the server's certificate chain. This cannot be combined with `Insecure'<br />since `Insecure' won't use TLS at all. |  |  |
-| `min_version` _string_ | MinVersion specifies the minimum acceptable TLS version.<br />Valid values are 1.0, 1.1, 1.2, 1.3.<br />The default value for this field is 1.2.<br />Note, that TLS 1.0 and 1.1 are deprecated due to known<br />vulnerabilities and should be avoided.<br />default="1.2" |  |  |
-| `max_version` _string_ | MaxVersion specifies the maximum acceptable TLS version. |  |  |
-| `cipher_suites` _string array_ | CipherSuites specifies the list of cipher suites to use.<br />Explicit cipher suites can be set. If left blank, a safe default list<br />is used. See https://go.dev/src/crypto/tls/cipher_suites.go for a<br />list of supported cipher suites. |  |  |
-| `reload_interval` _[Duration](#duration)_ | ReloadInterval specifies the duration after which the certificate<br />will be reloaded. If not set, it will never be reloaded. |  |  |
+| `insecureSkipVerify` _boolean_ | InsecureSkipVerify specifies whether to skip verifying the<br />certificate or not. |  |  |
+| `ca` _[ResourceReference](#resourcereference)_ | CA references the CA certificate to use for verifying the server certificate.<br />For a client this verifies the server certificate.<br />For a server this verifies client certificates.<br />If empty uses system root CA. |  |  |
+| `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  |  |
+| `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  |  |
 
 
