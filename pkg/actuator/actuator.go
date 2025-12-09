@@ -10,6 +10,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"time"
 
@@ -620,6 +622,31 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 	return obj
 }
 
+// getOtelExporters returns the OpenTelemetry exporters based on the given
+// [config.CollectorConfig] spec.
+func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
+	// TODO(dnaeon): authentication, tls, etc.
+	httpExporter := map[string]any{
+		"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
+	}
+
+	// TODO(dnaeon): debug exporter should be configurable via the shoot
+	// provider config
+	exporters := map[string]any{
+		"debug": map[string]any{
+			"verbosity": "basic", // basic, normal or detailed levels
+		},
+	}
+
+	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
+		exporters["otlphttp"] = httpExporter
+	}
+
+	// TODO(dnaeon): add OTLP gRPC exporter
+
+	return exporters
+}
+
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *corev1.Secret, cfg config.CollectorConfig) *otelv1beta1.OpenTelemetryCollector {
@@ -631,24 +658,8 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
 	)
 
-	// TODO(dnaeon): authentication, tls, etc.
-	httpExporter := map[string]any{
-		"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
-	}
-	exporters := map[string]any{
-		"debug": map[string]any{
-			"verbosity": "basic", // basic, normal or detailed
-		},
-	}
-
-	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
-		exporters["otlphttp"] = httpExporter
-	}
-
-	exporterNames := make([]string, 0)
-	for k := range exporters {
-		exporterNames = append(exporterNames, k)
-	}
+	exporters := a.getOtelExporters(cfg)
+	exporterNames := slices.Sorted(maps.Keys(exporters))
 
 	return &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
@@ -728,8 +739,6 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 					},
 				},
 				Exporters: otelv1beta1.AnyConfig{
-					// TODO(dnaeon): Add the actual exporter here
-					// TODO(dnaeon): remove the debug exporter
 					Object: exporters,
 				},
 				Service: otelv1beta1.Service{
