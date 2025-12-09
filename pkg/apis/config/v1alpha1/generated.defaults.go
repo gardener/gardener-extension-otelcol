@@ -20,17 +20,11 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
-	if in.Spec.Exporters.OTLPHTTPExporter.TLS.Insecure == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.OTLPHTTPExporter.TLS.Insecure = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.TLS.IncludeSystemCACertsPool == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.OTLPHTTPExporter.TLS.IncludeSystemCACertsPool = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+	if in.Spec.Exporters.OTLPHTTPExporter.TLS != nil {
+		if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
+			var ptrVar1 bool = false
+			in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+		}
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Timeout == 0 {
 		in.Spec.Exporters.OTLPHTTPExporter.Timeout = time.Duration(DefaultExporterClientTimeout)

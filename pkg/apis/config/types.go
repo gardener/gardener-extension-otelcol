@@ -34,81 +34,6 @@ const (
 	CompressionNone Compression = "none"
 )
 
-// TLSConfig provides the TLS settings used by exporters and receivers.
-//
-// See [OpenTelemetry TLS Configuration Settings] for more details.
-//
-// [OpenTelemetry TLS Configuration Settings]: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md
-type TLSConfig struct {
-	// Insecure specifies whether to disable client transport security for
-	// the exporter's HTTPs or gRPC connection.
-	Insecure *bool
-
-	// CurvePreferences specifies the curve preferences that will be used in
-	// an ECDHE handshake, in preference order.
-	//
-	// Accepted values by OTLP are: X25519, P521, P256, and P384.
-	CurvePreferences []string
-
-	// CertFile specifies the path to the TLS cert to use for TLS required connections.
-	CertFile string
-
-	// CertPEM is an alternative to CertFile, which provides the certificate
-	// contents as a string instead of a filepath.
-	CertPEM string
-
-	// KeyFile specifies the path to the TLS key to use for TLS required
-	// connections.
-	KeyFile string
-
-	// KeyPEM is an alternative to KeyFile, which provides the key contents
-	// as a string instead of a filepath.
-	KeyPEM string
-
-	// CAFile specifies the path to the CA cert. For a client this verifies
-	// the server certificate. For a server this verifies client
-	// certificates. If empty uses system root CA.
-	CAFile string
-
-	// CAPEM is an alternative to CAFile, which provides the CA cert
-	// contents as a string instead of a filepath.
-	CAPEM string
-
-	// IncludeSystemCACertsPool specifies whether to load the system
-	// certificate authorities pool alongside the certificate authority.
-	IncludeSystemCACertsPool *bool
-
-	// InsecureSkipVerify specifies whether to skip verifying the
-	// certificate or not.
-	//
-	// Additionally you can configure TLS to be enabled but skip verifying
-	// the server's certificate chain. This cannot be combined with `Insecure'
-	// since `Insecure' won't use TLS at all.
-	InsecureSkipVerify *bool
-
-	// MinVersion specifies the minimum acceptable TLS version.
-	//
-	// Valid values are 1.0, 1.1, 1.2, 1.3.
-	//
-	// Note, that TLS 1.0 and 1.1 are deprecated due to known
-	// vulnerabilities and should be avoided.
-	MinVersion string
-
-	// MaxVersion specifies the maximum acceptable TLS version.
-	MaxVersion string
-
-	// CipherSuites specifies the list of cipher suites to use.
-	//
-	// Explicit cipher suites can be set. If left blank, a safe default list
-	// is used. See https://go.dev/src/crypto/tls/cipher_suites.go for a
-	// list of supported cipher suites.
-	CipherSuites []string
-
-	// ReloadInterval specifies the duration after which the certificate
-	// will be reloaded. If not set, it will never be reloaded.
-	ReloadInterval time.Duration
-}
-
 // RetryOnFailureConfig provides the retry policy for an exporter.
 type RetryOnFailureConfig struct {
 	// Enabled specifies whether retry on failure is enabled or not.
@@ -168,7 +93,9 @@ type OTLPHTTPExporterConfig struct {
 	ProfilesEndpoint string
 
 	// TLS specifies the TLS configuration settings for the exporter.
-	TLS TLSConfig
+	TLS *TLSConfig
+	// Token references a bearer token for authentication.
+	Token *ResourceReference
 
 	// Timeout specifies the HTTP request time limit.
 	Timeout time.Duration
@@ -214,4 +141,34 @@ type CollectorConfig struct {
 
 	// Spec provides the extension configuration spec.
 	Spec CollectorConfigSpec
+}
+
+// TLSConfig provides the TLS settings used by exporters.
+type TLSConfig struct {
+	// InsecureSkipVerify specifies whether to skip verifying the
+	// certificate or not.
+	InsecureSkipVerify *bool
+	// CA references the CA certificate to use for verifying the server certificate.
+	// For a client this verifies the server certificate.
+	// For a server this verifies client certificates.
+	// If empty uses system root CA.
+	CA *ResourceReference
+	// Cert references the client certificate to use for TLS required connections.
+	Cert *ResourceReference
+	// Key references the client key to use for TLS required connections.
+	Key *ResourceReference
+}
+
+// ResourceReference references data from a Secret.
+type ResourceReference struct {
+	// ResourceRef references a resource in the shoot.
+	ResourceRef ResourceReferenceDetails
+}
+
+// ResourceReferenceDetails references a resource (e.g., a Secret) in the garden cluster.
+type ResourceReferenceDetails struct {
+	// Name is the name of thresource e reference in `.spec.resources` in the Shoot resource.
+	Name string
+	// DataKey is the key in the resource data map.
+	DataKey string
 }

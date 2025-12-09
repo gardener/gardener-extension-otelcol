@@ -62,115 +62,6 @@ const (
 	DefaultExporterClientWriteBufferSize = 512 * 1024
 )
 
-// TLSConfig provides the TLS settings used by exporters and receivers.
-//
-// See [OpenTelemetry TLS Configuration Settings] for more details.
-//
-// [OpenTelemetry TLS Configuration Settings]: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md
-type TLSConfig struct {
-	// Insecure specifies whether to disable client transport security for
-	// the exporter's HTTPs or gRPC connection. Default is false.
-	//
-	// +k8s:optional
-	// +default=false
-	Insecure *bool `json:"insecure,omitzero"`
-
-	// CurvePreferences specifies the curve preferences that will be used in
-	// an ECDHE handshake, in preference order.
-	//
-	// Accepted values by OTLP are: X25519, P521, P256, and P384.
-	//
-	// +k8s:optional
-	CurvePreferences []string `json:"curve_preferences,omitzero"`
-
-	// CertFile specifies the path to the TLS cert to use for TLS required connections.
-	//
-	// +k8s:optional
-	CertFile string `json:"cert_file,omitzero"`
-
-	// CertPEM is an alternative to CertFile, which provides the certificate
-	// contents as a string instead of a filepath.
-	//
-	// +k8s:optional
-	CertPEM string `json:"cert_pem,omitzero"`
-
-	// KeyFile specifies the path to the TLS key to use for TLS required
-	// connections.
-	//
-	// +k8s:optional
-	KeyFile string `json:"key_file,omitzero"`
-
-	// KeyPEM is an alternative to KeyFile, which provides the key contents
-	// as a string instead of a filepath.
-	//
-	// +k8s:optional
-	KeyPEM string `json:"key_pem,omitzero"`
-
-	// CAFile specifies the path to the CA cert. For a client this verifies
-	// the server certificate. For a server this verifies client
-	// certificates. If empty uses system root CA.
-	//
-	// +k8s:optional
-	CAFile string `json:"ca_file,omitzero"`
-
-	// CAPEM is an alternative to CAFile, which provides the CA cert
-	// contents as a string instead of a filepath.
-	//
-	// +k8s:optional
-	CAPEM string `json:"ca_pem,omitzero"`
-
-	// IncludeSystemCACertsPool specifies whether to load the system
-	// certificate authorities pool alongside the certificate authority.
-	//
-	// +k8s:optional
-	// +default=false
-	IncludeSystemCACertsPool *bool `json:"include_system_ca_certs_pool,omitzero"`
-
-	// InsecureSkipVerify specifies whether to skip verifying the
-	// certificate or not.
-	//
-	// Additionally you can configure TLS to be enabled but skip verifying
-	// the server's certificate chain. This cannot be combined with `Insecure'
-	// since `Insecure' won't use TLS at all.
-	//
-	// +k8s:optional
-	// +default=false
-	InsecureSkipVerify *bool `json:"insecure_skip_verify,omitzero"`
-
-	// MinVersion specifies the minimum acceptable TLS version.
-	//
-	// Valid values are 1.0, 1.1, 1.2, 1.3.
-	//
-	// The default value for this field is 1.2.
-	//
-	// Note, that TLS 1.0 and 1.1 are deprecated due to known
-	// vulnerabilities and should be avoided.
-	//
-	// +k8s:optional
-	// default="1.2"
-	MinVersion string `json:"min_version,omitzero"`
-
-	// MaxVersion specifies the maximum acceptable TLS version.
-	//
-	// +k8s:optional
-	MaxVersion string `json:"max_version,omitzero"`
-
-	// CipherSuites specifies the list of cipher suites to use.
-	//
-	// Explicit cipher suites can be set. If left blank, a safe default list
-	// is used. See https://go.dev/src/crypto/tls/cipher_suites.go for a
-	// list of supported cipher suites.
-	//
-	// +k8s:optional
-	CipherSuites []string `json:"cipher_suites,omitzero"`
-
-	// ReloadInterval specifies the duration after which the certificate
-	// will be reloaded. If not set, it will never be reloaded.
-	//
-	// +k8s:optional
-	ReloadInterval time.Duration `json:"reload_interval,omitzero"`
-}
-
 // RetryOnFailureConfig provides the retry policy for an exporter.
 type RetryOnFailureConfig struct {
 	// Enabled specifies whether retry on failure is enabled or not. Default
@@ -261,7 +152,11 @@ type OTLPHTTPExporterConfig struct {
 	// TLS specifies the TLS configuration settings for the exporter.
 	//
 	// +k8s:optional
-	TLS TLSConfig `json:"tls,omitzero"`
+	TLS *TLSConfig `json:"tls,omitempty"`
+	// Token references a bearer token for authentication.
+	//
+	// +k8s:optional
+	Token *ResourceReference `json:"token,omitempty"`
 
 	// Timeout specifies the HTTP request time limit. Default value is
 	// [DefaultExporterClientTimeout].
@@ -328,4 +223,48 @@ type CollectorConfig struct {
 
 	// Spec provides the extension configuration spec.
 	Spec CollectorConfigSpec `json:"spec,omitzero"`
+}
+
+// TLSConfig provides the TLS settings used by exporters.
+type TLSConfig struct {
+	// InsecureSkipVerify specifies whether to skip verifying the
+	// certificate or not.
+	// +k8s:optional
+	// +default=false
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+	// CA references the CA certificate to use for verifying the server certificate.
+	// For a client this verifies the server certificate.
+	// For a server this verifies client certificates.
+	// If empty uses system root CA.
+	//
+	// +k8s:optional
+	CA *ResourceReference `json:"ca,omitempty"`
+	// Cert references the client certificate to use for TLS required connections.
+	//
+	// +k8s:optional
+	Cert *ResourceReference `json:"cert,omitempty"`
+	// Key references the client key to use for TLS required connections.
+	//
+	// +k8s:optional
+	Key *ResourceReference `json:"key,omitempty"`
+}
+
+// ResourceReference references data from a Secret.
+type ResourceReference struct {
+	// ResourceRef references a resource in the shoot.
+	//
+	// +k8s:required
+	ResourceRef ResourceReferenceDetails `json:"resourceRef"`
+}
+
+// ResourceReferenceDetails references a resource (e.g., a Secret) in the garden cluster.
+type ResourceReferenceDetails struct {
+	// Name is the name of thresource e reference in `.spec.resources` in the Shoot resource.
+	//
+	// +k8s:required
+	Name string `json:"name"`
+	// DataKey is the key in the resource data map.
+	//
+	// +k8s:required
+	DataKey string `json:"dataKey"`
 }

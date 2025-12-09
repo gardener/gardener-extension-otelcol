@@ -18,7 +18,37 @@ spec:
             # TODO: implement OTLP gRPC as well
             # otlp: {}
             # OTLP HTTP exporter settings
-            otlphttp: {}
+            otlphttp:
+              endpoint: "https://opentelemetry-receiver:8080"
+#              tls:
+#              # insecureSkipVerify: false
+#                ca:
+#                  resourceRef:
+#                    name: otelcol-tls
+#                    dataKey: ca.crt
+#                cert:
+#                  resourceRef:
+#                    name: otelcol-tls
+#                    dataKey: tls.crt
+#                key:
+#                  resourceRef:
+#                    name: otelcol-tls
+#                    dataKey: tls.key
+#              token:
+#                resourceRef:
+#                  name: otelcol-bearer-token
+#                  dataKey: token
+#  resources:
+#  - name: otelcol-tls
+#    resourceRef:
+#      apiVersion: v1
+#      kind: Secret
+#      name: my-otelcol-tls
+#  - name: otelcol-bearer-token
+#    resourceRef:
+#      apiVersion: v1
+#      kind: Secret
+#      name: my-otelcol-bearer-token
   cloudProfile:
     name: local
     kind: CloudProfile
