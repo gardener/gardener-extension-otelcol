@@ -9,6 +9,137 @@ stringData:
   bearertoken: "secret"
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: opentelemetry-receiver-tls
+  namespace: default
+type: Opaque
+stringData:
+  # CA certificate for verifying client certificates presented by otel-collector
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIFFzCCAv+gAwIBAgIUf9/8OdMkmr+VVT40dqOkZY4jStQwDQYJKoZIhvcNAQEL
+    BQAwGzEZMBcGA1UEAwwQb3RlbC1yZWNlaXZlci1jYTAeFw0yNTEyMDkxMzEzNTZa
+    Fw0zNTEyMDcxMzEzNTZaMBsxGTAXBgNVBAMMEG90ZWwtcmVjZWl2ZXItY2EwggIi
+    MA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDqlelRjXsnW9v2tcJL2KbPa2tU
+    xGQxJAos5+fVIs1H7CGOKSskxryW4xEXqiiQTnUM+XB46TVvSpe0GQlCOaYoFhki
+    MuDaciThpSjdHbm3S1yrtOq8mwpEbAVstawe51JPLByudjEU8Ntw/H1s4VO+CzER
+    ZWA9luQUe+5fbcjn0u+dogw5HY/5y3xVgyDD4Tlb4YKgeTzvMC/MvKBFAGbKJso2
+    xspNsaDRjtR586gCCZ1Qgy/2hKh78bm0alSj+Ho2mFlyY1uP81MfVcBs2nOgRzrL
+    ZLp01Fw5lgKbH8U/QculHg09rKIMqRRfjxU7CoFDxPiDU7prWPkZ4MLBPFIa5Bch
+    at1LO6OxFQxnvjYhCrGBt8RyqxB8E6JgTx1nhHvGJ8+Vw1ykV8DmlS+rubrEbGEl
+    l4M8P4UJxP8XEM4osgIx7Qtv7nvnh6Z6+39xoKsgVO1zrlv72kZ3w6H/f9rNRro5
+    X61jc5WeuXmvKbbuiHsN/BFAwKAd+i9SZ8pPfRqMK+hU5NWOa56tUmK9F3Iu0FLL
+    wVxhu2ArmrKAxSc0agHjAHlU6YctZEgJmzfHDLTK3Q+YRaXaZet89qoXBSiCNsP8
+    g7rLsCWff2B7gpOT1SVDgdJhXVpXKGFU8+CmzsaaDFh3LT15+PCX9V1iJ2vBtGD7
+    EdvuyzVvVequcYo1/QIDAQABo1MwUTAdBgNVHQ4EFgQUdn6Zy3Ddq6WggGGpXIg+
+    0xw1HKkwHwYDVR0jBBgwFoAUdn6Zy3Ddq6WggGGpXIg+0xw1HKkwDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAgEAnfX3IueU6mnbgwSxuKkjXkr0X11g
+    pgcI1OM6K71y/jSwJmdKcvfkC41L5cFkzBkruQ0SzDq1VSc3d+3aNaxEHJutrP5x
+    WeP2wAh1BXfiNdsOnu0SJe41Fy90nu7V8HQY+JDYGQS8GaNtFbHUwbqp4/eCM077
+    8kiyEumZ5Mqf66vi8N2otxdIXG2eRfVwNxPRZDGcspVbQ8MYgrl2M/poFaofuSUS
+    v5M/i1UNKVIOB6vJIst9/fkPL93iTKPFj66Yfgpue0B2MF5N9luOKUI0C1LpKqQw
+    HRWYyI3R7pW5Z19eB4vGFgofvUkwjPi25rjM/B4I4n6gKScsjnDvRlBVZFa3eR3R
+    sW2ioVbWfyB5lTPwnPDY/HSd+g+L5YYJNYPsGnwpXYYLb1aLXiihQBTOCr8srQ41
+    A/lbuzuDxDTv3e3+OyDSps7L5dVM6gdJw2DnbnXINlLBk3MBgjsY+arspjPpHakp
+    2zmcD0+50IG2OnJFAZ5RV9KNesHkwzoTvSSBd32UtMEyvvzfY9j7roOG03ehj1aU
+    t3WiBAxwN6x19y1pvlNzToTyhr8Spzz9R/OHbv0NpFKafA+aqguT1V7jM/rvSga/
+    PQxLwLoF4irMAu7m6+j5JMlKNrTwiG1PYZIJ8DyThMWB7ZzNrnaynxVCwz+QGkot
+    8sOnUojc9c6wdY0=
+    -----END CERTIFICATE-----
+  # Server certificate
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIGDTCCA/WgAwIBAgIUTc1ZgVkYqBbXfPXdb8Bf3DGV5g0wDQYJKoZIhvcNAQEL
+    BQAwGzEZMBcGA1UEAwwQb3RlbC1yZWNlaXZlci1jYTAeFw0yNTEyMDkxMzE1MTZa
+    Fw0zNTEyMDcxMzE1MTZaMCkxJzAlBgNVBAMMHm9wZW50ZWxlbWV0cnktcmVjZWl2
+    ZXIuZGVmYXVsdDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALmcFiT/
+    1e9DmufniWbm9Vab8FOb6x4m3SgD6JTWnTCmO6s2qBdXHXKDdS67Do63Xi5xSXM2
+    Mk7y0gamtIsoXRCXOaiCD4KcBn7UBAXUnWCMD6bNsQejgSjTfi+R5nLr91Uo3i7Z
+    fAZ0p1b7NE8KL64+2fO4FqqfsUqDb19EB1r0RMMWMhixWojfghZqpG9uLoiqqdaL
+    WPRPkAUTuLz4sVCH/yaEbrP9sAl8FWZYIBUQYVqW1jyGGsHNMaLmWySAeimu5/PH
+    ap0xLSZidSM2UpB/0tfG3T0qm4pLnrl1x/y18SjlcFMjCgrMhWMd/7vok5RqSYBA
+    2QJJhcPU2nn/7rtBpN0uGrCe8Vg9hpawVJB0nSbR1JPYfKZe5tIKgQEYqNRoSlmy
+    IPs7sFW7HfrnWkFsqM10kIGd9KBTm8WCb/XuMWfM6rxQAMItLkmv8rPv2umx/G/f
+    NqjvL5GznEaScNwZwIMcWpFLiblZ4XoCPZiLTsTErV7Yo4Ha9xBWIcGvgVEH/Ik/
+    SnmZl0PPTw1pAoAxiUZO1G55PpAf3ePb/dbxU2IEyj1nc7BxdAp9oAr+PioCkBKh
+    htmcTtr4tAqf/kvKQdHz0RRSyJ07yKWazx2mo+2h6CuCcNe6x3wwR/WfvL//gApv
+    4IQxg+RSWK9P8Pw+9OQh6JHwkiCk1Q8EfL7zAgMBAAGjggE5MIIBNTAfBgNVHSME
+    GDAWgBR2fpnLcN2rpaCAYalciD7THDUcqTAJBgNVHRMEAjAAMAsGA1UdDwQEAwIF
+    oDATBgNVHSUEDDAKBggrBgEFBQcDATCBxQYDVR0RBIG9MIG6ghZvcGVudGVsZW1l
+    dHJ5LXJlY2VpdmVygh5vcGVudGVsZW1ldHJ5LXJlY2VpdmVyLmRlZmF1bHSCIm9w
+    ZW50ZWxlbWV0cnktcmVjZWl2ZXIuZGVmYXVsdC5zdmOCKm9wZW50ZWxlbWV0cnkt
+    cmVjZWl2ZXIuZGVmYXVsdC5zdmMuY2x1c3RlcoIwb3BlbnRlbGVtZXRyeS1yZWNl
+    aXZlci5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsMB0GA1UdDgQWBBSRU+Q7CRhX
+    qIRlfAyjK/oB7zFp6zANBgkqhkiG9w0BAQsFAAOCAgEAPpon6E0ugZLtQJwGa9Gu
+    zlZImW+o/lbkuwNDcvdI5ted0I4qrO0ZBAyVjpnNrQqaHH353teiYBfHasw9Fbmq
+    U744covGTdsQcx4mrdpM5Fkw1hYhriMefrgblFJsmB2WHs8jUafxq6H7BfFmkvbB
+    wiXn9I1cQ7l55XF0NPGpIMru6yhpA0oVQyehBkDDCZ6hcg5/IhiQnsixUY2JXE4o
+    Pnat1R+oGUQIibeRr/nTyOnmM9L/RQC4JwNfK19k7l/L93Hy6JXuEJxtCHjv0cjc
+    OUFndEOABBokDDzanuobGbQy7UfMg/mFWqYi8Slue/MS4JprwKme4f8KY64Mrs7x
+    B+3hQRE4clMJ3eWIUFNvVhm+siFT8SmJxDuwVqW8TVn/sFZJ3uBIkkQ2A34MYFTl
+    ZwgeYYf68n0G1IVmPhWhXQuWpkjdoxQ04Rqyh6dr5yws5px7z0UTedRqh/BM6iF2
+    USC+rhgfjRVFGh7357Rnl1ClBkAvgeUgKEamAFxRTRWrHVbrXr4tSNqvUZix/2id
+    7qHPY3g1+yHq8+wPZpSJ6Ba4J/Gd2ARqKd5XMCSJDXD4fW/wXuJ0da6gUxTgddG1
+    7pd1PhPE2/ddlnbUziniW50f7o1PRE0VlRrp9BDXhUyP/TQID2AjTz5JXHm3FOe+
+    j5u7CW25khdd8U5sQrIA6Ns=
+    -----END CERTIFICATE-----
+  # Server private key
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    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
+    etFqw8Rncr1aT9TaoXkChR3/wiCOhA==
+    -----END PRIVATE KEY-----
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: opentelemetry-receiver
@@ -34,6 +165,11 @@ data:
             include_metadata: true
             endpoint: 0.0.0.0:55690
             compression_algorithms: ["", "gzip"]
+            # Enable TLS with client certificate verification
+            tls:
+              cert_file: /etc/otel/tls/tls.crt
+              key_file: /etc/otel/tls/tls.key
+              client_ca_file: /etc/otel/tls/ca.crt
             # Enable authentication for HTTP endpoint
             auth:
               authenticator: bearertokenauth/server
@@ -71,7 +207,7 @@ metadata:
   namespace: default
 spec:
   ports:
-  - port: 8080
+  - port: 8443
     protocol: TCP
     targetPort: 55690
   selector:
@@ -121,6 +257,9 @@ spec:
         - mountPath: /etc/otel/auth
           name: auth-secret
           readOnly: true
+        - mountPath: /etc/otel/tls
+          name: tls-secret
+          readOnly: true
       serviceAccountName: opentelemetry-receiver
       volumes:
       - configMap:
@@ -133,4 +272,8 @@ spec:
       - name: auth-secret
         secret:
           secretName: opentelemetry-receiver-auth
+          defaultMode: 0444
+      - name: tls-secret
+        secret:
+          secretName: opentelemetry-receiver-tls
           defaultMode: 0444
