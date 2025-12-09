@@ -17,6 +17,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -335,7 +336,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorHTTPSService(ex.Namespace),
 		a.getTargetAllocatorDeployment(ex.Namespace, caBundleSecret, serverSecret),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
-		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret, cfg),
+		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret, cfg, cluster.Shoot.Spec.Resources),
 	)
 	if err != nil {
 		return err
@@ -693,13 +694,13 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 	return obj
 }
 
+const (
+	bearerTokenAuthName = "bearertokenauth"
+)
+
 // getOtelExporters returns the OpenTelemetry exporters based on the given
 // [config.CollectorConfig] spec.
 func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
-	// TODO(dnaeon): authentication, tls, etc.
-	httpExporter := map[string]any{
-		"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
-	}
 
 	// TODO(dnaeon): debug exporter should be configurable via the shoot
 	// provider config
@@ -710,7 +711,13 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	}
 
 	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
-		exporters["otlphttp"] = httpExporter
+		exporters["otlphttp"] = map[string]any{
+			"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
+		}
+
+		if cfg.Spec.Exporters.OTLPHTTPExporter.Token != nil {
+			exporters["otlphttp"].(map[string]any)["auth"] = map[string]any{"authenticator": bearerTokenAuthName}
+		}
 	}
 
 	// TODO(dnaeon): add OTLP gRPC exporter
@@ -720,21 +727,25 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
 // resource, which the extension manages.
-func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *corev1.Secret, cfg config.CollectorConfig) *otelv1beta1.OpenTelemetryCollector {
+func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *corev1.Secret, cfg config.CollectorConfig, resources []gardencorev1beta1.NamedResourceReference) *otelv1beta1.OpenTelemetryCollector {
 	const (
 		volumeNameCACertificate      = "ca-cert"
 		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
 
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
+
+		volumeNameBearerToken          = "bearer-token-auth"
+		volumeMountPathBearerTokenFile = "/etc/auth/bearer"
 	)
 
-	exporters := a.getOtelExporters(cfg)
-	exporterNames := slices.Sorted(maps.Keys(exporters))
+	var (
+		exporters     = a.getOtelExporters(cfg)
+		exporterNames = slices.Sorted(maps.Keys(exporters))
+		allLabels     = utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
+	)
 
-	allLabels := utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
-
-	return &otelv1beta1.OpenTelemetryCollector{
+	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        otelCollectorName,
 			Namespace:   namespace,
@@ -754,7 +765,7 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 			Mode:            otelv1beta1.ModeStatefulSet,
 			UpgradeStrategy: otelv1beta1.UpgradeStrategyNone,
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
-				Image:    "otel/opentelemetry-collector:0.141.0", // TODO(dnaeon): this image should be configurable
+				Image:    "otel/opentelemetry-collector-contrib:0.141.0", // TODO(dnaeon): this image should be configurable
 				Replicas: ptr.To(otelCollectorReplicas),
 				VolumeMounts: []corev1.VolumeMount{
 					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
@@ -851,4 +862,33 @@ func (a *Actuator) getOtelCollector(namespace string, caSecret, clientSecret *co
 			},
 		},
 	}
+
+	// Bearer Token Authentication
+	if token := cfg.Spec.Exporters.OTLPHTTPExporter.Token; token != nil {
+		if obj.Spec.Config.Extensions == nil {
+			obj.Spec.Config.Extensions = &otelv1beta1.AnyConfig{}
+		}
+
+		if obj.Spec.Config.Extensions.Object == nil {
+			obj.Spec.Config.Extensions.Object = make(map[string]any)
+		}
+
+		obj.Spec.Config.Extensions.Object[bearerTokenAuthName] = map[string]any{"filename": volumeMountPathBearerTokenFile + "/" + token.ResourceRef.DataKey}
+		obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, bearerTokenAuthName)
+		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{Name: volumeNameBearerToken, MountPath: volumeMountPathBearerTokenFile})
+		obj.Spec.Volumes = append(obj.Spec.Volumes, corev1.Volume{Name: volumeNameBearerToken, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: secretNameForResource(token.ResourceRef.Name, resources)}}})
+	}
+
+	return obj
+}
+
+func secretNameForResource(resourceName string, resources []gardencorev1beta1.NamedResourceReference) string {
+	for _, resource := range resources {
+		if resource.Name == resourceName &&
+			resource.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && resource.ResourceRef.Kind == "Secret" {
+
+			return v1beta1constants.ReferencedResourcesPrefix + resource.ResourceRef.Name
+		}
+	}
+	return ""
 }
