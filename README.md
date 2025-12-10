@@ -19,6 +19,7 @@ The project repo uses the following code structure.
 | `pkg/apis`        | Extension API types, e.g. configuration spec, etc.                                       |
 | `pkg/actuator`    | Implementations for the Gardener Extension Actuator interfaces                           |
 | `pkg/controller`  | Utility wrappers for creating Kubernetes reconcilers for Gardener Actuators              |
+| `pkg/imagevector` | Image vector for container images                                                        |
 | `pkg/heartbeat`   | Utility wrappers for creating heartbeat reconcilers for Gardener extensions              |
 | `pkg/metrics`     | Metrics emitted by the extension                                                         |
 | `pkg/mgr`         | Utility wrappers for creating `controller-runtime` managers using functional options API |
