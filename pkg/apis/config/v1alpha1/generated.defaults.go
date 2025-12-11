@@ -20,6 +20,10 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
+	if in.Spec.Exporters.OTLPHTTPExporter.Enabled == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.OTLPHTTPExporter.Enabled = &ptrVar1
+	}
 	if in.Spec.Exporters.OTLPHTTPExporter.TLS != nil {
 		if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
 			var ptrVar1 bool = false

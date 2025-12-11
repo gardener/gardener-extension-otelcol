@@ -215,6 +215,7 @@ func Convert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in *conf
 }
 
 func autoConvert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in *OTLPHTTPExporterConfig, out *config.OTLPHTTPExporterConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Endpoint = in.Endpoint
 	out.TracesEndpoint = in.TracesEndpoint
 	out.MetricsEndpoint = in.MetricsEndpoint
@@ -239,6 +240,7 @@ func Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in
 }
 
 func autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in *config.OTLPHTTPExporterConfig, out *OTLPHTTPExporterConfig, s conversion.Scope) error {
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Endpoint = in.Endpoint
 	out.TracesEndpoint = in.TracesEndpoint
 	out.MetricsEndpoint = in.MetricsEndpoint
