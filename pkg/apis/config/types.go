@@ -61,6 +61,9 @@ type RetryOnFailureConfig struct {
 //
 // [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
 type OTLPHTTPExporterConfig struct {
+	// Enabled specifies whether the OTLP HTTP exporter is enabled or not.
+	Enabled *bool
+
 	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
 	//
 	// To send each signal a corresponding path will be added to this base
