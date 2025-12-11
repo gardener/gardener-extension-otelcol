@@ -121,10 +121,34 @@ type OTLPHTTPExporterConfig struct {
 	Compression Compression
 }
 
+// DebugExporterVerbosity specifies the verbosity level for the debug exporter.
+type DebugExporterVerbosity string
+
+const (
+	// DebugExporterVerbosityBasic specifies basic level of verbosity.
+	DebugExporterVerbosityBasic DebugExporterVerbosity = "basic"
+	// DebugExporterVerbosityNormal specifies normal level of verbosity.
+	DebugExporterVerbosityNormal DebugExporterVerbosity = "normal"
+	// DebugExporterVerbosityDetailed specifies detailed level of verbosity.
+	DebugExporterVerbosityDetailed DebugExporterVerbosity = "detailed"
+)
+
+// DebugExporterConfig provides the settings for the debug exporter
+type DebugExporterConfig struct {
+	// Enabled specifies whether the debug exporter is enabled or not.
+	Enabled *bool
+
+	// Verbosity specifies the verbosity level for the debug exporter.
+	Verbosity DebugExporterVerbosity
+}
+
 // CollectorExportersConfig provides the OTLP exporter settings.
 type CollectorExportersConfig struct {
 	// HTTPExporter provides the OTLP HTTP Exporter settings.
 	OTLPHTTPExporter OTLPHTTPExporterConfig
+
+	// DebugExporter provides the settings for the debug exporter.
+	DebugExporter DebugExporterConfig
 }
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]

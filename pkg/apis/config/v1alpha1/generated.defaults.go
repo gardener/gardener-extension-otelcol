@@ -57,4 +57,11 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 	if in.Spec.Exporters.OTLPHTTPExporter.Compression == "" {
 		in.Spec.Exporters.OTLPHTTPExporter.Compression = Compression(CompressionGzip)
 	}
+	if in.Spec.Exporters.DebugExporter.Enabled == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.DebugExporter.Enabled = &ptrVar1
+	}
+	if in.Spec.Exporters.DebugExporter.Verbosity == "" {
+		in.Spec.Exporters.DebugExporter.Verbosity = DebugExporterVerbosity(DebugExporterVerbosityBasic)
+	}
 }

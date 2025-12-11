@@ -199,12 +199,46 @@ type OTLPHTTPExporterConfig struct {
 	Compression Compression `json:"compression,omitzero"`
 }
 
+// DebugExporterVerbosity specifies the verbosity level for the debug exporter.
+//
+// +k8s:enum
+type DebugExporterVerbosity string
+
+const (
+	// DebugExporterVerbosityBasic specifies basic level of verbosity.
+	DebugExporterVerbosityBasic DebugExporterVerbosity = "basic"
+	// DebugExporterVerbosityNormal specifies normal level of verbosity.
+	DebugExporterVerbosityNormal DebugExporterVerbosity = "normal"
+	// DebugExporterVerbosityDetailed specifies detailed level of verbosity.
+	DebugExporterVerbosityDetailed DebugExporterVerbosity = "detailed"
+)
+
+// DebugExporterConfig provides the settings for the debug exporter
+type DebugExporterConfig struct {
+	// Enabled specifies whether the debug exporter is enabled or not.
+	//
+	// +k8s:optional
+	// +default=false
+	Enabled *bool `json:"enabled,omitzero"`
+
+	// Verbosity specifies the verbosity level for the debug exporter.
+	//
+	// +k8s:optional
+	// +default=ref(DebugExporterVerbosityBasic)
+	Verbosity DebugExporterVerbosity `json:"verbosity,omitzero"`
+}
+
 // CollectorExportersConfig provides the OTLP exporter settings.
 type CollectorExportersConfig struct {
 	// HTTPExporter provides the OTLP HTTP Exporter settings.
 	//
-	// +k8s:required
+	// +k8s:optional
 	OTLPHTTPExporter OTLPHTTPExporterConfig `json:"otlphttp,omitzero"`
+
+	// DebugExporter provides the settings for the debug exporter.
+	//
+	// +k8s:optional
+	DebugExporter DebugExporterConfig `json:"debug,omitzero"`
 }
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
