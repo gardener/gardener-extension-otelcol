@@ -11,6 +11,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
+const (
+	// ImageNameOTelTargetAllocator specifies the name of the image for the
+	// OpenTelemetry Target Allocator.
+	ImageNameOTelTargetAllocator = "otel-targetallocator"
+
+	// ImageNameOTelCollector specifies the name of the image for the
+	// OpenTelemetry Collector.
+	ImageNameOTelCollector = "otel-collector"
+)
+
 var (
 	//go:embed images.yaml
 	imagesYAML  string

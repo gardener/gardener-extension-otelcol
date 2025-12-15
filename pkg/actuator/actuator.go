@@ -80,9 +80,6 @@ const (
 	// otelCollectorServiceAccountName is the name of the service account
 	// for the OTel Collector.
 	otelCollectorServiceAccountName = otelCollectorName + "-collector"
-	// otelCollectorImageName is the name of the image for OTel Collector in
-	// the image vector.
-	otelCollectorImageName = "otel-collector"
 
 	// secretsManagerIdentity is the identity used for secrets management.
 	secretsManagerIdentity = "gardener-extension-" + Name
@@ -113,9 +110,6 @@ const (
 	// targetAllocatorConfigMapName is the name of the ConfigMap for the
 	// Target Allocator.
 	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
-	// targetAllocatorImageName is the name of the image for Target
-	// Allocator in the image vector.
-	targetAllocatorImageName = "otel-targetallocator"
 )
 
 // Actuator is an implementation of [extension.Actuator].
@@ -324,14 +318,14 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
 
-	taImage, err := imagevector.Images().FindImage(targetAllocatorImageName)
+	taImage, err := imagevector.Images().FindImage(imagevector.ImageNameOTelTargetAllocator)
 	if err != nil {
-		return fmt.Errorf("failed to find the image for %s: %w", targetAllocatorImageName, err)
+		return fmt.Errorf("failed to find image: %w", err)
 	}
 
-	collectorImage, err := imagevector.Images().FindImage(otelCollectorImageName)
+	collectorImage, err := imagevector.Images().FindImage(imagevector.ImageNameOTelCollector)
 	if err != nil {
-		return fmt.Errorf("failed to find the image for %s: %w", otelCollectorImageName, err)
+		return fmt.Errorf("failed to find image: %w", err)
 	}
 
 	// Bundle things up in a managed resource
