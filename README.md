@@ -2,6 +2,9 @@
 
 The `gardener-extension-otelcol` repo provides Gardener Extension for OpenTelemetry Collector.
 
+> [!WARNING]
+> This extension is in early development state. Do not use it in a production environment.
+
 # Requirements
 
 - [Go 1.25.x](https://go.dev/) or later
