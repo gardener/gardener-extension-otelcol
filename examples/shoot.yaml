@@ -14,12 +14,15 @@ spec:
         kind: CollectorConfig
         spec:
           exporters:
-            # OTLP gRPC exporter settings
-            # TODO: implement OTLP gRPC as well
-            # otlp: {}
+            # OTLP debug exporter
+            debug:
+              enabled: true
+              verbosity: detailed  # none, basic, normal or detailed
+
             # OTLP HTTP exporter settings
             otlphttp:
-              endpoint: "https://opentelemetry-receiver:8443"
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:8443"
               token:
                 resourceRef:
                   name: otelcol-bearer-token
