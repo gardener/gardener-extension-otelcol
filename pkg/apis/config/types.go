@@ -124,6 +124,16 @@ type OTLPHTTPExporterConfig struct {
 	Compression Compression
 }
 
+// IsEnabled is a predicate which returns whether the exporter is enabled or
+// not.
+func (cfg *OTLPHTTPExporterConfig) IsEnabled() bool {
+	if cfg.Enabled != nil {
+		return *cfg.Enabled
+	}
+
+	return false
+}
+
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
 type DebugExporterVerbosity string
 
@@ -143,6 +153,16 @@ type DebugExporterConfig struct {
 
 	// Verbosity specifies the verbosity level for the debug exporter.
 	Verbosity DebugExporterVerbosity
+}
+
+// IsEnabled is a predicate which returns whether the exporter is enabled or
+// not.
+func (cfg *DebugExporterConfig) IsEnabled() bool {
+	if cfg.Enabled != nil {
+		return *cfg.Enabled
+	}
+
+	return false
 }
 
 // CollectorExportersConfig provides the OTLP exporter settings.
