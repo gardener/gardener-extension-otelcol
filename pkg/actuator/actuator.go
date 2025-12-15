@@ -714,9 +714,13 @@ const (
 )
 
 // getDebugExporterConfig returns the OTel settings for the debug exporter.
-func (a *Actuator) getDebugExporterConfig(cfg config.CollectorConfig) map[string]any {
+func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[string]any {
+	// See the link below for more details about each config setting for the
+	// debug exporter.
+	//
+	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter
 	exporter := map[string]any{
-		"verbosity": cfg.Spec.Exporters.DebugExporter.Verbosity,
+		"verbosity": cfg.Verbosity,
 	}
 
 	return exporter
@@ -724,14 +728,52 @@ func (a *Actuator) getDebugExporterConfig(cfg config.CollectorConfig) map[string
 
 // getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
 // exporter.
-func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.CollectorConfig) map[string]any {
+func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) map[string]any {
 	exporter := map[string]any{}
 
-	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
-		exporter["endpoint"] = cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint
+	// See the link below for more details about each config setting of the
+	// OTLP HTTP exporter.
+	//
+	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+	if cfg.Endpoint != "" {
+		exporter["endpoint"] = cfg.Endpoint
 	}
 
-	if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
+	if cfg.TracesEndpoint != "" {
+		exporter["traces_endpoint"] = cfg.TracesEndpoint
+	}
+
+	if cfg.MetricsEndpoint != "" {
+		exporter["metrics_endpoint"] = cfg.MetricsEndpoint
+	}
+
+	if cfg.LogsEndpoint != "" {
+		exporter["logs_endpoint"] = cfg.LogsEndpoint
+	}
+
+	if cfg.ProfilesEndpoint != "" {
+		exporter["profiles_endpoint"] = cfg.ProfilesEndpoint
+	}
+
+	exporter["read_buffer_size"] = cfg.ReadBufferSize
+	exporter["write_buffer_size"] = cfg.WriteBufferSize
+	exporter["timeout"] = cfg.Timeout.String()
+	exporter["compression"] = string(cfg.Compression)
+	exporter["encoding"] = string(cfg.Encoding)
+
+	// Retry on Failure settings
+	if cfg.RetryOnFailure.Enabled != nil {
+		exporter["retry_on_failure"] = map[string]any{
+			"enabled":          *cfg.RetryOnFailure.Enabled,
+			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
+			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
+			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
+			"multiplier":       cfg.RetryOnFailure.Multiplier,
+		}
+	}
+
+	// TLS settings
+	if tls := cfg.TLS; tls != nil {
 		tlsConfig := map[string]any{}
 		if tls.InsecureSkipVerify != nil {
 			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
@@ -749,7 +791,8 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.CollectorConfig) map[str
 		exporter["tls"] = tlsConfig
 	}
 
-	if cfg.Spec.Exporters.OTLPHTTPExporter.Token != nil {
+	// Bearer Token Authentication settings
+	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
 			"authenticator": bearerTokenAuthName,
 		}
@@ -764,10 +807,10 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	exporters := make(map[string]any)
 
 	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
-		exporters["debug"] = a.getDebugExporterConfig(cfg)
+		exporters["debug"] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
 	}
 	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
-		exporters["otlphttp"] = a.getOTLPHTTPExporterConfig(cfg)
+		exporters["otlphttp"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
 	}
 
 	// TODO(dnaeon): add OTLP gRPC exporter
