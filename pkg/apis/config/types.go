@@ -97,6 +97,7 @@ type OTLPHTTPExporterConfig struct {
 
 	// TLS specifies the TLS configuration settings for the exporter.
 	TLS *TLSConfig
+
 	// Token references a bearer token for authentication.
 	Token *ResourceReference
 
