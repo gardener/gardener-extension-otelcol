@@ -112,7 +112,7 @@ type OTLPHTTPExporterConfig struct {
 	//
 	// +k8s:optional
 	// +default=false
-	Enabled *bool
+	Enabled *bool `json:"enabled,omitzero"`
 
 	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
 	//
