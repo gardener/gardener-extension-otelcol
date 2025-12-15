@@ -719,44 +719,61 @@ const (
 	volumeMountPathTLS = "/etc/ssl/tls"
 )
 
+// getDebugExporterConfig returns the OTel settings for the debug exporter.
+func (a *Actuator) getDebugExporterConfig(cfg config.CollectorConfig) map[string]any {
+	exporter := map[string]any{
+		"verbosity": cfg.Spec.Exporters.DebugExporter.Verbosity,
+	}
+
+	return exporter
+}
+
+// getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
+// exporter.
+func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.CollectorConfig) map[string]any {
+	exporter := map[string]any{}
+
+	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
+		exporter["endpoint"] = cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint
+	}
+
+	if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
+		tlsConfig := map[string]any{}
+		if tls.InsecureSkipVerify != nil {
+			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+		}
+		if tls.CA != nil {
+			tlsConfig["ca_file"] = volumeMountPathTLS + "/" + tls.CA.ResourceRef.DataKey
+		}
+		if tls.Cert != nil {
+			tlsConfig["cert_file"] = volumeMountPathTLS + "/" + tls.Cert.ResourceRef.DataKey
+		}
+		if tls.Key != nil {
+			tlsConfig["key_file"] = volumeMountPathTLS + "/" + tls.Key.ResourceRef.DataKey
+		}
+
+		exporter["tls"] = tlsConfig
+	}
+
+	if cfg.Spec.Exporters.OTLPHTTPExporter.Token != nil {
+		exporter["auth"] = map[string]any{
+			"authenticator": bearerTokenAuthName,
+		}
+	}
+
+	return exporter
+}
+
 // getOtelExporters returns the OpenTelemetry exporters based on the given
 // [config.CollectorConfig] spec.
 func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
-	// TODO(dnaeon): debug exporter should be configurable via the shoot
-	// provider config
-	exporters := map[string]any{
-		"debug": map[string]any{
-			"verbosity": "basic", // basic, normal or detailed levels
-		},
+	exporters := make(map[string]any)
+
+	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
+		exporters["debug"] = a.getDebugExporterConfig(cfg)
 	}
-
-	if cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint != "" {
-		exporters["otlphttp"] = map[string]any{
-			"endpoint": cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
-		}
-
-		if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
-			tlsConfig := map[string]any{}
-
-			if tls.InsecureSkipVerify != nil {
-				tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-			}
-			if tls.CA != nil {
-				tlsConfig["ca_file"] = volumeMountPathTLS + "/" + tls.CA.ResourceRef.DataKey
-			}
-			if tls.Cert != nil {
-				tlsConfig["cert_file"] = volumeMountPathTLS + "/" + tls.Cert.ResourceRef.DataKey
-			}
-			if tls.Key != nil {
-				tlsConfig["key_file"] = volumeMountPathTLS + "/" + tls.Key.ResourceRef.DataKey
-			}
-
-			exporters["otlphttp"].(map[string]any)["tls"] = tlsConfig
-		}
-
-		if cfg.Spec.Exporters.OTLPHTTPExporter.Token != nil {
-			exporters["otlphttp"].(map[string]any)["auth"] = map[string]any{"authenticator": bearerTokenAuthName}
-		}
+	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
+		exporters["otlphttp"] = a.getOTLPHTTPExporterConfig(cfg)
 	}
 
 	// TODO(dnaeon): add OTLP gRPC exporter
@@ -874,7 +891,7 @@ func (a *Actuator) getOtelCollector(
 					Telemetry: &otelv1beta1.AnyConfig{
 						Object: map[string]any{
 							"metrics": map[string]any{
-								"level": "detailed", // none, basic, normal and detailed levels
+								"level": "normal", // none, basic, normal and detailed levels
 								"readers": []any{
 									map[string]any{
 										"pull": map[string]any{
@@ -889,7 +906,7 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 							"logs": map[string]any{
-								"level":    "DEBUG", // INFO, WARN, DEBUG and ERROR levels
+								"level":    "INFO", // INFO, WARN, DEBUG and ERROR levels
 								"encoding": "json",
 							},
 						},
@@ -897,10 +914,9 @@ func (a *Actuator) getOtelCollector(
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						// TODO(dnaeon): add a pipeline for logs, once we have them enabled
 						"metrics": {
-							Receivers: []string{"prometheus"},
-							// TODO: enable debug
-							Exporters:  exporterNames,
+							Receivers:  []string{"prometheus"},
 							Processors: []string{"batch"},
+							Exporters:  exporterNames,
 						},
 					},
 				},
@@ -911,7 +927,6 @@ func (a *Actuator) getOtelCollector(
 	// TLS
 	if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
 		volume := corev1.Volume{Name: volumeNameTLS, VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{}}}
-
 		addSecretToProjectedVolume := func(resourceRef config.ResourceReferenceDetails) {
 			volume.Projected.Sources = append(volume.Projected.Sources, corev1.VolumeProjection{Secret: &corev1.SecretProjection{
 				LocalObjectReference: corev1.LocalObjectReference{Name: secretNameForResource(resourceRef.Name, resources)},
