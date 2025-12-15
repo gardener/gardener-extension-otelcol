@@ -607,7 +607,38 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 	}
 }
 
-// getTargetAllocator returns the [appsv1.Deployment] resource.
+// getTargetAllocator returns the [appsv1.Deployment] resource for the Target
+// Allocator.
+//
+// We are creating a deployment here, instead of using the upstream OTel
+// TargetAllocator custom resource, because the OTel Operator expects that mTLS
+// between the Target Allocator and the Collector is handled via Cert Manager
+// only. However, Gardener does not use Cert Manager, so we can't configure mTLS
+// easily.
+//
+// mTLS between the TA and the Collector is required, otherwise the TA will
+// return invalid secrets for scrape targets which require authentication.
+//
+// Currently the mTLS between TA and Collector cannot be done in a generic way
+// when using the OTel Operator, because upon start up the OTel Operator looks
+// for Cert Manager. If it doesn't find Cert Manager, it will always configure
+// the communication between the TA and Collector to happen via HTTP, which in
+// turn results in invalid secrets being delivered to the Collector. As a result
+// scraping will always fail.
+//
+// The following upstream issue tracks the progress of allowing clients to
+// configure mTLS between TA and Collector without having to rely on Cert
+// Manager.
+//
+// https://github.com/open-telemetry/opentelemetry-operator/issues/3982
+//
+// Once the issue above is fixed we can drop the following resources, which we
+// are now explicitely managing, and instead use the TargetAllocator custom
+// resource only.
+//
+// - Deployment for the TargetAllocator (getTargetAllocatorDeployment)
+// - ConfigMap for the TargetAllocator (getTargetAllocatorConfigMap)
+// - HTTPS Service for the Target Allocator (getTargetAllocatorHTTPSService)
 func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serverSecret *corev1.Secret, image *imagevectorutils.Image) *appsv1.Deployment {
 	const (
 		volumeNameCACertificate      = "ca-cert"
