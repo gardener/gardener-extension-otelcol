@@ -42,6 +42,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `otlphttp` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  |  |
+| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  |  |
 
 
 #### Compression
@@ -61,6 +62,41 @@ _Appears in:_
 | `zstd` | CompressionZstd specifies that zstd compression is used.<br /> |
 | `snappy` | CompressionSnappy specifies that snappy compression is used.<br /> |
 | `none` | CompressionNone specifies that no compression is used.<br /> |
+
+
+#### DebugExporterConfig
+
+
+
+DebugExporterConfig provides the settings for the debug exporter
+
+
+
+_Appears in:_
+- [CollectorExportersConfig](#collectorexportersconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled specifies whether the debug exporter is enabled or not. |  |  |
+| `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level for the debug exporter. |  |  |
+
+
+#### DebugExporterVerbosity
+
+_Underlying type:_ _string_
+
+DebugExporterVerbosity specifies the verbosity level for the debug exporter.
+
+
+
+_Appears in:_
+- [DebugExporterConfig](#debugexporterconfig)
+
+| Field | Description |
+| --- | --- |
+| `basic` | DebugExporterVerbosityBasic specifies basic level of verbosity.<br /> |
+| `normal` | DebugExporterVerbosityNormal specifies normal level of verbosity.<br /> |
+| `detailed` | DebugExporterVerbosityDetailed specifies detailed level of verbosity.<br /> |
 
 
 #### Encoding
@@ -97,6 +133,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `Enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. |  |  |
 | `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  |  |
 | `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  |  |
 | `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  |  |
