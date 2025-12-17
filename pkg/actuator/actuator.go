@@ -354,22 +354,13 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(
+	return managedresources.CreateForSeed(
 		ctx,
 		a.client,
 		ex.Namespace,
 		managedResourceName,
 		false,
 		data,
-	); err != nil {
-		return err
-	}
-
-	return managedresources.WaitUntilHealthy(
-		ctx,
-		a.reader,
-		ex.Namespace,
-		managedResourceName,
 	)
 }
 
