@@ -93,26 +93,34 @@ func Validate(cfg config.CollectorConfig) error {
 	}
 
 	// Validate resource references
-	resourceRefs := []struct {
+	type resourceRef struct {
 		path string
 		ref  *config.ResourceReference
-	}{
+	}
+
+	resourceRefs := []resourceRef{
 		{
 			path: "spec.exporters.otlphttp.token",
 			ref:  cfg.Spec.Exporters.OTLPHTTPExporter.Token,
 		},
-		{
-			path: "spec.exporters.otlphttp.tls.ca",
-			ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.CA,
-		},
-		{
-			path: "spec.exporters.otlphttp.tls.cert",
-			ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Cert,
-		},
-		{
-			path: "spec.exporters.otlphttp.tls.key",
-			ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Key,
-		},
+	}
+
+	if cfg.Spec.Exporters.OTLPHTTPExporter.TLS != nil {
+		resourceRefs = append(
+			resourceRefs,
+			resourceRef{
+				path: "spec.exporters.otlphttp.tls.ca",
+				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.CA,
+			},
+			resourceRef{
+				path: "spec.exporters.otlphttp.tls.cert",
+				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Cert,
+			},
+			resourceRef{
+				path: "spec.exporters.otlphttp.tls.key",
+				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Key,
+			},
+		)
 	}
 
 	for _, f := range resourceRefs {
