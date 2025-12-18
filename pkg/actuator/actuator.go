@@ -624,7 +624,7 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 // https://github.com/open-telemetry/opentelemetry-operator/issues/3982
 //
 // Once the issue above is fixed we can drop the following resources, which we
-// are now explicitely managing, and instead use the TargetAllocator custom
+// are now explicitly managing, and instead use the TargetAllocator custom
 // resource only.
 //
 // - Deployment for the TargetAllocator (getTargetAllocatorDeployment)
@@ -856,8 +856,8 @@ func (a *Actuator) getOtelCollector(
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
 
-		volumeNameBearerToken          = "bearer-token-auth"
-		volumeMountPathBearerTokenFile = "/etc/auth/bearer"
+		volumeNameBearerToken          = "bearer-token-auth" // #nosec: G101
+		volumeMountPathBearerTokenFile = "/etc/auth/bearer"  // #nosec: G101
 	)
 
 	var (
@@ -1027,12 +1027,12 @@ func (a *Actuator) getOtelCollector(
 }
 
 func secretNameForResource(resourceName string, resources []gardencorev1beta1.NamedResourceReference) string {
-	for _, resource := range resources {
-		if resource.Name == resourceName &&
-			resource.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && resource.ResourceRef.Kind == "Secret" {
-
-			return v1beta1constants.ReferencedResourcesPrefix + resource.ResourceRef.Name
+	for _, r := range resources {
+		if r.Name == resourceName &&
+			r.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && r.ResourceRef.Kind == "Secret" {
+			return v1beta1constants.ReferencedResourcesPrefix + r.ResourceRef.Name
 		}
 	}
+
 	return ""
 }

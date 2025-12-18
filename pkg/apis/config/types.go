@@ -27,7 +27,7 @@ const (
 	// MetricsVerbosityLevelNormal configures the collector with standard
 	// indicators on top of the basic ones.
 	MetricsVerbosityLevelNormal MetricsVerbosityLevel = "normal"
-	// MetricsVerbosityDetailed configures the collector with the most
+	// MetricsVerbosityLevelDetailed configures the collector with the most
 	// verbose level, which includes dimensions and views.
 	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
 )
