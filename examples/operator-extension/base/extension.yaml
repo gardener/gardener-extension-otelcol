@@ -7,7 +7,7 @@ spec:
     extension:
       helm:
         ociRepository:
-          ref: registry.local.gardener.cloud:5000/helm-charts/gardener-extension-otelcol:v0.1.0-dev
+          ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol:v0.1.0-dev
   resources:
     - kind: Extension
       type: otelcol
