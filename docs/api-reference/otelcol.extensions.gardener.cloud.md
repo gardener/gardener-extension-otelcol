@@ -225,7 +225,7 @@ _Appears in:_
 | `none` | MetricsVerbosityLevelNone disables the internal collector metrics.<br /> |
 | `basic` | MetricsVerbosityLevelBasic configures the collector to emit basic<br />metrics only.<br /> |
 | `normal` | MetricsVerbosityLevelNormal configures the collector with standard<br />indicators on top of the basic ones.<br /> |
-| `detailed` | MetricsVerbosityDetailed configures the collector with the most<br />verbose level, which includes dimensions and views.<br /> |
+| `detailed` | MetricsVerbosityLevelDetailed configures the collector with the most<br />verbose level, which includes dimensions and views.<br /> |
 
 
 #### OTLPHTTPExporterConfig
