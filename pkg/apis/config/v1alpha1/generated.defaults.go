@@ -40,7 +40,7 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 		in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize = int(DefaultExporterClientWriteBufferSize)
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Encoding == "" {
-		in.Spec.Exporters.OTLPHTTPExporter.Encoding = Encoding(EncodingProto)
+		in.Spec.Exporters.OTLPHTTPExporter.Encoding = MessageEncoding(MessageEncodingProto)
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Enabled == nil {
 		var ptrVar1 bool = true
