@@ -25,7 +25,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specify exporters configuration of the collector. |  |  |
+| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  |  |
+| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  |  |
+| `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  |  |
 
 
 #### CollectorExportersConfig
@@ -43,6 +45,48 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `otlphttp` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  |  |
 | `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  |  |
+
+
+#### CollectorLogsConfig
+
+
+
+CollectorLogsConfig provides the settings for the collector internal logs.
+
+See [Configure internal logs] for more details.
+
+[Configure internal logs]: https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `level` _[LogLevel](#loglevel)_ | Level specifies the log level of the collector. |  |  |
+| `encoding` _[LogEncoding](#logencoding)_ | Encoding specifies the encoding for logs of the collector. |  |  |
+
+
+#### CollectorMetricsConfig
+
+
+
+CollectorMetricsConfig provides the settings for the collector internal
+metrics.
+
+See [Metrics verbosity] for more details.
+
+[Metrics verbosity]: https://opentelemetry.io/docs/collector/internal-telemetry/#metric-verbosity
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `level` _[MetricsVerbosityLevel](#metricsverbositylevel)_ | Level specifies the collector internal metrics verbosity level. |  |  |
 
 
 #### Compression
@@ -99,11 +143,55 @@ _Appears in:_
 | `detailed` | DebugExporterVerbosityDetailed specifies detailed level of verbosity.<br /> |
 
 
-#### Encoding
+#### LogEncoding
 
 _Underlying type:_ _string_
 
-Encoding specifies the encoding used by the collector exporters.
+LogEncoding specifies the encoding for the internal collector logger.
+
+See the link below for more details.
+
+https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
+
+
+
+_Appears in:_
+- [CollectorLogsConfig](#collectorlogsconfig)
+
+| Field | Description |
+| --- | --- |
+| `console` | LogEncodingConsole sets the collector's internal logger with console<br />encoding.<br /> |
+| `json` | LogEncodingJSON sets the collector's internal logger with JSON<br />encoding.<br /> |
+
+
+#### LogLevel
+
+_Underlying type:_ _string_
+
+LogLevel specifies the minimum enabled logging level for the collector.
+
+See the link below for more details.
+
+https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
+
+
+
+_Appears in:_
+- [CollectorLogsConfig](#collectorlogsconfig)
+
+| Field | Description |
+| --- | --- |
+| `INFO` | LogLevelInfo sets the collector's internal logger to INFO level.<br /> |
+| `WARN` | LogLevelWarn sets the collector's internal logger to WARN level.<br /> |
+| `ERROR` | LogLevelError sets the collector's internal logger to ERROR level.<br /> |
+| `DEBUG` | LogLevelDebug sets the collector's internal logger to DEBUG level.<br /> |
+
+
+#### MessageEncoding
+
+_Underlying type:_ _string_
+
+MessageEncoding specifies the encoding used by the collector exporters.
 
 
 
@@ -112,8 +200,32 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `proto` | EncodingProto specifies that proto encoding is used for messages.<br /> |
-| `json` | EncodingJSON specifies that JSON is used for encoding messages.<br /> |
+| `proto` | MessageEncodingProto specifies that proto encoding is used for<br />messages.<br /> |
+| `json` | MessageEncodingJSON specifies that JSON is used for encoding<br />messages.<br /> |
+
+
+#### MetricsVerbosityLevel
+
+_Underlying type:_ _string_
+
+MetricsVerbosityLevel specifies the verbosity of the internal collector
+metrics.
+
+See the link below for more details.
+
+https://opentelemetry.io/docs/collector/internal-telemetry/#metric-verbosity
+
+
+
+_Appears in:_
+- [CollectorMetricsConfig](#collectormetricsconfig)
+
+| Field | Description |
+| --- | --- |
+| `none` | MetricsVerbosityLevelNone disables the internal collector metrics.<br /> |
+| `basic` | MetricsVerbosityLevelBasic configures the collector to emit basic<br />metrics only.<br /> |
+| `normal` | MetricsVerbosityLevelNormal configures the collector with standard<br />indicators on top of the basic ones.<br /> |
+| `detailed` | MetricsVerbosityDetailed configures the collector with the most<br />verbose level, which includes dimensions and views.<br /> |
 
 
 #### OTLPHTTPExporterConfig
@@ -133,7 +245,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `Enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. |  |  |
+| `enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. |  |  |
 | `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  |  |
 | `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  |  |
 | `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  |  |
@@ -144,7 +256,7 @@ _Appears in:_
 | `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultExporterClientTimeout]. |  |  |
 | `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientReadBufferSize]. |  |  |
 | `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientWriteBufferSize]. |  |  |
-| `encoding` _[Encoding](#encoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [EncodingProto]. |  |  |
+| `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. |  |  |
 | `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
 | `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
 
