@@ -10,9 +10,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// MetricsVerbosityLevel specifies the verbosity of the internal collector
+// metrics.
+//
+// See the link below for more details.
+//
+// https://opentelemetry.io/docs/collector/internal-telemetry/#metric-verbosity
+//
+// +k8s:enum
+type MetricsVerbosityLevel string
+
+const (
+	// MetricsVerbosityLevelNone disables the internal collector metrics.
+	MetricsVerbosityLevelNone MetricsVerbosityLevel = "none"
+	// MetricsVerbosityLevelBasic configures the collector to emit basic
+	// metrics only.
+	MetricsVerbosityLevelBasic MetricsVerbosityLevel = "basic"
+	// MetricsVerbosityLevelNormal configures the collector with standard
+	// indicators on top of the basic ones.
+	MetricsVerbosityLevelNormal MetricsVerbosityLevel = "normal"
+	// MetricsVerbosityDetailed configures the collector with the most
+	// verbose level, which includes dimensions and views.
+	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
+)
+
 // LogLevel specifies the minimum enabled logging level for the collector.
 //
-// See the following link for more details about the internal collector logger.
+// See the link below for more details.
 //
 // https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
 //
@@ -32,7 +56,7 @@ const (
 
 // LogEncoding specifies the encoding for the internal collector logger.
 //
-// See the following link for more details about the internal collector logger.
+// See the link below for more details.
 //
 // https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
 //
@@ -306,6 +330,20 @@ type CollectorLogsConfig struct {
 	Encoding LogEncoding `json:"encoding,omitzero"`
 }
 
+// CollectorMetricsConfig provides the settings for the collector internal
+// metrics.
+//
+// See [Metrics verbosity] for more details.
+//
+// [Metrics verbosity]: https://opentelemetry.io/docs/collector/internal-telemetry/#metric-verbosity
+type CollectorMetricsConfig struct {
+	// Level specifies the collector internal metrics verbosity level.
+	//
+	// +k8s:optional
+	// +default=ref(MetricsVerbosityLevelNormal)
+	Level MetricsVerbosityLevel `json:"level,omitzero"`
+}
+
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
 	// Exporters specifies the exporters configuration of the collector.
@@ -317,6 +355,11 @@ type CollectorConfigSpec struct {
 	//
 	// +k8s:optional
 	Logs CollectorLogsConfig `json:"logs,omitzero"`
+
+	// Metrics specifies the settings for the internal collector metrics.
+	//
+	// +k8s:optional
+	Metrics CollectorMetricsConfig `json:"metrics,omitzero"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

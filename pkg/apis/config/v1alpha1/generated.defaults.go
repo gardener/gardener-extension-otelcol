@@ -74,4 +74,7 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 	if in.Spec.Logs.Encoding == "" {
 		in.Spec.Logs.Encoding = LogEncoding(LogEncodingConsole)
 	}
+	if in.Spec.Metrics.Level == "" {
+		in.Spec.Metrics.Level = MetricsVerbosityLevel(MetricsVerbosityLevelNormal)
+	}
 }
