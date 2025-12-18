@@ -10,16 +10,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Encoding specifies the encoding used by the collector exporters.
+// MessageEncoding specifies the encoding used by the collector exporters.
 //
 // +k8s:enum
-type Encoding string
+type MessageEncoding string
 
 const (
-	// EncodingProto specifies that proto encoding is used for messages.
-	EncodingProto Encoding = "proto"
-	// EncodingJSON specifies that JSON is used for encoding messages.
-	EncodingJSON Encoding = "json"
+	// MessageEncodingProto specifies that proto encoding is used for
+	// messages.
+	MessageEncodingProto MessageEncoding = "proto"
+	// MessageEncodingJSON specifies that JSON is used for encoding
+	// messages.
+	MessageEncodingJSON MessageEncoding = "json"
 )
 
 // Compression specifies the compression used by the collector.
@@ -186,11 +188,11 @@ type OTLPHTTPExporterConfig struct {
 	WriteBufferSize int `json:"write_buffer_size,omitzero"`
 
 	// Encoding specifies the encoding to use for the messages. The default
-	// value is [EncodingProto].
+	// value is [MessageEncodingProto].
 	//
 	// +k8s:optional
-	// +default=ref(EncodingProto)
-	Encoding Encoding `json:"encoding,omitzero"`
+	// +default=ref(MessageEncodingProto)
+	Encoding MessageEncoding `json:"encoding,omitzero"`
 
 	// RetryOnFailure specifies the retry policy of the exporter.
 	//

@@ -226,7 +226,7 @@ func autoConvert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfi
 	out.Timeout = time.Duration(in.Timeout)
 	out.ReadBufferSize = in.ReadBufferSize
 	out.WriteBufferSize = in.WriteBufferSize
-	out.Encoding = config.Encoding(in.Encoding)
+	out.Encoding = config.MessageEncoding(in.Encoding)
 	if err := Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfi
 	out.Timeout = time.Duration(in.Timeout)
 	out.ReadBufferSize = in.ReadBufferSize
 	out.WriteBufferSize = in.WriteBufferSize
-	out.Encoding = Encoding(in.Encoding)
+	out.Encoding = MessageEncoding(in.Encoding)
 	if err := Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
 		return err
 	}

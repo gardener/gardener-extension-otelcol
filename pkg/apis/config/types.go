@@ -10,14 +10,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Encoding specifies the encoding used by the collector exporters.
-type Encoding string
+// MessageEncoding specifies the encoding used by the collector exporters.
+type MessageEncoding string
 
 const (
-	// EncodingProto specifies that proto encoding is used for messages.
-	EncodingProto Encoding = "proto"
-	// EncodingJSON specifies that JSON is used for encoding messages.
-	EncodingJSON Encoding = "json"
+	// MessageEncodingProto specifies that proto encoding is used for
+	// messages.
+	MessageEncodingProto MessageEncoding = "proto"
+	// MessageEncodingJSON specifies that JSON is used for encoding
+	// messages.
+	MessageEncodingJSON MessageEncoding = "json"
 )
 
 // Compression specifies the compression used by the collector.
@@ -114,7 +116,7 @@ type OTLPHTTPExporterConfig struct {
 
 	// Encoding specifies the encoding to use for the messages. Valid
 	// options are `proto' and `json'.
-	Encoding Encoding
+	Encoding MessageEncoding
 
 	// RetryOnFailure specifies the retry policy of the exporter.
 	RetryOnFailure RetryOnFailureConfig
@@ -215,7 +217,8 @@ type ResourceReference struct {
 
 // ResourceReferenceDetails references a resource (e.g., a Secret) in the garden cluster.
 type ResourceReferenceDetails struct {
-	// Name is the name of thresource e reference in `.spec.resources` in the Shoot resource.
+	// Name is the name of the resource e reference in `.spec.resources` in
+	// the Shoot resource.
 	Name string
 	// DataKey is the key in the resource data map.
 	DataKey string
