@@ -42,7 +42,7 @@ IMAGE ?= europe-docker.pkg.dev/gardener-project/public/gardener/extensions/garde
 EXTENSION_NAME ?= gardener-extension-otelcol
 
 # Registry used for local development
-LOCAL_REGISTRY ?= registry.local.gardener.cloud:5000
+LOCAL_REGISTRY ?= registry.local.gardener.cloud:5001
 # Name of the kind cluster for local development
 GARDENER_DEV_CLUSTER ?= gardener-local
 # Name of the kind cluster for local development (with gardener-operator)
