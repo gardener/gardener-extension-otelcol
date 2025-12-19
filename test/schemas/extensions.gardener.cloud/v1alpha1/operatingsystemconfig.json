@@ -1,0 +1,780 @@
+{
+  "description": "OperatingSystemConfig is a specification for a OperatingSystemConfig resource",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Specification of the OperatingSystemConfig.\nIf the object's deletion timestamp is set, this field is immutable.",
+      "properties": {
+        "class": {
+          "description": "Class holds the extension class used to control the responsibility for multiple provider extensions.",
+          "type": "string",
+          "x-kubernetes-validations": [
+            {
+              "message": "Value is immutable",
+              "rule": "self == oldSelf"
+            }
+          ]
+        },
+        "criConfig": {
+          "description": "CRI config is a structure contains configurations of the CRI library",
+          "properties": {
+            "cgroupDriver": {
+              "description": "CgroupDriver configures the CRI's cgroup driver. Supported values are `cgroupfs` or `systemd`.",
+              "type": "string"
+            },
+            "containerd": {
+              "description": "ContainerdConfig is the containerd configuration.\nOnly to be set for OperatingSystemConfigs with purpose 'reconcile'.",
+              "properties": {
+                "plugins": {
+                  "description": "Plugins configures the plugins section in containerd's config.toml.",
+                  "items": {
+                    "description": "PluginConfig contains configuration values for the containerd plugins section.",
+                    "properties": {
+                      "op": {
+                        "description": "Op is the operation for the given path. Possible values are 'add' and 'remove', defaults to 'add'.",
+                        "type": "string"
+                      },
+                      "path": {
+                        "description": "Path is a list of elements that construct the path in the plugins section.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "values": {
+                        "description": "Values are the values configured at the given path. If defined, it is expected as json format:\n- A given json object will be put to the given path.\n- If not configured, only the table entry to be created.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array"
+                },
+                "registries": {
+                  "description": "Registries configures the registry hosts for containerd.",
+                  "items": {
+                    "description": "RegistryConfig contains registry configuration options.",
+                    "properties": {
+                      "hosts": {
+                        "description": "Hosts are the registry hosts.\nIt corresponds to the host fields in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format for more information.",
+                        "items": {
+                          "description": "RegistryHost contains configuration values for a registry host.",
+                          "properties": {
+                            "caCerts": {
+                              "description": "CACerts are paths to public key certificates used for TLS.",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "capabilities": {
+                              "description": "Capabilities determine what operations a host is\ncapable of performing. Defaults to\n - pull\n - resolve",
+                              "items": {
+                                "description": "RegistryCapability specifies an action a client can perform against a registry.",
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "overridePath": {
+                              "description": "OverridePath sets the 'override_path' field to allow defining the API endpoint in the URL.\nSee https://github.com/containerd/containerd/blob/cef8ce2ecb572bc8026323c0c3dfad9953b952f6/docs/hosts.md?override_path#override_path-field for more information.",
+                              "type": "boolean"
+                            },
+                            "url": {
+                              "description": "URL is the endpoint address of the registry mirror.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "type": "object",
+                          "additionalProperties": false
+                        },
+                        "type": "array"
+                      },
+                      "readinessProbe": {
+                        "description": "ReadinessProbe determines if host registry endpoints should be probed before they are added to the containerd config.",
+                        "type": "boolean"
+                      },
+                      "server": {
+                        "description": "Server is the URL to registry server of this upstream.\nIt corresponds to the server field in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field for more information.",
+                        "type": "string"
+                      },
+                      "upstream": {
+                        "description": "Upstream is the upstream name of the registry.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "upstream"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array"
+                },
+                "sandboxImage": {
+                  "description": "SandboxImage configures the sandbox image for containerd.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "sandboxImage"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "name": {
+              "description": "Name is a mandatory string containing the name of the CRI library. Supported values are `containerd`.",
+              "enum": [
+                "containerd"
+              ],
+              "type": "string",
+              "x-kubernetes-validations": [
+                {
+                  "message": "Value is immutable",
+                  "rule": "self == oldSelf"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "files": {
+          "description": "Files is a list of files that should get written to the host's file system.",
+          "items": {
+            "description": "File is a file that should get written to the host's file system. The content can either be inlined or\nreferenced from a secret in the same namespace.",
+            "properties": {
+              "content": {
+                "description": "Content describe the file's content.",
+                "properties": {
+                  "imageRef": {
+                    "description": "ImageRef describes a container image which contains a file.",
+                    "properties": {
+                      "filePathInImage": {
+                        "description": "FilePathInImage contains the path in the image to the file that should be extracted.",
+                        "type": "string"
+                      },
+                      "image": {
+                        "description": "Image contains the container image repository with tag.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "filePathInImage",
+                      "image"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "inline": {
+                    "description": "Inline is a struct that contains information about the inlined data.",
+                    "properties": {
+                      "data": {
+                        "description": "Data is the file's data.",
+                        "type": "string"
+                      },
+                      "encoding": {
+                        "description": "Encoding is the file's encoding (e.g. base64).",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "data",
+                      "encoding"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "secretRef": {
+                    "description": "SecretRef is a struct that contains information about the referenced secret.",
+                    "properties": {
+                      "dataKey": {
+                        "description": "DataKey is the key in the secret's `.data` field that should be read.",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the secret.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "dataKey",
+                      "name"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "transmitUnencoded": {
+                    "description": "TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.\nThis for example can be used to manipulate the clear-text content before it reaches the node.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object",
+                "additionalProperties": false
+              },
+              "path": {
+                "description": "Path is the path of the file system where the file should get written to.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "Permissions describes with which permissions the file should get written to the file system.\nIf no permissions are set, the operating system's defaults are used.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "content",
+              "path"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "inPlaceUpdates": {
+          "description": "InPlaceUpdates contains the configuration for in-place updates.",
+          "properties": {
+            "credentialsRotation": {
+              "description": "CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.",
+              "properties": {
+                "certificateAuthorities": {
+                  "description": "CertificateAuthorities contains information about the certificate authority credential rotation.",
+                  "properties": {
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "serviceAccountKey": {
+                  "description": "ServiceAccountKey contains information about the service account key credential rotation.",
+                  "properties": {
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "kubelet": {
+              "description": "KubeletVersion is the version of the kubelet.",
+              "type": "string"
+            },
+            "operatingSystemVersion": {
+              "description": "OperatingSystemVersion is the version of the operating system.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kubelet",
+            "operatingSystemVersion"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "providerConfig": {
+          "description": "ProviderConfig is the provider specific configuration.",
+          "type": "object",
+          "x-kubernetes-preserve-unknown-fields": true
+        },
+        "purpose": {
+          "description": "Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it\ngets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the\ngardener-node-agent already running on a bootstrapped VM.\nThis field is immutable.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type contains the instance of the resource's kind.",
+          "type": "string"
+        },
+        "units": {
+          "description": "Units is a list of unit for the operating system configuration (usually, a systemd unit).",
+          "items": {
+            "description": "Unit is a unit for the operating system configuration (usually, a systemd unit).",
+            "properties": {
+              "command": {
+                "description": "Command is the unit's command.",
+                "type": "string"
+              },
+              "content": {
+                "description": "Content is the unit's content.",
+                "type": "string"
+              },
+              "dropIns": {
+                "description": "DropIns is a list of drop-ins for this unit.",
+                "items": {
+                  "description": "DropIn is a drop-in configuration for a systemd unit.",
+                  "properties": {
+                    "content": {
+                      "description": "Content is the content of the drop-in.",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the drop-in.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "content",
+                    "name"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "type": "array"
+              },
+              "enable": {
+                "description": "Enable describes whether the unit is enabled or not.",
+                "type": "boolean"
+              },
+              "filePaths": {
+                "description": "FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be\ntriggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "name": {
+                "description": "Name is the name of a unit.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "purpose",
+        "type"
+      ],
+      "type": "object",
+      "additionalProperties": false
+    },
+    "status": {
+      "description": "OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.",
+      "properties": {
+        "cloudConfig": {
+          "description": "CloudConfig is a structure for containing the generated output for the given operating system\nconfig spec. It contains a reference to a secret as the result may contain confidential data.\nAfter Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose 'provision'.",
+          "properties": {
+            "secretRef": {
+              "description": "SecretRef is a reference to a secret that contains the actual result of the generated cloud config.",
+              "properties": {
+                "name": {
+                  "description": "name is unique within a namespace to reference a secret resource.",
+                  "type": "string"
+                },
+                "namespace": {
+                  "description": "namespace defines the space within which the secret name must be unique.",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "x-kubernetes-map-type": "atomic",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "secretRef"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "conditions": {
+          "description": "Conditions represents the latest available observations of a Seed's current state.",
+          "items": {
+            "description": "Condition holds the information about the state of a resource.",
+            "properties": {
+              "codes": {
+                "description": "Well-defined error codes in case the condition reports a problem.",
+                "items": {
+                  "description": "ErrorCode is a string alias.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "lastTransitionTime": {
+                "description": "Last time the condition transitioned from one status to another.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "lastUpdateTime": {
+                "description": "Last time the condition was updated.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "description": "A human readable message indicating details about the transition.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "The reason for the condition's last transition.",
+                "type": "string"
+              },
+              "status": {
+                "description": "Status of the condition, one of True, False, Unknown.",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type of the condition.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lastTransitionTime",
+              "lastUpdateTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "extensionFiles": {
+          "description": "ExtensionFiles is a list of additional files provided by the extension.",
+          "items": {
+            "description": "File is a file that should get written to the host's file system. The content can either be inlined or\nreferenced from a secret in the same namespace.",
+            "properties": {
+              "content": {
+                "description": "Content describe the file's content.",
+                "properties": {
+                  "imageRef": {
+                    "description": "ImageRef describes a container image which contains a file.",
+                    "properties": {
+                      "filePathInImage": {
+                        "description": "FilePathInImage contains the path in the image to the file that should be extracted.",
+                        "type": "string"
+                      },
+                      "image": {
+                        "description": "Image contains the container image repository with tag.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "filePathInImage",
+                      "image"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "inline": {
+                    "description": "Inline is a struct that contains information about the inlined data.",
+                    "properties": {
+                      "data": {
+                        "description": "Data is the file's data.",
+                        "type": "string"
+                      },
+                      "encoding": {
+                        "description": "Encoding is the file's encoding (e.g. base64).",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "data",
+                      "encoding"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "secretRef": {
+                    "description": "SecretRef is a struct that contains information about the referenced secret.",
+                    "properties": {
+                      "dataKey": {
+                        "description": "DataKey is the key in the secret's `.data` field that should be read.",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the secret.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "dataKey",
+                      "name"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "transmitUnencoded": {
+                    "description": "TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.\nThis for example can be used to manipulate the clear-text content before it reaches the node.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object",
+                "additionalProperties": false
+              },
+              "path": {
+                "description": "Path is the path of the file system where the file should get written to.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "Permissions describes with which permissions the file should get written to the file system.\nIf no permissions are set, the operating system's defaults are used.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "content",
+              "path"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "extensionUnits": {
+          "description": "ExtensionUnits is a list of additional systemd units provided by the extension.",
+          "items": {
+            "description": "Unit is a unit for the operating system configuration (usually, a systemd unit).",
+            "properties": {
+              "command": {
+                "description": "Command is the unit's command.",
+                "type": "string"
+              },
+              "content": {
+                "description": "Content is the unit's content.",
+                "type": "string"
+              },
+              "dropIns": {
+                "description": "DropIns is a list of drop-ins for this unit.",
+                "items": {
+                  "description": "DropIn is a drop-in configuration for a systemd unit.",
+                  "properties": {
+                    "content": {
+                      "description": "Content is the content of the drop-in.",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the drop-in.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "content",
+                    "name"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "type": "array"
+              },
+              "enable": {
+                "description": "Enable describes whether the unit is enabled or not.",
+                "type": "boolean"
+              },
+              "filePaths": {
+                "description": "FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be\ntriggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "name": {
+                "description": "Name is the name of a unit.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "inPlaceUpdates": {
+          "description": "InPlaceUpdates contains the configuration for in-place updates.",
+          "properties": {
+            "osUpdate": {
+              "description": "OSUpdate defines the configuration for the operating system update.",
+              "properties": {
+                "args": {
+                  "description": "Args provides a mechanism to pass additional arguments or flags to the Command.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "command": {
+                  "description": "Command defines the command responsible for performing machine image updates.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
+        "lastError": {
+          "description": "LastError holds information about the last occurred error during an operation.",
+          "properties": {
+            "codes": {
+              "description": "Well-defined error codes of the last error(s).",
+              "items": {
+                "description": "ErrorCode is a string alias.",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": {
+              "description": "A human readable message indicating details about the last error.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the error was reported",
+              "format": "date-time",
+              "type": "string"
+            },
+            "taskID": {
+              "description": "ID of the task which caused this last error",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "lastOperation": {
+          "description": "LastOperation holds information about the last operation on the resource.",
+          "properties": {
+            "description": {
+              "description": "A human readable message indicating details about the last operation.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the operation state transitioned from one to another.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "progress": {
+              "description": "The progress in percentage (0-100) of the last operation.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "state": {
+              "description": "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "lastUpdateTime",
+            "progress",
+            "state",
+            "type"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the most recent generation observed for this resource.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "providerStatus": {
+          "description": "ProviderStatus contains provider-specific status.",
+          "type": "object",
+          "x-kubernetes-preserve-unknown-fields": true
+        },
+        "resources": {
+          "description": "Resources holds a list of named resource references that can be referred to in the state by their names.",
+          "items": {
+            "description": "NamedResourceReference is a named reference to a resource.",
+            "properties": {
+              "name": {
+                "description": "Name of the resource reference.",
+                "type": "string"
+              },
+              "resourceRef": {
+                "description": "ResourceRef is a reference to a resource.",
+                "properties": {
+                  "apiVersion": {
+                    "description": "apiVersion is the API version of the referent",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "description": "kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object",
+                "x-kubernetes-map-type": "atomic",
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "resourceRef"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "state": {
+          "description": "State can be filled by the operating controller with what ever data it needs.",
+          "type": "object",
+          "x-kubernetes-preserve-unknown-fields": true
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "spec"
+  ],
+  "type": "object"
+}

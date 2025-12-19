@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.extension.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.extension.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.extension.name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.extension.metrics.enable_scraping }}
+        prometheus.io/name: {{ .Release.Name }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.extension.metrics.bind_address | trimPrefix ":" | quote }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        app.kubernetes.io/name: {{ .Values.extension.name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      priorityClassName: gardener-system-900
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.extension.name }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.extension.name }}
+          command:
+            - extension
+            - manager
+            - --extension-name={{ .Values.extension.name }}
+            - --metrics-bind-address={{ .Values.extension.metrics.bind_address }}
+            - --pprof-bind-address={{ .Values.extension.pprof.bind_address }}
+            - --health-probe-bind-address={{ .Values.extension.health.bind_address }}
+            - --heartbeat-renew-interval={{ .Values.extension.heartbeat.renew_interval }}
+            - --heartbeat-namespace={{ .Release.Namespace }}
+            - --leader-election={{ .Values.extension.leader_election.enabled }}
+            - --leader-election-id={{ .Values.extension.leader_election.election_id }}
+            - --leader-election-namespace={{ .Release.Namespace }}
+            - --ignore-operation-annotation={{ .Values.extension.manager.ignore_operation_annotation }}
+            - --max-concurrent-reconciles={{ .Values.extension.manager.max_concurrent_reconciles }}
+            - --log-level={{ .Values.extension.logging.level }}
+            - --log-format={{ .Values.extension.logging.format }}
+            - --resync-interval={{ .Values.extension.manager.resync_interval }}
+            - --client-conn-qps={{ .Values.extension.manager.qps }}
+            - --client-conn-burst={{ .Values.extension.manager.burst }}
+            - --gardener-version={{ .Values.gardener.version }}
+            {{- range $key, $val := .Values.gardener.gardenlet.featureGates }}
+            - --gardenlet-feature-gate={{ $key }}={{ $val }}
+            {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- if .Values.extension.metrics.enable_scraping }}
+            - name: metrics
+              containerPort: {{ .Values.extension.metrics.bind_address | trimPrefix ":" }}
+              protocol: TCP
+            {{- end }}
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: {{ .Values.extension.health.bind_address | trimPrefix ":" }}
+              scheme: HTTP
+            initialDelaySeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 10
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: {{ .Values.extension.health.bind_address | trimPrefix ":" }}
+              scheme: HTTP
+            initialDelaySeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 10
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

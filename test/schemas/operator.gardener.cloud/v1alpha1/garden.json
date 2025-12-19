@@ -1,0 +1,2365 @@
+{
+  "description": "Garden describes a list of gardens.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec contains the specification of this garden.",
+      "properties": {
+        "dns": {
+          "description": "DNS contains specifications of DNS providers.",
+          "properties": {
+            "providers": {
+              "description": "Providers is a list of DNS providers.",
+              "items": {
+                "description": "DNSProvider contains the configuration for a DNS provider.",
+                "properties": {
+                  "name": {
+                    "description": "Name is the name of the DNS provider.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "providerConfig": {
+                    "description": "Config is the provider-specific configuration passed to DNSRecord resources.",
+                    "type": "object",
+                    "x-kubernetes-preserve-unknown-fields": true
+                  },
+                  "secretRef": {
+                    "description": "SecretRef is a reference to a Secret object containing the DNS provider credentials.",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic",
+                    "additionalProperties": false
+                  },
+                  "type": {
+                    "description": "Type is the type of the DNS provider.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "secretRef",
+                  "type"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "providers"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "extensions": {
+          "description": "Extensions contain type and provider information for Garden extensions.",
+          "items": {
+            "description": "GardenExtension contains type and provider information for Garden extensions.",
+            "properties": {
+              "providerConfig": {
+                "description": "ProviderConfig is the configuration passed to extension resource.",
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "type": {
+                "description": "Type is the type of the extension resource.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "runtimeCluster": {
+          "description": "RuntimeCluster contains configuration for the runtime cluster.",
+          "properties": {
+            "ingress": {
+              "description": "Ingress configures Ingress specific settings for the Garden cluster.",
+              "properties": {
+                "controller": {
+                  "description": "Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind defines which kind of IngressController to use. At the moment only `nginx` is supported",
+                      "enum": [
+                        "nginx"
+                      ],
+                      "type": "string"
+                    },
+                    "providerConfig": {
+                      "description": "ProviderConfig specifies infrastructure specific configuration for the ingressController",
+                      "type": "object",
+                      "x-kubernetes-preserve-unknown-fields": true
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "domains": {
+                  "description": "Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used\nto construct ingress URLs for system applications running in runtime cluster.",
+                  "items": {
+                    "description": "DNSDomain defines a DNS domain with optional provider.",
+                    "properties": {
+                      "name": {
+                        "description": "Name is the domain name.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "provider": {
+                        "description": "Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.\nIt is only optional, if the `.spec.dns` section is not provided at all.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "controller"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "networking": {
+              "description": "Networking defines the networking configuration of the runtime cluster.",
+              "properties": {
+                "blockCIDRs": {
+                  "description": "BlockCIDRs is a list of network addresses that should be blocked.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "ipFamilies": {
+                  "description": "IPFamilies specifies the IP protocol versions to use for the runtime cluster's networking. This field is\nimmutable.\nDefaults to [\"IPv4\"].",
+                  "items": {
+                    "description": "IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "nodes": {
+                  "description": "Nodes are the CIDRs of the node network. Elements can be appended to this list, but not removed.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "pods": {
+                  "description": "Pods are the CIDRs of the pod network. Elements can be appended to this list, but not removed.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "services": {
+                  "description": "Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "pods",
+                "services"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "provider": {
+              "description": "Provider defines the provider-specific information for this cluster.",
+              "properties": {
+                "region": {
+                  "description": "Region is the region the cluster is deployed to.",
+                  "type": "string"
+                },
+                "zones": {
+                  "description": "Zones is the list of availability zones the cluster is deployed to.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "settings": {
+              "description": "Settings contains certain settings for this cluster.",
+              "properties": {
+                "loadBalancerServices": {
+                  "description": "LoadBalancerServices controls certain settings for services of type load balancer that are created in the runtime\ncluster.",
+                  "properties": {
+                    "annotations": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+                      "type": "object"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "topologyAwareRouting": {
+                  "description": "TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.\nSee https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.",
+                  "properties": {
+                    "enabled": {
+                      "description": "Enabled controls whether certain Services deployed in the cluster should be topology-aware.\nThese Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.\nAdditionally, other components that are deployed to the runtime cluster via other means can read this field and\naccording to its value enable/disable topology-aware routing for their Services.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "verticalPodAutoscaler": {
+                  "description": "VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the\ncluster.",
+                  "properties": {
+                    "enabled": {
+                      "default": true,
+                      "description": "Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because\nthe operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime\ncluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still\ndisable it, then reconciliation will fail.",
+                      "type": "boolean"
+                    },
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "maxAllowed": {
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                        "x-kubernetes-int-or-string": true
+                      },
+                      "description": "MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.\nThe VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.\nFor more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.\n\nDefaults to nil (no maximum).",
+                      "type": "object"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "volume": {
+              "description": "Volume contains settings for persistent volumes created in the runtime cluster.",
+              "properties": {
+                "minimumSize": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.",
+                  "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                  "x-kubernetes-int-or-string": true
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "ingress",
+            "networking",
+            "provider"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "virtualCluster": {
+          "description": "VirtualCluster contains configuration for the virtual cluster.",
+          "properties": {
+            "controlPlane": {
+              "description": "ControlPlane holds information about the general settings for the control plane of the virtual cluster.",
+              "properties": {
+                "highAvailability": {
+                  "description": "HighAvailability holds the configuration settings for high availability settings.",
+                  "type": "object"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "dns": {
+              "description": "DNS holds information about DNS settings.",
+              "properties": {
+                "domains": {
+                  "description": "Domains are the external domains of the virtual garden cluster.\nThe first given domain in this list is immutable.",
+                  "items": {
+                    "description": "DNSDomain defines a DNS domain with optional provider.",
+                    "properties": {
+                      "name": {
+                        "description": "Name is the domain name.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "provider": {
+                        "description": "Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.\nIt is only optional, if the `.spec.dns` section is not provided at all.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "etcd": {
+              "description": "ETCD contains configuration for the etcds of the virtual garden cluster.",
+              "properties": {
+                "events": {
+                  "description": "Events contains configuration for the events etcd.",
+                  "properties": {
+                    "autoscaling": {
+                      "description": "Autoscaling contains auto-scaling configuration options for etcd.",
+                      "properties": {
+                        "minAllowed": {
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                            "x-kubernetes-int-or-string": true
+                          },
+                          "description": "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..\nConfiguration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.\nDefault values are not applied to this field.",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "minAllowed"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "storage": {
+                      "description": "Storage contains storage configuration.",
+                      "properties": {
+                        "capacity": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "default": "10Gi",
+                          "description": "Capacity is the storage capacity for the volumes.",
+                          "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                          "x-kubernetes-int-or-string": true
+                        },
+                        "className": {
+                          "description": "ClassName is the name of a storage class.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "main": {
+                  "description": "Main contains configuration for the main etcd.",
+                  "properties": {
+                    "autoscaling": {
+                      "description": "Autoscaling contains auto-scaling configuration options for etcd.",
+                      "properties": {
+                        "minAllowed": {
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                            "x-kubernetes-int-or-string": true
+                          },
+                          "description": "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..\nConfiguration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.\nDefault values are not applied to this field.",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "minAllowed"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "backup": {
+                      "description": "Backup contains the object store configuration for backups for the virtual garden etcd.",
+                      "properties": {
+                        "bucketName": {
+                          "description": "BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.\nIn this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating\nand deleting buckets.",
+                          "type": "string",
+                          "x-kubernetes-validations": [
+                            {
+                              "message": "BucketName is immutable",
+                              "rule": "self == oldSelf"
+                            }
+                          ]
+                        },
+                        "provider": {
+                          "description": "Provider is a provider name. This field is immutable.",
+                          "type": "string",
+                          "x-kubernetes-validations": [
+                            {
+                              "message": "Provider is immutable",
+                              "rule": "self == oldSelf"
+                            }
+                          ]
+                        },
+                        "providerConfig": {
+                          "description": "ProviderConfig is the provider-specific configuration passed to BackupBucket resource.",
+                          "type": "object",
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "region": {
+                          "description": "Region is a region name. If undefined, the provider region is used. This field is immutable.",
+                          "type": "string",
+                          "x-kubernetes-validations": [
+                            {
+                              "message": "Region is immutable",
+                              "rule": "self == oldSelf"
+                            }
+                          ]
+                        },
+                        "secretRef": {
+                          "description": "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where\nbackups should be stored. It should have enough privileges to manipulate the objects as well as buckets.",
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "x-kubernetes-map-type": "atomic",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "secretRef"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "storage": {
+                      "description": "Storage contains storage configuration.",
+                      "properties": {
+                        "capacity": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "default": "10Gi",
+                          "description": "Capacity is the storage capacity for the volumes.",
+                          "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                          "x-kubernetes-int-or-string": true
+                        },
+                        "className": {
+                          "description": "ClassName is the name of a storage class.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "gardener": {
+              "description": "Gardener contains the configuration options for the Gardener control plane components.",
+              "properties": {
+                "clusterIdentity": {
+                  "description": "ClusterIdentity is the identity of the garden cluster. This field is immutable.",
+                  "minLength": 1,
+                  "type": "string",
+                  "x-kubernetes-validations": [
+                    {
+                      "message": "Value is immutable",
+                      "rule": "self == oldSelf"
+                    }
+                  ]
+                },
+                "gardenerAPIServer": {
+                  "description": "APIServer contains configuration settings for the gardener-apiserver.",
+                  "properties": {
+                    "admissionPlugins": {
+                      "description": "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),\nand, if desired, the corresponding configuration.",
+                      "items": {
+                        "description": "AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.",
+                        "properties": {
+                          "config": {
+                            "description": "Config is the configuration of the plugin.",
+                            "type": "object",
+                            "x-kubernetes-preserve-unknown-fields": true
+                          },
+                          "disabled": {
+                            "description": "Disabled specifies whether this plugin should be disabled.",
+                            "type": "boolean"
+                          },
+                          "kubeconfigSecretName": {
+                            "description": "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.",
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the plugin.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "auditConfig": {
+                      "description": "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
+                      "properties": {
+                        "auditPolicy": {
+                          "description": "AuditPolicy contains configuration settings for audit policy of the kube-apiserver.",
+                          "properties": {
+                            "configMapRef": {
+                              "description": "ConfigMapRef is a reference to a ConfigMap object in the same namespace,\nwhich contains the audit policy for the kube-apiserver.",
+                              "properties": {
+                                "apiVersion": {
+                                  "description": "API version of the referent.",
+                                  "type": "string"
+                                },
+                                "fieldPath": {
+                                  "description": "If referring to a piece of an object instead of an entire object, this string\nshould contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].\nFor example, if the object reference is to a container within a pod, this would take on a value like:\n\"spec.containers{name}\" (where \"name\" refers to the name of the container that triggered\nthe event) or if no container name is specified \"spec.containers[2]\" (container with\nindex 2 in this pod). This syntax is chosen only to have some well-defined way of\nreferencing a part of an object.",
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                                  "type": "string"
+                                },
+                                "namespace": {
+                                  "description": "Namespace of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+                                  "type": "string"
+                                },
+                                "resourceVersion": {
+                                  "description": "Specific resourceVersion to which this reference is made, if any.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+                                  "type": "string"
+                                },
+                                "uid": {
+                                  "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object",
+                              "x-kubernetes-map-type": "atomic",
+                              "additionalProperties": false
+                            }
+                          },
+                          "type": "object",
+                          "additionalProperties": false
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "auditWebhook": {
+                      "description": "AuditWebhook contains settings related to an audit webhook configuration.",
+                      "properties": {
+                        "batchMaxSize": {
+                          "default": 30,
+                          "description": "BatchMaxSize is the maximum size of a batch.",
+                          "format": "int32",
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "kubeconfigSecretName": {
+                          "description": "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "version": {
+                          "default": "audit.k8s.io/v1",
+                          "description": "Version is the API version to send and expect from the webhook.",
+                          "enum": [
+                            "audit.k8s.io/v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kubeconfigSecretName"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "encryptionConfig": {
+                      "description": "EncryptionConfig contains customizable encryption configuration of the Gardener API server.",
+                      "properties": {
+                        "resources": {
+                          "description": "Resources contains the list of resources that shall be encrypted in addition to secrets.\nEach item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.\nWildcards are not supported for now.\nSee https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "resources"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "goAwayChance": {
+                      "description": "GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a\nconnection (GOAWAY). The client's other in-flight requests won't be affected, and the client will reconnect,\nlikely landing on a different apiserver after going through the load balancer again. This field sets the fraction\nof requests that will be sent a GOAWAY. Min is 0 (off), Max is 0.02 (1/50 requests); 0.001 (1/1000) is a\nrecommended starting point.",
+                      "maximum": 0.02,
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    "logging": {
+                      "description": "Logging contains configuration for the log level and HTTP access logs.",
+                      "properties": {
+                        "httpAccessVerbosity": {
+                          "description": "HTTPAccessVerbosity is the kube-apiserver access logs level",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "verbosity": {
+                          "description": "Verbosity is the kube-apiserver log verbosity level\nDefaults to 2.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "requests": {
+                      "description": "Requests contains configuration for request-specific settings for the kube-apiserver.",
+                      "properties": {
+                        "maxMutatingInflight": {
+                          "description": "MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server\nexceeds this, it rejects requests.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "maxNonMutatingInflight": {
+                          "description": "MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server\nexceeds this, it rejects requests.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "shootAdminKubeconfigMaxExpiration": {
+                      "description": "ShootAdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.\nIf an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,\na credential will be issued with a validity duration of this value.",
+                      "type": "string"
+                    },
+                    "watchCacheSizes": {
+                      "description": "WatchCacheSizes contains configuration of the API server's watch cache sizes.\nConfiguring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests\nand a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's\ncapacity is too small to cope with the amount of update requests and watchers for a particular resource, it\nmight happen that controller watches are permanently stopped with `too old resource version` errors.\nStarting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch\ncache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+                      "properties": {
+                        "default": {
+                          "description": "Default configures the default watch cache size of the kube-apiserver\n(flag `--default-watch-cache-size`, defaults to 100).\nSee: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "resources": {
+                          "description": "Resources configures the watch cache size of the kube-apiserver per resource\n(flag `--watch-cache-sizes`).\nSee: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+                          "items": {
+                            "description": "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+                            "properties": {
+                              "apiGroup": {
+                                "description": "APIGroup is the API group of the resource for which the watch cache size should be configured.\nAn unset value is used to specify the legacy core API (e.g. for `secrets`).",
+                                "type": "string"
+                              },
+                              "resource": {
+                                "description": "Resource is the name of the resource for which the watch cache size should be configured\n(in lowercase plural form, e.g. `secrets`).",
+                                "type": "string"
+                              },
+                              "size": {
+                                "description": "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+                                "format": "int32",
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "size"
+                            ],
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "gardenerAdmissionController": {
+                  "description": "AdmissionController contains configuration settings for the gardener-admission-controller.",
+                  "properties": {
+                    "logLevel": {
+                      "default": "info",
+                      "description": "LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].\nDefaults to info.",
+                      "enum": [
+                        "info",
+                        "debug",
+                        "error"
+                      ],
+                      "type": "string"
+                    },
+                    "resourceAdmissionConfiguration": {
+                      "description": "ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.",
+                      "properties": {
+                        "limits": {
+                          "description": "Limits contains configuration for resources which are subjected to size limitations.",
+                          "items": {
+                            "description": "ResourceLimit contains settings about a kind and the size each resource should have at most.",
+                            "properties": {
+                              "apiGroups": {
+                                "description": "APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "apiVersions": {
+                                "description": "APIVersions is the version of the resource. WildcardAll represents all versions.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "count": {
+                                "description": "Count specifies the maximum number of resources of the given kind. Only cluster-scoped resources are considered.",
+                                "format": "int64",
+                                "type": "integer"
+                              },
+                              "resources": {
+                                "description": "Resources is the name of the resource this rule applies to. WildcardAll represents all resources.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "size": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ],
+                                "description": "Size specifies the imposed limit.",
+                                "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                                "x-kubernetes-int-or-string": true
+                              }
+                            },
+                            "required": [
+                              "resources"
+                            ],
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
+                        },
+                        "operationMode": {
+                          "description": "OperationMode specifies the mode the webhooks operates in. Allowed values are \"block\" and \"log\". Defaults to \"block\".",
+                          "type": "string"
+                        },
+                        "unrestrictedSubjects": {
+                          "description": "UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.",
+                          "items": {
+                            "description": "Subject contains a reference to the object or user identities a role binding applies to.  This can either hold a direct API object reference,\nor a value for non-objects such as user and group names.",
+                            "properties": {
+                              "apiGroup": {
+                                "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+                                "type": "string"
+                              },
+                              "kind": {
+                                "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+                                "type": "string"
+                              },
+                              "name": {
+                                "description": "Name of the object being referenced.",
+                                "type": "string"
+                              },
+                              "namespace": {
+                                "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "name"
+                            ],
+                            "type": "object",
+                            "x-kubernetes-map-type": "atomic",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "limits"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "gardenerControllerManager": {
+                  "description": "ControllerManager contains configuration settings for the gardener-controller-manager.",
+                  "properties": {
+                    "defaultProjectQuotas": {
+                      "description": "DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already\nspecified.",
+                      "items": {
+                        "description": "ProjectQuotaConfiguration defines quota configurations.",
+                        "properties": {
+                          "config": {
+                            "description": "Config is the corev1.ResourceQuota specification used for the project set-up.",
+                            "properties": {
+                              "apiVersion": {
+                                "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+                                "type": "string"
+                              },
+                              "kind": {
+                                "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                                "type": "string"
+                              },
+                              "metadata": {
+                                "description": "Standard object's metadata.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+                                "type": "object"
+                              },
+                              "spec": {
+                                "description": "Spec defines the desired quota.\nhttps://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+                                "properties": {
+                                  "hard": {
+                                    "additionalProperties": {
+                                      "anyOf": [
+                                        {
+                                          "type": "integer"
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ],
+                                      "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                                      "x-kubernetes-int-or-string": true
+                                    },
+                                    "description": "hard is the set of desired hard limits for each named resource.\nMore info: https://kubernetes.io/docs/concepts/policy/resource-quotas/",
+                                    "type": "object"
+                                  },
+                                  "scopeSelector": {
+                                    "description": "scopeSelector is also a collection of filters like scopes that must match each object tracked by a quota\nbut expressed using ScopeSelectorOperator in combination with possible values.\nFor a resource to match, both scopes AND scopeSelector (if specified in spec), must be matched.",
+                                    "properties": {
+                                      "matchExpressions": {
+                                        "description": "A list of scope selector requirements by scope of the resources.",
+                                        "items": {
+                                          "description": "A scoped-resource selector requirement is a selector that contains values, a scope name, and an operator\nthat relates the scope name and values.",
+                                          "properties": {
+                                            "operator": {
+                                              "description": "Represents a scope's relationship to a set of values.\nValid operators are In, NotIn, Exists, DoesNotExist.",
+                                              "type": "string"
+                                            },
+                                            "scopeName": {
+                                              "description": "The name of the scope that the selector applies to.",
+                                              "type": "string"
+                                            },
+                                            "values": {
+                                              "description": "An array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty.\nThis array is replaced during a strategic merge patch.",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "type": "array",
+                                              "x-kubernetes-list-type": "atomic"
+                                            }
+                                          },
+                                          "required": [
+                                            "operator",
+                                            "scopeName"
+                                          ],
+                                          "type": "object",
+                                          "additionalProperties": false
+                                        },
+                                        "type": "array",
+                                        "x-kubernetes-list-type": "atomic"
+                                      }
+                                    },
+                                    "type": "object",
+                                    "x-kubernetes-map-type": "atomic",
+                                    "additionalProperties": false
+                                  },
+                                  "scopes": {
+                                    "description": "A collection of filters that must match each object tracked by a quota.\nIf not specified, the quota matches all objects.",
+                                    "items": {
+                                      "description": "A ResourceQuotaScope defines a filter that must match each object tracked by a quota",
+                                      "type": "string"
+                                    },
+                                    "type": "array",
+                                    "x-kubernetes-list-type": "atomic"
+                                  }
+                                },
+                                "type": "object",
+                                "additionalProperties": false
+                              },
+                              "status": {
+                                "description": "Status defines the actual enforced quota and its current usage.\nhttps://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+                                "properties": {
+                                  "hard": {
+                                    "additionalProperties": {
+                                      "anyOf": [
+                                        {
+                                          "type": "integer"
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ],
+                                      "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                                      "x-kubernetes-int-or-string": true
+                                    },
+                                    "description": "Hard is the set of enforced hard limits for each named resource.\nMore info: https://kubernetes.io/docs/concepts/policy/resource-quotas/",
+                                    "type": "object"
+                                  },
+                                  "used": {
+                                    "additionalProperties": {
+                                      "anyOf": [
+                                        {
+                                          "type": "integer"
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ],
+                                      "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                                      "x-kubernetes-int-or-string": true
+                                    },
+                                    "description": "Used is the current observed total usage of the resource in the namespace.",
+                                    "type": "object"
+                                  }
+                                },
+                                "type": "object",
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "projectSelector": {
+                            "description": "ProjectSelector is an optional setting to select the projects considered for quotas.\nDefaults to empty LabelSelector, which matches all projects.",
+                            "properties": {
+                              "matchExpressions": {
+                                "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                                "items": {
+                                  "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                                  "properties": {
+                                    "key": {
+                                      "description": "key is the label key that the selector applies to.",
+                                      "type": "string"
+                                    },
+                                    "operator": {
+                                      "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                                      "type": "string"
+                                    },
+                                    "values": {
+                                      "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array",
+                                      "x-kubernetes-list-type": "atomic"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "operator"
+                                  ],
+                                  "type": "object",
+                                  "additionalProperties": false
+                                },
+                                "type": "array",
+                                "x-kubernetes-list-type": "atomic"
+                              },
+                              "matchLabels": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                                "type": "object"
+                              }
+                            },
+                            "type": "object",
+                            "x-kubernetes-map-type": "atomic",
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "config"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "logLevel": {
+                      "default": "info",
+                      "description": "LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].\nDefaults to info.",
+                      "enum": [
+                        "info",
+                        "debug",
+                        "error"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "gardenerDashboard": {
+                  "description": "Dashboard contains configuration settings for the gardener-dashboard.",
+                  "properties": {
+                    "assetsConfigMapRef": {
+                      "description": "AssetsConfigMapRef is the reference to a ConfigMap in the garden namespace containing the assets (logos/icons).",
+                      "properties": {
+                        "name": {
+                          "default": "",
+                          "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "x-kubernetes-map-type": "atomic",
+                      "additionalProperties": false
+                    },
+                    "enableTokenLogin": {
+                      "default": true,
+                      "description": "EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC\nmust be configured.",
+                      "type": "boolean"
+                    },
+                    "frontendConfigMapRef": {
+                      "description": "FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend\nconfiguration.",
+                      "properties": {
+                        "name": {
+                          "default": "",
+                          "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "x-kubernetes-map-type": "atomic",
+                      "additionalProperties": false
+                    },
+                    "gitHub": {
+                      "description": "GitHub contains configuration for the GitHub ticketing feature.",
+                      "properties": {
+                        "apiURL": {
+                          "default": "https://api.github.com",
+                          "description": "APIURL is the URL to the GitHub API.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "organisation": {
+                          "description": "Organisation is the name of the GitHub organisation.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "pollInterval": {
+                          "description": "PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a\nfallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a\nwebhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.\nIf this field is not provided and there is no 'webhookSecret' key in the referenced secret, it will be\nimplicitly defaulted to `15m`.",
+                          "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$",
+                          "type": "string"
+                        },
+                        "repository": {
+                          "description": "Repository is the name of the GitHub repository.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "secretRef": {
+                          "description": "SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.",
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "x-kubernetes-map-type": "atomic",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "apiURL",
+                        "organisation",
+                        "repository",
+                        "secretRef"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "ingress": {
+                      "description": "Ingress contains configuration for the ingress settings.",
+                      "properties": {
+                        "enabled": {
+                          "default": true,
+                          "description": "Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.",
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "logLevel": {
+                      "default": "info",
+                      "description": "LogLevel is the configured log level. Must be one of [trace,debug,info,warn,error].\nDefaults to info.",
+                      "enum": [
+                        "trace",
+                        "debug",
+                        "info",
+                        "warn",
+                        "error"
+                      ],
+                      "type": "string"
+                    },
+                    "oidcConfig": {
+                      "description": "OIDCConfig contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.",
+                      "properties": {
+                        "additionalScopes": {
+                          "description": "AdditionalScopes is the list of additional OIDC scopes.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "certificateAuthoritySecretRef": {
+                          "description": "CertificateAuthoritySecretRef is the reference to a secret in the garden namespace containing a custom CA certificate under the \"ca.crt\" key",
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "x-kubernetes-map-type": "atomic",
+                          "additionalProperties": false
+                        },
+                        "clientIDPublic": {
+                          "description": "ClientIDPublic is the public client ID.\nFalls back to the API server's OIDC client ID configuration if not set here.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "issuerURL": {
+                          "description": "The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).\nFalls back to the API server's OIDC issuer URL configuration if not set here.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "secretRef": {
+                          "description": "SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.",
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "x-kubernetes-map-type": "atomic",
+                          "additionalProperties": false
+                        },
+                        "sessionLifetime": {
+                          "description": "SessionLifetime is the maximum duration of a session.",
+                          "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "secretRef"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "terminal": {
+                      "description": "Terminal contains configuration for the terminal settings.",
+                      "properties": {
+                        "allowedHosts": {
+                          "description": "AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.\nIt is important to consider that the usage of wildcards follows the rules defined by the content security policy.\n'*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'. For more information, see\nhttps://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "container": {
+                          "description": "Container contains configuration for the dashboard terminal container.",
+                          "properties": {
+                            "description": {
+                              "description": "Description is a description for the dashboard terminal container with hints for the user.",
+                              "type": "string"
+                            },
+                            "image": {
+                              "description": "Image is the container image for the dashboard terminal container.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "image"
+                          ],
+                          "type": "object",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "container"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "gardenerDiscoveryServer": {
+                  "description": "DiscoveryServer contains configuration settings for the gardener-discovery-server.",
+                  "type": "object"
+                },
+                "gardenerScheduler": {
+                  "description": "Scheduler contains configuration settings for the gardener-scheduler.",
+                  "properties": {
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "logLevel": {
+                      "default": "info",
+                      "description": "LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].\nDefaults to info.",
+                      "enum": [
+                        "info",
+                        "debug",
+                        "error"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "clusterIdentity"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "kubernetes": {
+              "description": "Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden\ncluster.",
+              "properties": {
+                "kubeAPIServer": {
+                  "description": "KubeAPIServer contains configuration settings for the kube-apiserver.",
+                  "properties": {
+                    "admissionPlugins": {
+                      "description": "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding\nconfiguration.",
+                      "items": {
+                        "description": "AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.",
+                        "properties": {
+                          "config": {
+                            "description": "Config is the configuration of the plugin.",
+                            "type": "object",
+                            "x-kubernetes-preserve-unknown-fields": true
+                          },
+                          "disabled": {
+                            "description": "Disabled specifies whether this plugin should be disabled.",
+                            "type": "boolean"
+                          },
+                          "kubeconfigSecretName": {
+                            "description": "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.",
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the plugin.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "apiAudiences": {
+                      "description": "APIAudiences are the identifiers of the API. The service account token authenticator will\nvalidate that tokens used against the API are bound to at least one of these audiences.\nDefaults to [\"kubernetes\"].",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "auditConfig": {
+                      "description": "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
+                      "properties": {
+                        "auditPolicy": {
+                          "description": "AuditPolicy contains configuration settings for audit policy of the kube-apiserver.",
+                          "properties": {
+                            "configMapRef": {
+                              "description": "ConfigMapRef is a reference to a ConfigMap object in the same namespace,\nwhich contains the audit policy for the kube-apiserver.",
+                              "properties": {
+                                "apiVersion": {
+                                  "description": "API version of the referent.",
+                                  "type": "string"
+                                },
+                                "fieldPath": {
+                                  "description": "If referring to a piece of an object instead of an entire object, this string\nshould contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].\nFor example, if the object reference is to a container within a pod, this would take on a value like:\n\"spec.containers{name}\" (where \"name\" refers to the name of the container that triggered\nthe event) or if no container name is specified \"spec.containers[2]\" (container with\nindex 2 in this pod). This syntax is chosen only to have some well-defined way of\nreferencing a part of an object.",
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                                  "type": "string"
+                                },
+                                "namespace": {
+                                  "description": "Namespace of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+                                  "type": "string"
+                                },
+                                "resourceVersion": {
+                                  "description": "Specific resourceVersion to which this reference is made, if any.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+                                  "type": "string"
+                                },
+                                "uid": {
+                                  "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object",
+                              "x-kubernetes-map-type": "atomic",
+                              "additionalProperties": false
+                            }
+                          },
+                          "type": "object",
+                          "additionalProperties": false
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "auditWebhook": {
+                      "description": "AuditWebhook contains settings related to an audit webhook configuration.",
+                      "properties": {
+                        "batchMaxSize": {
+                          "default": 30,
+                          "description": "BatchMaxSize is the maximum size of a batch.",
+                          "format": "int32",
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "kubeconfigSecretName": {
+                          "description": "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "version": {
+                          "default": "audit.k8s.io/v1",
+                          "description": "Version is the API version to send and expect from the webhook.",
+                          "enum": [
+                            "audit.k8s.io/v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kubeconfigSecretName"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "authentication": {
+                      "description": "Authentication contains settings related to authentication.",
+                      "properties": {
+                        "webhook": {
+                          "description": "Webhook contains settings related to an authentication webhook configuration.",
+                          "properties": {
+                            "cacheTTL": {
+                              "description": "CacheTTL is the duration to cache responses from the webhook authenticator.",
+                              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$",
+                              "type": "string"
+                            },
+                            "kubeconfigSecretName": {
+                              "description": "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "default": "v1beta1",
+                              "description": "Version is the API version to send and expect from the webhook.",
+                              "enum": [
+                                "v1alpha1",
+                                "v1beta1",
+                                "v1"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kubeconfigSecretName"
+                          ],
+                          "type": "object",
+                          "additionalProperties": false
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "autoscaling": {
+                      "description": "Autoscaling contains auto-scaling configuration options for the kube-apiserver.",
+                      "properties": {
+                        "minAllowed": {
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                            "x-kubernetes-int-or-string": true
+                          },
+                          "description": "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..\nConfiguration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.\nDefault values are not applied to this field.",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "minAllowed"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "defaultNotReadyTolerationSeconds": {
+                      "description": "DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute\nthat is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).\nThe field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.\nDefaults to 300.",
+                      "format": "int64",
+                      "type": "integer"
+                    },
+                    "defaultUnreachableTolerationSeconds": {
+                      "description": "DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute\nthat is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).\nThe field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.\nDefaults to 300.",
+                      "format": "int64",
+                      "type": "integer"
+                    },
+                    "enableAnonymousAuthentication": {
+                      "description": "EnableAnonymousAuthentication defines whether anonymous requests to the secure port\nof the API server should be allowed (flag `--anonymous-auth`).\nSee: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/\n\nDeprecated: This field is deprecated and will be removed in a future release.\nPlease use anonymous authentication configuration instead.\nFor more information see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration",
+                      "type": "boolean"
+                    },
+                    "encryptionConfig": {
+                      "description": "EncryptionConfig contains customizable encryption configuration of the Kube API server.",
+                      "properties": {
+                        "resources": {
+                          "description": "Resources contains the list of resources that shall be encrypted in addition to secrets.\nEach item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.\nWildcards are not supported for now.\nSee https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "resources"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "eventTTL": {
+                      "description": "EventTTL controls the amount of time to retain events.\nDefaults to 1h.",
+                      "type": "string"
+                    },
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "logging": {
+                      "description": "Logging contains configuration for the log level and HTTP access logs.",
+                      "properties": {
+                        "httpAccessVerbosity": {
+                          "description": "HTTPAccessVerbosity is the kube-apiserver access logs level",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "verbosity": {
+                          "description": "Verbosity is the kube-apiserver log verbosity level\nDefaults to 2.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "oidcConfig": {
+                      "description": "OIDCConfig contains configuration settings for the OIDC provider.\n\nDeprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.\nPlease configure and use structured authentication instead of oidc flags.\nFor more information check https://github.com/gardener/gardener/issues/9858",
+                      "properties": {
+                        "caBundle": {
+                          "description": "If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.",
+                          "type": "string"
+                        },
+                        "clientAuthentication": {
+                          "description": "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.\n\nDeprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.\nIt's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+                          "properties": {
+                            "extraConfig": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Extra configuration added to kubeconfig's auth-provider.\nMust not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token",
+                              "type": "object"
+                            },
+                            "secret": {
+                              "description": "The client Secret for the OpenID Connect client.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "additionalProperties": false
+                        },
+                        "clientID": {
+                          "description": "The client ID for the OpenID Connect client, must be set.",
+                          "type": "string"
+                        },
+                        "groupsClaim": {
+                          "description": "If provided, the name of a custom OpenID Connect claim for specifying user groups. The claim value is expected to be a string or array of strings. This flag is experimental, please see the authentication documentation for further details.",
+                          "type": "string"
+                        },
+                        "groupsPrefix": {
+                          "description": "If provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.",
+                          "type": "string"
+                        },
+                        "issuerURL": {
+                          "description": "The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).",
+                          "type": "string"
+                        },
+                        "requiredClaims": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
+                          "type": "object"
+                        },
+                        "signingAlgs": {
+                          "description": "List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "usernameClaim": {
+                          "description": "The OpenID claim to use as the user name. Note that claims other than the default ('sub') is not guaranteed to be unique and immutable. This flag is experimental, please see the authentication documentation for further details. (default \"sub\")",
+                          "type": "string"
+                        },
+                        "usernamePrefix": {
+                          "description": "If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "requests": {
+                      "description": "Requests contains configuration for request-specific settings for the kube-apiserver.",
+                      "properties": {
+                        "maxMutatingInflight": {
+                          "description": "MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server\nexceeds this, it rejects requests.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "maxNonMutatingInflight": {
+                          "description": "MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server\nexceeds this, it rejects requests.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "resourcesToStoreInETCDEvents": {
+                      "description": "ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of\netcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from\nthis list will not migrate them automatically from the etcd-main to etcd-events or vice versa.",
+                      "items": {
+                        "description": "GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.",
+                        "properties": {
+                          "group": {
+                            "description": "Group is the API group name.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "resource": {
+                            "description": "Resource is the resource name.",
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "group",
+                          "resource"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "runtimeConfig": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "RuntimeConfig contains information about enabled or disabled APIs.",
+                      "type": "object"
+                    },
+                    "serviceAccountConfig": {
+                      "description": "ServiceAccountConfig contains configuration settings for the service account handling\nof the kube-apiserver.",
+                      "properties": {
+                        "acceptedIssuers": {
+                          "description": "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.\nThese values are not used to generate new service account tokens. Only useful when service account tokens are also\nissued by another external system or a change of the current issuer that is used for generating tokens is being performed.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "extendTokenExpiration": {
+                          "description": "ExtendTokenExpiration turns on projected service account expiration extension during token generation, which\nhelps safe transition from legacy token to bound service account token feature. If this flag is enabled,\nadmission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,\nignoring value of service-account-max-token-expiration.",
+                          "type": "boolean"
+                        },
+                        "issuer": {
+                          "description": "Issuer is the identifier of the service account token issuer. The issuer will assert this\nidentifier in \"iss\" claim of issued tokens. This value is used to generate new service account tokens.\nThis value is a string or URI. Defaults to URI of the API server.",
+                          "type": "string"
+                        },
+                        "maxTokenExpiration": {
+                          "description": "MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an\notherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued\nwith a validity duration of this value.\nThis field must be within [30d,90d].",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "sni": {
+                      "description": "SNI contains configuration options for the TLS SNI settings.",
+                      "properties": {
+                        "domainPatterns": {
+                          "description": "DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain\npatterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address\nrequested by a client. If no domain patterns are provided, the names of the certificate are extracted.\nNon-wildcard matches trump over wildcard matches, explicit domain patterns trump over extracted names.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "secretName": {
+                          "description": "SecretName is the name of a secret containing the TLS certificate and private key.\nIf not configured, Gardener falls back to a secret labelled with 'gardener.cloud/role=garden-cert'.",
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "structuredAuthentication": {
+                      "description": "StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.\nThis field is only available for Kubernetes v1.30 or later.",
+                      "properties": {
+                        "configMapName": {
+                          "description": "ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration\nfor the kube-apiserver.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "configMapName"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "structuredAuthorization": {
+                      "description": "StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.\nThis field is only available for Kubernetes v1.30 or later.",
+                      "properties": {
+                        "configMapName": {
+                          "description": "ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for\nthe kube-apiserver.",
+                          "type": "string"
+                        },
+                        "kubeconfigs": {
+                          "description": "Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.",
+                          "items": {
+                            "description": "AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.",
+                            "properties": {
+                              "authorizerName": {
+                                "description": "AuthorizerName is the name of a webhook authorizer.",
+                                "type": "string"
+                              },
+                              "secretName": {
+                                "description": "SecretName is the name of a secret containing the kubeconfig.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "authorizerName",
+                              "secretName"
+                            ],
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "configMapName",
+                        "kubeconfigs"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "watchCacheSizes": {
+                      "description": "WatchCacheSizes contains configuration of the API server's watch cache sizes.\nConfiguring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests\nand a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's\ncapacity is too small to cope with the amount of update requests and watchers for a particular resource, it\nmight happen that controller watches are permanently stopped with `too old resource version` errors.\nStarting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch\ncache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+                      "properties": {
+                        "default": {
+                          "description": "Default configures the default watch cache size of the kube-apiserver\n(flag `--default-watch-cache-size`, defaults to 100).\nSee: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "resources": {
+                          "description": "Resources configures the watch cache size of the kube-apiserver per resource\n(flag `--watch-cache-sizes`).\nSee: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+                          "items": {
+                            "description": "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+                            "properties": {
+                              "apiGroup": {
+                                "description": "APIGroup is the API group of the resource for which the watch cache size should be configured.\nAn unset value is used to specify the legacy core API (e.g. for `secrets`).",
+                                "type": "string"
+                              },
+                              "resource": {
+                                "description": "Resource is the name of the resource for which the watch cache size should be configured\n(in lowercase plural form, e.g. `secrets`).",
+                                "type": "string"
+                              },
+                              "size": {
+                                "description": "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+                                "format": "int32",
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "resource",
+                              "size"
+                            ],
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "kubeControllerManager": {
+                  "description": "KubeControllerManager contains configuration settings for the kube-controller-manager.",
+                  "properties": {
+                    "certificateSigningDuration": {
+                      "default": "48h",
+                      "description": "CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs\nmay request shorter certs by setting `spec.expirationSeconds`.",
+                      "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$",
+                      "type": "string"
+                    },
+                    "featureGates": {
+                      "additionalProperties": {
+                        "type": "boolean"
+                      },
+                      "description": "FeatureGates contains information about enabled feature gates.",
+                      "type": "object"
+                    },
+                    "horizontalPodAutoscaler": {
+                      "description": "HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.",
+                      "properties": {
+                        "cpuInitializationPeriod": {
+                          "description": "The period after which a ready pod transition is considered to be the first.",
+                          "type": "string"
+                        },
+                        "downscaleStabilization": {
+                          "description": "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
+                          "type": "string"
+                        },
+                        "initialReadinessDelay": {
+                          "description": "The configurable period at which the horizontal pod autoscaler considers a Pod \u201cnot yet ready\u201d given that it\u2019s unready and it has  transitioned to unready during that time.",
+                          "type": "string"
+                        },
+                        "syncPeriod": {
+                          "description": "The period for syncing the number of pods in horizontal pod autoscaler.",
+                          "type": "string"
+                        },
+                        "tolerance": {
+                          "description": "The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "nodeCIDRMaskSize": {
+                      "description": "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.",
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "nodeMonitorGracePeriod": {
+                      "description": "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
+                      "type": "string"
+                    },
+                    "podEvictionTimeout": {
+                      "description": "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated\nin favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.\nThe `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint\nbased eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,\ninstead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and\n`spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting\nfrom Kubernetes 1.33.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "version": {
+                  "description": "Version is the semantic Kubernetes version to use for the virtual garden cluster.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "version"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "maintenance": {
+              "description": "Maintenance contains information about the time window for maintenance operations.",
+              "properties": {
+                "timeWindow": {
+                  "description": "TimeWindow contains information about the time window for maintenance operations.",
+                  "properties": {
+                    "begin": {
+                      "description": "Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\".\nIf not present, a random value will be computed.",
+                      "pattern": "([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]\\+[0-1][0-4]00",
+                      "type": "string"
+                    },
+                    "end": {
+                      "description": "End is the end of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\".\nIf not present, the value will be computed based on the \"Begin\" value.",
+                      "pattern": "([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]\\+[0-1][0-4]00",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "begin",
+                    "end"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "timeWindow"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "networking": {
+              "description": "Networking contains information about cluster networking such as CIDRs, etc.",
+              "properties": {
+                "services": {
+                  "description": "Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "services"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "dns",
+            "gardener",
+            "kubernetes",
+            "maintenance",
+            "networking"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "runtimeCluster",
+        "virtualCluster"
+      ],
+      "type": "object",
+      "additionalProperties": false
+    },
+    "status": {
+      "description": "Status contains the status of this garden.",
+      "properties": {
+        "conditions": {
+          "description": "Conditions is a list of conditions.",
+          "items": {
+            "description": "Condition holds the information about the state of a resource.",
+            "properties": {
+              "codes": {
+                "description": "Well-defined error codes in case the condition reports a problem.",
+                "items": {
+                  "description": "ErrorCode is a string alias.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "lastTransitionTime": {
+                "description": "Last time the condition transitioned from one status to another.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "lastUpdateTime": {
+                "description": "Last time the condition was updated.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "description": "A human readable message indicating details about the transition.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "The reason for the condition's last transition.",
+                "type": "string"
+              },
+              "status": {
+                "description": "Status of the condition, one of True, False, Unknown.",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type of the condition.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lastTransitionTime",
+              "lastUpdateTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "credentials": {
+          "description": "Credentials contains information about the virtual garden cluster credentials.",
+          "properties": {
+            "encryptionAtRest": {
+              "description": "EncryptionAtRest contains information about garden data encryption at rest.",
+              "properties": {
+                "resources": {
+                  "description": "Resources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.\nResources which are encrypted by default will not appear here.\nSee https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "rotation": {
+              "description": "Rotation contains information about the credential rotations.",
+              "properties": {
+                "certificateAuthorities": {
+                  "description": "CertificateAuthorities contains information about the certificate authority credential rotation.",
+                  "properties": {
+                    "lastCompletionTime": {
+                      "description": "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastCompletionTriggeredTime": {
+                      "description": "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was\ntriggered.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationFinishedTime": {
+                      "description": "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "pendingWorkersRollouts": {
+                      "description": "PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to\ncredentials rotation.",
+                      "items": {
+                        "description": "PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.",
+                        "properties": {
+                          "lastInitiationTime": {
+                            "description": "LastInitiationTime is the most recent time when the worker rollout was initiated.",
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of a worker pool.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "phase": {
+                      "description": "Phase describes the phase of the certificate authority credential rotation.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "phase"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "etcdEncryptionKey": {
+                  "description": "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
+                  "properties": {
+                    "autoCompleteAfterPrepared": {
+                      "description": "AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.\nSuch rotation can be triggered by the `rotate-etcd-encryption-key` annotation.\nThis field is needed while we support two types of key rotations: two-operation and single operation rotation.\n\nDeprecated: This field will be removed in a future release. The field will be no longer needed with\nthe removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.",
+                      "type": "boolean"
+                    },
+                    "lastCompletionTime": {
+                      "description": "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastCompletionTriggeredTime": {
+                      "description": "LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was\ntriggered.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationFinishedTime": {
+                      "description": "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "phase": {
+                      "description": "Phase describes the phase of the ETCD encryption key credential rotation.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "phase"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "observability": {
+                  "description": "Observability contains information about the observability credential rotation.",
+                  "properties": {
+                    "lastCompletionTime": {
+                      "description": "LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the observability credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "serviceAccountKey": {
+                  "description": "ServiceAccountKey contains information about the service account key credential rotation.",
+                  "properties": {
+                    "lastCompletionTime": {
+                      "description": "LastCompletionTime is the most recent time when the service account key credential rotation was successfully\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastCompletionTriggeredTime": {
+                      "description": "LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was\ntriggered.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationFinishedTime": {
+                      "description": "LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "pendingWorkersRollouts": {
+                      "description": "PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to\ncredentials rotation.",
+                      "items": {
+                        "description": "PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.",
+                        "properties": {
+                          "lastInitiationTime": {
+                            "description": "LastInitiationTime is the most recent time when the worker rollout was initiated.",
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of a worker pool.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
+                    },
+                    "phase": {
+                      "description": "Phase describes the phase of the service account key credential rotation.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "phase"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "workloadIdentityKey": {
+                  "description": "WorkloadIdentityKey contains information about the workload identity key credential rotation.",
+                  "properties": {
+                    "lastCompletionTime": {
+                      "description": "LastCompletionTime is the most recent time when the workload identity key credential rotation was successfully\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastCompletionTriggeredTime": {
+                      "description": "LastCompletionTriggeredTime is the recent time when the workload identity key credential rotation completion was\ntriggered.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationFinishedTime": {
+                      "description": "LastInitiationFinishedTime is the recent time when the workload identity key credential rotation initiation was\ncompleted.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lastInitiationTime": {
+                      "description": "LastInitiationTime is the most recent time when the workload identity key credential rotation was initiated.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "phase": {
+                      "description": "Phase describes the phase of the workload identity key credential rotation.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "phase"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
+        "encryptedResources": {
+          "description": "EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.\nResources which are encrypted by default will not appear here.\nSee https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.\n\nDeprecated: This field is deprecated and will be removed with release v1.138.\nThis field will be removed in favor of `status.credentials.encryptionAtRest.resources`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "gardener": {
+          "description": "Gardener holds information about the Gardener which last acted on the Garden.",
+          "properties": {
+            "id": {
+              "description": "ID is the container id of the Gardener which last acted on a resource.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the hostname (pod name) of the Gardener which last acted on a resource.",
+              "type": "string"
+            },
+            "version": {
+              "description": "Version is the version of the Gardener which last acted on a resource.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "version"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "lastOperation": {
+          "description": "LastOperation holds information about the last operation on the Garden.",
+          "properties": {
+            "description": {
+              "description": "A human readable message indicating details about the last operation.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the operation state transitioned from one to another.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "progress": {
+              "description": "The progress in percentage (0-100) of the last operation.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "state": {
+              "description": "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "lastUpdateTime",
+            "progress",
+            "state",
+            "type"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the most recent generation observed for this resource.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "type": "object"
+}

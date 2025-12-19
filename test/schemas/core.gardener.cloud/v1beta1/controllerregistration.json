@@ -1,0 +1,170 @@
+{
+  "description": "ControllerRegistration represents a registration of an external controller.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec contains the specification of this registration.\nIf the object's deletion timestamp is set, this field is immutable.",
+      "properties": {
+        "deployment": {
+          "description": "Deployment contains information for how this controller is deployed.",
+          "properties": {
+            "deploymentRefs": {
+              "description": "DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.",
+              "items": {
+                "description": "DeploymentRef contains information about `ControllerDeployment` references.",
+                "properties": {
+                  "name": {
+                    "description": "Name is the name of the `ControllerDeployment` that is being referred to.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            },
+            "policy": {
+              "description": "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+              "type": "string"
+            },
+            "seedSelector": {
+              "description": "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be\nconsidered for a deployment.\nAn empty list means that all seeds are selected.",
+              "properties": {
+                "matchExpressions": {
+                  "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                  "items": {
+                    "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                    "properties": {
+                      "key": {
+                        "description": "key is the label key that the selector applies to.",
+                        "type": "string"
+                      },
+                      "operator": {
+                        "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                        "type": "string"
+                      },
+                      "values": {
+                        "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "x-kubernetes-list-type": "atomic"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "operator"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
+                },
+                "matchLabels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                  "type": "object"
+                }
+              },
+              "type": "object",
+              "x-kubernetes-map-type": "atomic",
+              "additionalProperties": false
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
+        "resources": {
+          "description": "Resources is a list of combinations of kinds (DNSProvider, Infrastructure, Generic, ...) and their actual types\n(aws-route53, gcp, auditlog, ...).",
+          "items": {
+            "description": "ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this\nkind (aws-route53, gcp, auditlog, ...).",
+            "properties": {
+              "autoEnable": {
+                "description": "AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.\nThis field can only be set for resources of kind \"Extension\".",
+                "items": {
+                  "description": "ClusterType defines the type of cluster.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "clusterCompatibility": {
+                "description": "ClusterCompatibility defines the compatibility of this resource with different cluster types.\nIf compatibility is not specified, it will be defaulted to 'shoot'.\nThis field can only be set for resources of kind \"Extension\".",
+                "items": {
+                  "description": "ClusterType defines the type of cluster.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "kind": {
+                "description": "Kind is the resource kind, for example \"OperatingSystemConfig\".",
+                "type": "string"
+              },
+              "lifecycle": {
+                "description": "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.\nThis field is defaulted in the following way when kind is \"Extension\".\n Reconcile: \"AfterKubeAPIServer\"\n Delete: \"BeforeKubeAPIServer\"\n Migrate: \"BeforeKubeAPIServer\"",
+                "properties": {
+                  "delete": {
+                    "description": "Delete defines the strategy during deletion.",
+                    "type": "string"
+                  },
+                  "migrate": {
+                    "description": "Migrate defines the strategy during migration.",
+                    "type": "string"
+                  },
+                  "reconcile": {
+                    "description": "Reconcile defines the strategy during reconciliation.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "additionalProperties": false
+              },
+              "primary": {
+                "description": "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension\nresource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type\ncombination. This field is immutable.",
+                "type": "boolean"
+              },
+              "reconcileTimeout": {
+                "description": "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.\nThis field is defaulted to 3m0s when kind is \"Extension\".",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type is the resource type, for example \"coreos\" or \"ubuntu\".",
+                "type": "string"
+              },
+              "workerlessSupported": {
+                "description": "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.\nThis field is only relevant when kind is \"Extension\".",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "kind",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "type": "object"
+}

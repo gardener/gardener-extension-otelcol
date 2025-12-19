@@ -1,0 +1,25 @@
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: otelcol
+  annotations:
+    security.gardener.cloud/pod-security-enforce: baseline
+spec:
+  # https://gardener.cloud/docs/gardener/extensions/registration/#deployment-configuration-options
+  deployment:
+    policy: OnDemand
+    deploymentRefs:
+      - name: otelcol
+  # https://gardener.cloud/docs/gardener/extensions/registration/#extension-resource-configurations
+  resources:
+    - kind: Extension
+      type: otelcol
+      workerlessSupported: true
+      clusterCompatibility:
+        - shoot
+      # https://gardener.cloud/docs/gardener/extensions/registration/#extension-lifecycle
+      lifecycle:
+        reconcile: BeforeKubeAPIServer
+        delete: AfterKubeAPIServer
+        migrate: AfterKubeAPIServer
