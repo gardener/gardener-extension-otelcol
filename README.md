@@ -1,9 +1,14 @@
 # gardener-extension-otelcol
 
-The `gardener-extension-otelcol` repo provides Gardener Extension for OpenTelemetry Collector.
+The `gardener-extension-otelcol` repo provides a Gardener Extension for an
+OpenTelemetry Collector, which runs in the shoot control-plane namespace and
+forwards observability signals for control-plane components to a remote
+OpenTelemetry Collector receiver.
 
 > [!WARNING]
 > This extension is in early development state. Do not use it in a production environment.
+
+![High Level Overview](./images/otel-extension-overview.png)
 
 # Requirements
 
@@ -38,6 +43,11 @@ You can enable the extension for a [Gardener Shoot
 cluster](https://gardener.cloud/docs/glossary/_index#gardener-glossary) by
 updating the `.spec.extensions` of your shoot manifest.
 
+The following example shoot manifest snippet enables the extension and
+configures the OpenTelemetry Collector to emit the signals for the shoot
+control-plane components via the
+[Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter).
+
 ``` yaml
 ...
 
@@ -46,10 +56,97 @@ spec:
     - type: otelcol
       providerConfig:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
-        kind: ExampleConfig
+        kind: CollectorConfig
         spec:
-          foo: bar
+          exporters:
+            debug:
+              enabled: true
+              verbosity: basic  # basic, normal or detailed
 ```
+
+This configuration however is only useful while developing or troubleshooting an
+issue with the collector, because signals are not actually forwarded to a remote
+[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) receiver.
+
+The following configuration snippet enables the extension for a shoot and
+configures it to forward the signals of the control-plane components to a remote
+collector using the
+[OTLP HTTP exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter).
+
+``` yaml
+...
+
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          exporters:
+            # OTLP HTTP exporter settings
+            otlphttp:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.example.org"
+```
+
+The following example snippet expands on the previous one by adding
+[TLS configuration settings](https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md) and
+[Bearer token authentication](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension) with the remote collector.
+
+``` yaml
+...
+
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          exporters:
+            # OTLP HTTP exporter settings
+            otlphttp:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.example.org"
+              token:
+                resourceRef:
+                  name: otelcol-bearer-token
+                  dataKey: token
+              tls:
+                ca:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: ca.crt
+                cert:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.crt
+                key:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.key
+  resources:
+  - name: otelcol-bearer-token
+    resourceRef:
+      apiVersion: v1
+      kind: Secret
+      name: my-otelcol-bearer-token
+  - name: otelcol-tls
+    resourceRef:
+      apiVersion: v1
+      kind: Secret
+      name: my-otelcol-tls
+```
+
+In order to provide the `otelcol-tls` and `otelcol-bearer-token` secrets from
+the example above to the extension, you should first create the respective
+secrets in the shoot project namespace, which can then be referenced via
+[Gardener Referenced Resources](https://gardener.cloud/docs/gardener/extensions/referenced-resources/#referenced-resources).
+
+For additional configuration settings, which can be provided to the extension,
+please make sure to check the
+[OTel Extension API spec documentation](./docs/api-reference/otelcol.extensions.gardener.cloud.md).
 
 # Development
 
@@ -148,21 +245,32 @@ Verify that we have successfully created the `ControllerDeployment` and
 `ControllerRegistration` resources.
 
 ``` shell
-$ kubectl get controllerregistrations,controllerdeployments gardener-extension-otelcol
-NAME                                                                    RESOURCES           AGE
-controllerregistration.core.gardener.cloud/gardener-extension-otelcol   Extension/otelcol   40s
+$ kubectl get controllerregistrations,controllerdeployments otelcol
+NAME                                                 RESOURCES           AGE
+controllerregistration.core.gardener.cloud/otelcol   Extension/otelcol   108s
 
-NAME                                                                  AGE
-controllerdeployment.core.gardener.cloud/gardener-extension-otelcol   40s
+NAME                                               AGE
+controllerdeployment.core.gardener.cloud/otelcol   108s
 ```
 
 Finally, we can create an example shoot with our extension enabled. The
 [examples/shoot.yaml](./examples/shoot.yaml) file provides a ready-to-use shoot
 manifest with the extension enabled and configured.
 
+The provided example shoot references secrets from the project namespace, which
+are used to configure the TLS settings between the exporter and a local dev
+receiver, running in the `default` namespace.
+
+The following command will create the TLS secrets, a dev OpenTelemetry receiver
+in the `default` namespace, and a dev shoot, configured with the extension.
+
 ``` shell
-kubectl apply -f examples/shoot.yaml
+make create-dev-shoot
 ```
+
+If you have an already existing and running shoot, for which you want to enable
+the extension, simply follow the instructions from the previous section in order
+to enable and configure the extension manually.
 
 Once we create the shoot cluster, `gardenlet` will start deploying our
 `gardener-extension-otelcol`, since it is required by our shoot.
@@ -171,13 +279,13 @@ Verify that the extension has been successfully installed by checking the
 corresponding `ControllerInstallation` resource.
 
 ``` shell
-$ kubectl get controllerinstallations.core.gardener.cloud
-NAME                               REGISTRATION                 SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
-gardener-extension-otelcol-tktwt   gardener-extension-otelcol   local   True    True        True      False         103s
+$ kubectl get controllerinstallations
+NAME                      REGISTRATION        SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
+otelcol-clnw7             otelcol             local   True    True        True      False         91s
 ```
 
 After your shoot cluster has been successfully created and reconciled, verify
-that the extension is healthy.
+that the extension resource in the shoot control-plane namespace is healthy.
 
 ``` shell
 $ kubectl --namespace shoot--local--local get extensions
@@ -185,11 +293,50 @@ NAME      TYPE      STATUS      AGE
 otelcol   otelcol   Succeeded   85m
 ```
 
+Verify that the
+[ManagedResource](https://gardener.cloud/docs/gardener/concepts/resource-manager/)
+created by the extension is healthy as well.
+
+``` shell
+$ kubectl --namespace shoot--local--local get managedresource external-otelcol
+NAME               CLASS   APPLIED   HEALTHY   PROGRESSING   AGE
+external-otelcol   seed    True      True      False         2m7s
+```
+
+After successful reconciliation we should see the following OpenTelemetry
+collectors in the shoot control-plane namespace.
+
+``` shell
+$ kubectl --namespace shoot--local--local get otelcol external-otelcol
+NAME                      MODE          VERSION   READY   AGE     IMAGE                                                                                                                          MANAGEMENT
+external-otelcol          statefulset   0.141.0   1/1     6m45s   europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.141.0   managed
+```
+
+We should also see that the Collector and Target Allocator are running and
+healthy.
+
+``` shell
+$ kubectl --namespace shoot--local--local get sts external-otelcol-collector
+NAME                         READY   AGE
+external-otelcol-collector   1/1     8m34s
+
+$ kubectl --namespace shoot--local--local get deployment external-otelcol-targetallocator
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+external-otelcol-targetallocator   1/1     1            1           8m40s
+```
+
 In order to trigger reconciliation of the extension you can annotate the
 extension resource.
 
 ``` shell
 kubectl --namespace shoot--local--local annotate extensions otelcol gardener.cloud/operation=reconcile
+```
+
+In order to delete the dev shoot, TLS secrets and dev OpenTelemetry receiver you
+can run the following command.
+
+``` shell
+make delete-dev-shoot
 ```
 
 ## Development Environment with Gardener Operator
@@ -252,9 +399,9 @@ Verify that we have successfully created the
 `Extension` (from group `operator.gardener.cloud/v1alpha1`) resource.
 
 ``` shell
-$ kubectl --kubeconfig $KUBECONFIG_RUNTIME get extop gardener-extension-otelcol
-NAME                         INSTALLED   REQUIRED RUNTIME   REQUIRED VIRTUAL   AGE
-gardener-extension-otelcol   True        False              False              85s
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME get extop otelcol
+NAME      INSTALLED   REQUIRED RUNTIME   REQUIRED VIRTUAL   AGE
+otelcol   True        False              False              13s
 ```
 
 Verify that the respective `ControllerRegistration` and `ControllerDeployment`
@@ -262,21 +409,35 @@ resources have been created by the `gardener-operator` in the _virtual_ garden
 cluster.
 
 ``` shell
-> kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerregistrations,controllerdeployments gardener-extension-otelcol
-NAME                                                                    RESOURCES           AGE
-controllerregistration.core.gardener.cloud/gardener-extension-otelcol   Extension/otelcol  3m50s
+$ kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerregistrations,controllerdeployments otelcol
+NAME                                                 RESOURCES           AGE
+controllerregistration.core.gardener.cloud/otelcol   Extension/otelcol   42s
 
-NAME                                                                  AGE
-controllerdeployment.core.gardener.cloud/gardener-extension-otelcol   3m50s
+NAME                                               AGE
+controllerdeployment.core.gardener.cloud/otelcol   42s
 ```
 
-Now we can create an example shoot with our extension enabled. The
+Finally, we can create an example shoot with our extension enabled. The
 [examples/shoot.yaml](./examples/shoot.yaml) file provides a ready-to-use shoot
-manifest, which we will use.
+manifest with the extension enabled and configured.
+
+The provided example shoot references secrets from the project namespace, which
+are used to configure the TLS settings between the exporter and a local dev
+receiver, running in the `default` namespace.
+
+The following commands will create the TLS secrets, a dev OpenTelemetry receiver
+in the `default` namespace, and a dev shoot, configured with the extension.
 
 ``` shell
+kubectl --kubeconfig $KUBECONFIG_RUNTIME apply -f examples/opentelemetry-receiver.yaml
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/secret-tls.yaml
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/secret-bearer-token.yaml
 kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/shoot.yaml
 ```
+
+If you have an already existing and running shoot, for which you want to enable
+the extension, simply follow the instructions from the previous sections in
+order to enable and configure the extension manually.
 
 Once we create the shoot cluster, `gardenlet` will start deploying our
 `gardener-extension-otelcol`, since it is required by our shoot.
@@ -285,18 +446,50 @@ Verify that the extension has been successfully installed by checking the
 corresponding `ControllerInstallation` resource for our extension.
 
 ``` shell
-$ kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerinstallations.core.gardener.cloud
-NAME                               REGISTRATION                 SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
-gardener-extension-otelcol-ng4r8   gardener-extension-otelcol   local   True    True        True      False         2m9s
+$ kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerinstallations
+NAME                      REGISTRATION        SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
+otelcol-8rvmn             otelcol             local   True    True        True      False         64s
 ```
 
 After your shoot cluster has been successfully created and reconciled, verify
 that the extension is healthy.
 
 ``` shell
-$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get extensions
-NAME      TYPE      STATUS      AGE
-otelcol   otelcol   Succeeded   2m37s
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get extensions otelcol
+NAME                INSTALLED   REQUIRED RUNTIME   REQUIRED VIRTUAL   AGE
+otelcol             True        False              True               13m
+```
+
+Verify that the
+[ManagedResource](https://gardener.cloud/docs/gardener/concepts/resource-manager/)
+created by the extension is healthy as well.
+
+``` shell
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get managedresource external-otelcol
+NAME               CLASS   APPLIED   HEALTHY   PROGRESSING   AGE
+external-otelcol   seed    True      True      False         6m20s
+```
+
+After successful reconciliation we should see the following OpenTelemetry
+collectors in the shoot control-plane namespace.
+
+``` shell
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get otelcol external-otelcol
+NAME                      MODE          VERSION   READY   AGE     IMAGE                                                                                                                          MANAGEMENT
+external-otelcol          statefulset   0.141.0   1/1     6m45s   europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.141.0   managed
+```
+
+We should also see that the Collector and Target Allocator are running and
+healthy.
+
+``` shell
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get sts external-otelcol-collector
+NAME                         READY   AGE
+external-otelcol-collector   1/1     3m30s
+
+$ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get deployment external-otelcol-targetallocator
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+external-otelcol-targetallocator   1/1     1            1           3m38s
 ```
 
 In order to trigger reconciliation of the extension you can annotate the
@@ -304,6 +497,17 @@ extension resource.
 
 ``` shell
 kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local annotate extensions otelcol gardener.cloud/operation=reconcile
+```
+
+In order to delete the dev shoot, TLS secrets and dev OpenTelemetry receiver you
+can run the following commands.
+
+``` shell
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL --namespace garden-local annotate shoot local confirmation.gardener.cloud/deletion=true --overwrite
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL delete -f examples/shoot.yaml --ignore-not-found=true --wait=false
+kubectl --kubeconfig $KUBECONFIG_RUNTIME delete -f examples/opentelemetry-receiver.yaml --ignore-not-found=true --wait=false
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL delete -f examples/secret-tls.yaml --ignore-not-found=true --wait=false
+kubectl --kubeconfig $KUBECONFIG_VIRTUAL delete -f examples/secret-bearer-token.yaml --ignore-not-found=true --wait=false
 ```
 
 # Tests
@@ -337,7 +541,7 @@ Extensions and the available extensions API.
 - [Gardener: Extension Resources](https://github.com/gardener/gardener/tree/master/docs/extensions/resources)
 - [Gardener: Extensions API Contract](https://github.com/gardener/gardener/blob/master/docs/extensions/resources/extension.md)
 - [Gardener: How to Set Up a Gardener Landscape](https://gardener.cloud/docs/gardener/deployment/setup_gardener/)
-- [Gardener: Extension Packages (Go)](https://github.com/gardener/gardener/tree/master/extensions/pkg)
+- [Gardener: Extension API Packages (Go)](https://github.com/gardener/gardener/tree/master/extensions/pkg)
 
 # Contributing
 
