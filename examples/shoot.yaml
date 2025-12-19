@@ -13,11 +13,21 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
+          # Collector log settings
+          logs:
+            level: INFO  # INFO, WARN, ERROR or DEBUG
+            encoding: console  # console or json
+
+          # Internal collector metrics settings
+          metrics:
+            level: normal  # none, basic, normal or detailed
+
+          # Exporters settings
           exporters:
             # OTLP debug exporter
             debug:
               enabled: true
-              verbosity: detailed  # none, basic, normal or detailed
+              verbosity: basic  # basic, normal or detailed
 
             # OTLP HTTP exporter settings
             otlphttp:
