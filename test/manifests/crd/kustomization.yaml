@@ -1,0 +1,24 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+buildMetadata:
+- originAnnotations
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+resources:
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_backupbuckets.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_backupentries.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_bastions.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_clusters.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_containerruntimes.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_controlplanes.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_dnsrecords.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_extensions.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_infrastructures.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_networks.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_operatingsystemconfigs.yaml
+- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_workers.yaml
+- resources.gardener.cloud/v1alpha1/resources.gardener.cloud_managedresources.yaml

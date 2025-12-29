@@ -1,0 +1,17 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: otelcol
+  annotations:
+    security.gardener.cloud/pod-security-enforce: baseline
+spec:
+  resources:
+    - kind: Extension
+      type: otelcol
+      workerlessSupported: true
+      clusterCompatibility:
+        - shoot
+      lifecycle:
+        reconcile: BeforeKubeAPIServer
+        delete: AfterKubeAPIServer
+        migrate: AfterKubeAPIServer

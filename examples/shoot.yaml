@@ -1,0 +1,92 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: local
+  namespace: garden-local
+  annotations:
+    shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
+    authentication.gardener.cloud/issuer: "managed"
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          # Collector log settings
+          logs:
+            level: INFO  # INFO, WARN, ERROR or DEBUG
+            encoding: console  # console or json
+
+          # Internal collector metrics settings
+          metrics:
+            level: normal  # none, basic, normal or detailed
+
+          # Exporters settings
+          exporters:
+            # OTLP debug exporter
+            debug:
+              enabled: true
+              verbosity: basic  # basic, normal or detailed
+
+            # OTLP HTTP exporter settings
+            otlphttp:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:8443"
+              token:
+                resourceRef:
+                  name: otelcol-bearer-token
+                  dataKey: token
+              tls:
+                ca:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: ca.crt
+                cert:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.crt
+                key:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.key
+  resources:
+  - name: otelcol-bearer-token
+    resourceRef:
+      apiVersion: v1
+      kind: Secret
+      name: my-otelcol-bearer-token
+  - name: otelcol-tls
+    resourceRef:
+      apiVersion: v1
+      kind: Secret
+      name: my-otelcol-tls
+  cloudProfile:
+    name: local
+    kind: CloudProfile
+  credentialsBindingName: local # dummy, doesn't contain any credentials
+  region: local
+  networking:
+    type: calico
+    # Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
+    nodes: 10.0.0.0/16
+  provider:
+    type: local
+    workers:
+      - name: local
+        machine:
+          type: local
+        cri:
+          name: containerd
+        minimum: 1
+        maximum: 2
+        maxSurge: 1
+        maxUnavailable: 0
+  kubernetes:
+    kubelet:
+      seccompDefault: true
+      serializeImagePulls: false
+      registryPullQPS: 10
+      registryBurst: 20
+      protectKernelDefaults: true
+      streamingConnectionIdleTimeout: 5m

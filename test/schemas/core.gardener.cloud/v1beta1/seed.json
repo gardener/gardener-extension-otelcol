@@ -1,0 +1,979 @@
+{
+  "description": "Seed represents an installation request for an external controller.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec contains the specification of this installation.",
+      "properties": {
+        "accessRestrictions": {
+          "description": "AccessRestrictions describe a list of access restrictions for this seed cluster.",
+          "items": {
+            "description": "AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the restriction.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "backup": {
+          "description": "Backup holds the object store configuration for the backups of shoot (currently only etcd).\nIf it is not specified, then there won't be any backups taken for shoots associated with this seed.\nIf backup field is present in seed, then backups of the etcd from shoot control plane will be stored\nunder the configured object store.",
+          "properties": {
+            "credentialsRef": {
+              "description": "CredentialsRef is reference to a resource holding the credentials used for\nauthentication with the object store service where the backups are stored.\nSupported referenced resources are v1.Secrets and\nsecurity.gardener.cloud/v1alpha1.WorkloadIdentity",
+              "properties": {
+                "apiVersion": {
+                  "description": "API version of the referent.",
+                  "type": "string"
+                },
+                "fieldPath": {
+                  "description": "If referring to a piece of an object instead of an entire object, this string\nshould contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].\nFor example, if the object reference is to a container within a pod, this would take on a value like:\n\"spec.containers{name}\" (where \"name\" refers to the name of the container that triggered\nthe event) or if no container name is specified \"spec.containers[2]\" (container with\nindex 2 in this pod). This syntax is chosen only to have some well-defined way of\nreferencing a part of an object.",
+                  "type": "string"
+                },
+                "kind": {
+                  "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                  "type": "string"
+                },
+                "namespace": {
+                  "description": "Namespace of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+                  "type": "string"
+                },
+                "resourceVersion": {
+                  "description": "Specific resourceVersion to which this reference is made, if any.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+                  "type": "string"
+                },
+                "uid": {
+                  "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "x-kubernetes-map-type": "atomic",
+              "additionalProperties": false
+            },
+            "provider": {
+              "description": "Provider is a provider name. This field is immutable.",
+              "type": "string"
+            },
+            "providerConfig": {
+              "description": "ProviderConfig is the configuration passed to BackupBucket resource.",
+              "type": "object",
+              "x-kubernetes-preserve-unknown-fields": true
+            },
+            "region": {
+              "description": "Region is a region name. This field is immutable.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "dns": {
+          "description": "DNS contains DNS-relevant information about this seed cluster.",
+          "properties": {
+            "defaults": {
+              "description": "Defaults configures DNS settings related to seed default domains.\nWhen determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.",
+              "items": {
+                "description": "SeedDNSProviderConfig configures a DNS provider.",
+                "properties": {
+                  "credentialsRef": {
+                    "description": "CredentialsRef is a reference to a resource holding the credentials used for\nauthentication with the DNS provider.\nAs of now, only v1.Secrets are supported.",
+                    "properties": {
+                      "apiVersion": {
+                        "description": "API version of the referent.",
+                        "type": "string"
+                      },
+                      "fieldPath": {
+                        "description": "If referring to a piece of an object instead of an entire object, this string\nshould contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].\nFor example, if the object reference is to a container within a pod, this would take on a value like:\n\"spec.containers{name}\" (where \"name\" refers to the name of the container that triggered\nthe event) or if no container name is specified \"spec.containers[2]\" (container with\nindex 2 in this pod). This syntax is chosen only to have some well-defined way of\nreferencing a part of an object.",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "Namespace of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+                        "type": "string"
+                      },
+                      "resourceVersion": {
+                        "description": "Specific resourceVersion to which this reference is made, if any.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+                        "type": "string"
+                      },
+                      "uid": {
+                        "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic",
+                    "additionalProperties": false
+                  },
+                  "domain": {
+                    "description": "Domain is the domain name to be used by the DNS provider.",
+                    "type": "string"
+                  },
+                  "type": {
+                    "description": "Type is the type of the DNS provider.",
+                    "type": "string"
+                  },
+                  "zone": {
+                    "description": "Zone is the zone where the DNS records are managed.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "credentialsRef",
+                  "domain",
+                  "type"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            },
+            "internal": {
+              "description": "Internal configures DNS settings related to seed internal domain.",
+              "properties": {
+                "credentialsRef": {
+                  "description": "CredentialsRef is a reference to a resource holding the credentials used for\nauthentication with the DNS provider.\nAs of now, only v1.Secrets are supported.",
+                  "properties": {
+                    "apiVersion": {
+                      "description": "API version of the referent.",
+                      "type": "string"
+                    },
+                    "fieldPath": {
+                      "description": "If referring to a piece of an object instead of an entire object, this string\nshould contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].\nFor example, if the object reference is to a container within a pod, this would take on a value like:\n\"spec.containers{name}\" (where \"name\" refers to the name of the container that triggered\nthe event) or if no container name is specified \"spec.containers[2]\" (container with\nindex 2 in this pod). This syntax is chosen only to have some well-defined way of\nreferencing a part of an object.",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                      "type": "string"
+                    },
+                    "namespace": {
+                      "description": "Namespace of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+                      "type": "string"
+                    },
+                    "resourceVersion": {
+                      "description": "Specific resourceVersion to which this reference is made, if any.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+                      "type": "string"
+                    },
+                    "uid": {
+                      "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic",
+                  "additionalProperties": false
+                },
+                "domain": {
+                  "description": "Domain is the domain name to be used by the DNS provider.",
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Type is the type of the DNS provider.",
+                  "type": "string"
+                },
+                "zone": {
+                  "description": "Zone is the zone where the DNS records are managed.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "credentialsRef",
+                "domain",
+                "type"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "provider": {
+              "description": "Provider configures a DNSProvider",
+              "properties": {
+                "secretRef": {
+                  "description": "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.",
+                  "properties": {
+                    "name": {
+                      "description": "name is unique within a namespace to reference a secret resource.",
+                      "type": "string"
+                    },
+                    "namespace": {
+                      "description": "namespace defines the space within which the secret name must be unique.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic",
+                  "additionalProperties": false
+                },
+                "type": {
+                  "description": "Type describes the type of the dns-provider, for example `aws-route53`",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "secretRef",
+                "type"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
+        "extensions": {
+          "description": "Extensions contain type and provider information for Seed extensions.",
+          "items": {
+            "description": "Extension contains type and provider information for extensions.",
+            "properties": {
+              "disabled": {
+                "description": "Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.",
+                "type": "boolean"
+              },
+              "providerConfig": {
+                "description": "ProviderConfig is the configuration passed to extension resource.",
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "type": {
+                "description": "Type is the type of the extension resource.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "ingress": {
+          "description": "Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.",
+          "properties": {
+            "controller": {
+              "description": "Controller configures a Gardener managed Ingress Controller listening on the ingressDomain",
+              "properties": {
+                "kind": {
+                  "description": "Kind defines which kind of IngressController to use. At the moment only `nginx` is supported",
+                  "enum": [
+                    "nginx"
+                  ],
+                  "type": "string"
+                },
+                "providerConfig": {
+                  "description": "ProviderConfig specifies infrastructure specific configuration for the ingressController",
+                  "type": "object",
+                  "x-kubernetes-preserve-unknown-fields": true
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "domain": {
+              "description": "Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used\nto construct ingress URLs for system applications running in Shoot/Garden clusters. Once set this field is immutable.",
+              "maxLength": 253,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+              "type": "string",
+              "x-kubernetes-validations": [
+                {
+                  "message": "Value is immutable",
+                  "rule": "self == oldSelf"
+                }
+              ]
+            }
+          },
+          "required": [
+            "controller",
+            "domain"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "networks": {
+          "description": "Networks defines the pod, service and worker network of the Seed cluster.",
+          "properties": {
+            "blockCIDRs": {
+              "description": "BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running\nin the seed cluster.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "ipFamilies": {
+              "description": "IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.\nSee https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md.\nDefaults to [\"IPv4\"].",
+              "items": {
+                "description": "IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "nodes": {
+              "description": "Nodes is the CIDR of the node network. This field is immutable.",
+              "type": "string"
+            },
+            "pods": {
+              "description": "Pods is the CIDR of the pod network. This field is immutable.",
+              "type": "string"
+            },
+            "services": {
+              "description": "Services is the CIDR of the service network. This field is immutable.",
+              "type": "string"
+            },
+            "shootDefaults": {
+              "description": "ShootDefaults contains the default networks CIDRs for shoots.",
+              "properties": {
+                "pods": {
+                  "description": "Pods is the CIDR of the pod network.",
+                  "type": "string"
+                },
+                "services": {
+                  "description": "Services is the CIDR of the service network.",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "pods",
+            "services"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "provider": {
+          "description": "Provider defines the provider type and region for this Seed cluster.",
+          "properties": {
+            "providerConfig": {
+              "description": "ProviderConfig is the configuration passed to Seed resource.",
+              "type": "object",
+              "x-kubernetes-preserve-unknown-fields": true
+            },
+            "region": {
+              "description": "Region is a name of a region.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type is the name of the provider.",
+              "type": "string"
+            },
+            "zones": {
+              "description": "Zones is the list of availability zones the seed cluster is deployed to.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "region",
+            "type"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "resources": {
+          "description": "Resources holds a list of named resource references that can be referred to in extension configs by their names.",
+          "items": {
+            "description": "NamedResourceReference is a named reference to a resource.",
+            "properties": {
+              "name": {
+                "description": "Name of the resource reference.",
+                "type": "string"
+              },
+              "resourceRef": {
+                "description": "ResourceRef is a reference to a resource.",
+                "properties": {
+                  "apiVersion": {
+                    "description": "apiVersion is the API version of the referent",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "description": "kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object",
+                "x-kubernetes-map-type": "atomic",
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "resourceRef"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "settings": {
+          "description": "Settings contains certain settings for this seed cluster.",
+          "properties": {
+            "dependencyWatchdog": {
+              "description": "DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.",
+              "properties": {
+                "prober": {
+                  "description": "Prober controls the prober settings for the dependency-watchdog for the seed.",
+                  "properties": {
+                    "enabled": {
+                      "description": "Enabled controls whether the probe controller(prober) of the dependency-watchdog should be enabled. This controller\nscales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not\nreachable via its external ingress in order to avoid melt-down situations.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "weeder": {
+                  "description": "Weeder controls the weeder settings for the dependency-watchdog for the seed.",
+                  "properties": {
+                    "enabled": {
+                      "description": "Enabled controls whether the endpoint controller(weeder) of the dependency-watchdog should be enabled. This controller\nhelps to alleviate the delay where control plane components remain unavailable by finding the respective pods in\nCrashLoopBackoff status and restarting them once their dependants become ready and available again.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "excessCapacityReservation": {
+              "description": "ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
+              "properties": {
+                "configs": {
+                  "description": "Configs configures excess capacity reservation deployments for shoot control planes in the seed.",
+                  "items": {
+                    "description": "SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.",
+                    "properties": {
+                      "nodeSelector": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "NodeSelector specifies the node where the excess-capacity-reservation pod should run.",
+                        "type": "object"
+                      },
+                      "resources": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                          "x-kubernetes-int-or-string": true
+                        },
+                        "description": "Resources specify the resource requests and limits of the excess-capacity-reservation pod.",
+                        "type": "object"
+                      },
+                      "tolerations": {
+                        "description": "Tolerations specify the tolerations for the the excess-capacity-reservation pod.",
+                        "items": {
+                          "description": "The pod this Toleration is attached to tolerates any taint that matches\nthe triple <key,value,effect> using the matching operator <operator>.",
+                          "properties": {
+                            "effect": {
+                              "description": "Effect indicates the taint effect to match. Empty means match all taint effects.\nWhen specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.",
+                              "type": "string"
+                            },
+                            "key": {
+                              "description": "Key is the taint key that the toleration applies to. Empty means match all taint keys.\nIf the key is empty, operator must be Exists; this combination means to match all values and all keys.",
+                              "type": "string"
+                            },
+                            "operator": {
+                              "description": "Operator represents a key's relationship to the value.\nValid operators are Exists and Equal. Defaults to Equal.\nExists is equivalent to wildcard for value, so that a pod can\ntolerate all taints of a particular category.",
+                              "type": "string"
+                            },
+                            "tolerationSeconds": {
+                              "description": "TolerationSeconds represents the period of time the toleration (which must be\nof effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,\nit is not set, which means tolerate the taint forever (do not evict). Zero and\nnegative values will be treated as 0 (evict immediately) by the system.",
+                              "format": "int64",
+                              "type": "integer"
+                            },
+                            "value": {
+                              "description": "Value is the taint value the toleration matches to.\nIf the operator is Exists, the value should be empty, otherwise just a regular string.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object",
+                          "additionalProperties": false
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "resources"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array"
+                },
+                "enabled": {
+                  "description": "Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.",
+                  "type": "boolean"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "loadBalancerServices": {
+              "description": "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
+              "properties": {
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+                  "type": "object"
+                },
+                "class": {
+                  "description": "Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.\nNote that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.",
+                  "type": "string"
+                },
+                "externalTrafficPolicy": {
+                  "description": "ExternalTrafficPolicy describes how nodes distribute service traffic they\nreceive on one of the service's \"externally-facing\" addresses.\nDefaults to \"Cluster\".",
+                  "type": "string"
+                },
+                "proxyProtocol": {
+                  "description": "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.\nDefaults to nil, which is equivalent to not allowing ProxyProtocol.",
+                  "properties": {
+                    "allowed": {
+                      "description": "Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.\nThis should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.\nUntil the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.\nThe option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).\nDefaults to false.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "allowed"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "zonalIngress": {
+                  "description": "ZonalIngress controls whether ingress gateways are deployed per availability zone.\nDefaults to true.",
+                  "properties": {
+                    "enabled": {
+                      "description": "Enabled controls whether seed ingress gateways are deployed in each availability zone.\nDefaults to true, which provisions an ingress gateway load balancer for each availability zone.\nWhen disabled, only a single ingress gateway is deployed.\nSee https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.",
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "zones": {
+                  "description": "Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.\nCan be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.",
+                  "items": {
+                    "description": "SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a\nmulti-zonal setup.",
+                    "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.",
+                        "type": "object"
+                      },
+                      "externalTrafficPolicy": {
+                        "description": "ExternalTrafficPolicy describes how nodes distribute service traffic they\nreceive on one of the service's \"externally-facing\" addresses.\nDefaults to \"Cluster\".",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the zone as specified in seed.spec.provider.zones.",
+                        "type": "string"
+                      },
+                      "proxyProtocol": {
+                        "description": "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.\nDefaults to nil, which is equivalent to not allowing ProxyProtocol.",
+                        "properties": {
+                          "allowed": {
+                            "description": "Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.\nThis should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.\nUntil the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.\nThe option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).\nDefaults to false.",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "allowed"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "scheduling": {
+              "description": "Scheduling controls settings for scheduling decisions for the seed.",
+              "properties": {
+                "visible": {
+                  "description": "Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds\nare not considered by the scheduler.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "visible"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "topologyAwareRouting": {
+              "description": "TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.\nSee https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.",
+              "properties": {
+                "enabled": {
+                  "description": "Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.\nThese Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "verticalPodAutoscaler": {
+              "description": "VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
+              "properties": {
+                "enabled": {
+                  "description": "Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It\nis enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if\nyour seed cluster already has another, manually/custom managed VPA deployment.",
+                  "type": "boolean"
+                },
+                "featureGates": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "description": "FeatureGates contains information about enabled feature gates.",
+                  "type": "object"
+                },
+                "maxAllowed": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                    "x-kubernetes-int-or-string": true
+                  },
+                  "description": "MaxAllowed specifies the global maximum allowed (maximum amount of resources) that vpa-recommender can recommend for a container.\nThe VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.\nFor more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.\n\nDefaults to nil (no maximum).",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
+        "taints": {
+          "description": "Taints describes taints on the seed.",
+          "items": {
+            "description": "SeedTaint describes a taint on a seed.",
+            "properties": {
+              "key": {
+                "description": "Key is the taint key to be applied to a seed.",
+                "type": "string"
+              },
+              "value": {
+                "description": "Value is the taint value corresponding to the taint key.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "key"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "volume": {
+          "description": "Volume contains settings for persistentvolumes created in the seed cluster.",
+          "properties": {
+            "minimumSize": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "MinimumSize defines the minimum size that should be used for PVCs in the seed.",
+              "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+              "x-kubernetes-int-or-string": true
+            },
+            "providers": {
+              "description": "Providers is a list of storage class provisioner types for the seed.",
+              "items": {
+                "description": "SeedVolumeProvider is a storage class provisioner type.",
+                "properties": {
+                  "name": {
+                    "description": "Name is the name of the storage class provisioner type.",
+                    "type": "string"
+                  },
+                  "purpose": {
+                    "description": "Purpose is the purpose of this provider.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "purpose"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "dns",
+        "networks",
+        "provider"
+      ],
+      "type": "object",
+      "additionalProperties": false
+    },
+    "status": {
+      "description": "Status contains the status of this installation.",
+      "properties": {
+        "allocatable": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+            "x-kubernetes-int-or-string": true
+          },
+          "description": "Allocatable represents the resources of a seed that are available for scheduling.\nDefaults to Capacity.",
+          "type": "object"
+        },
+        "capacity": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+            "x-kubernetes-int-or-string": true
+          },
+          "description": "Capacity represents the total resources of a seed.",
+          "type": "object"
+        },
+        "clientCertificateExpirationTimestamp": {
+          "description": "ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "clusterIdentity": {
+          "description": "ClusterIdentity is the identity of the Seed cluster. This field is immutable.",
+          "type": "string"
+        },
+        "conditions": {
+          "description": "Conditions represents the latest available observations of a Seed's current state.",
+          "items": {
+            "description": "Condition holds the information about the state of a resource.",
+            "properties": {
+              "codes": {
+                "description": "Well-defined error codes in case the condition reports a problem.",
+                "items": {
+                  "description": "ErrorCode is a string alias.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "lastTransitionTime": {
+                "description": "Last time the condition transitioned from one status to another.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "lastUpdateTime": {
+                "description": "Last time the condition was updated.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "description": "A human readable message indicating details about the transition.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "The reason for the condition's last transition.",
+                "type": "string"
+              },
+              "status": {
+                "description": "Status of the condition, one of True, False, Unknown.",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type of the condition.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lastTransitionTime",
+              "lastUpdateTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "gardener": {
+          "description": "Gardener holds information about the Gardener which last acted on the Shoot.",
+          "properties": {
+            "id": {
+              "description": "ID is the container id of the Gardener which last acted on a resource.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the hostname (pod name) of the Gardener which last acted on a resource.",
+              "type": "string"
+            },
+            "version": {
+              "description": "Version is the version of the Gardener which last acted on a resource.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "version"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "kubernetesVersion": {
+          "description": "KubernetesVersion is the Kubernetes version of the seed cluster.",
+          "type": "string"
+        },
+        "lastOperation": {
+          "description": "LastOperation holds information about the last operation on the Seed.",
+          "properties": {
+            "description": {
+              "description": "A human readable message indicating details about the last operation.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the operation state transitioned from one to another.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "progress": {
+              "description": "The progress in percentage (0-100) of the last operation.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "state": {
+              "description": "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "lastUpdateTime",
+            "progress",
+            "state",
+            "type"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the\nSeed's generation, which is updated on mutation by the API Server.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "type": "object"
+}

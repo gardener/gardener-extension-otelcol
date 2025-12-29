@@ -1,0 +1,126 @@
+{
+  "description": "BackupEntry holds details about shoot backup.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec contains the specification of the Backup Entry.",
+      "properties": {
+        "bucketName": {
+          "description": "BucketName is the name of backup bucket for this Backup Entry.",
+          "type": "string"
+        },
+        "seedName": {
+          "description": "SeedName holds the name of the seed to which this BackupEntry is scheduled",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName"
+      ],
+      "type": "object",
+      "additionalProperties": false
+    },
+    "status": {
+      "description": "Status contains the most recently observed status of the Backup Entry.",
+      "properties": {
+        "lastError": {
+          "description": "LastError holds information about the last occurred error during an operation.",
+          "properties": {
+            "codes": {
+              "description": "Well-defined error codes of the last error(s).",
+              "items": {
+                "description": "ErrorCode is a string alias.",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": {
+              "description": "A human readable message indicating details about the last error.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the error was reported",
+              "format": "date-time",
+              "type": "string"
+            },
+            "taskID": {
+              "description": "ID of the task which caused this last error",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "lastOperation": {
+          "description": "LastOperation holds information about the last operation on the BackupEntry.",
+          "properties": {
+            "description": {
+              "description": "A human readable message indicating details about the last operation.",
+              "type": "string"
+            },
+            "lastUpdateTime": {
+              "description": "Last time the operation state transitioned from one to another.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "progress": {
+              "description": "The progress in percentage (0-100) of the last operation.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "state": {
+              "description": "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "lastUpdateTime",
+            "progress",
+            "state",
+            "type"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "migrationStartTime": {
+          "description": "MigrationStartTime is the time when a migration to a different seed was initiated.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the most recent generation observed for this BackupEntry. It corresponds to the\nBackupEntry's generation, which is updated on mutation by the API Server.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "seedName": {
+          "description": "SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated\nat the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "metadata"
+  ],
+  "type": "object"
+}

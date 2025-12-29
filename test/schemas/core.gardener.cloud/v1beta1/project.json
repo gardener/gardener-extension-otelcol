@@ -1,0 +1,288 @@
+{
+  "description": "Project holds certain properties about a Gardener project.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec defines the project properties.",
+      "properties": {
+        "createdBy": {
+          "description": "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user\nwho created the project. This field is immutable.",
+          "properties": {
+            "apiGroup": {
+              "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the object being referenced.",
+              "type": "string"
+            },
+            "namespace": {
+              "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object",
+          "x-kubernetes-map-type": "atomic",
+          "additionalProperties": false
+        },
+        "description": {
+          "description": "Description is a human-readable description of what the project is used for.\nOnly letters, digits and certain punctuation characters are allowed for this field.",
+          "type": "string"
+        },
+        "dualApprovalForDeletion": {
+          "description": "DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.",
+          "items": {
+            "description": "DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.",
+            "properties": {
+              "includeServiceAccounts": {
+                "description": "IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.\nDefaults to true.",
+                "type": "boolean"
+              },
+              "resource": {
+                "description": "Resource is the name of the resource this applies to.",
+                "type": "string"
+              },
+              "selector": {
+                "description": "Selector is the label selector for the resources.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic",
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "resource",
+              "selector"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "members": {
+          "description": "Members is a list of subjects representing a user name, an email address, or any other identifier of a user,\ngroup, or service account that has a certain role.",
+          "items": {
+            "description": "ProjectMember is a member of a project.",
+            "properties": {
+              "apiGroup": {
+                "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Name of the object being referenced.",
+                "type": "string"
+              },
+              "namespace": {
+                "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+                "type": "string"
+              },
+              "role": {
+                "description": "Role represents the role of this member.\nIMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`\nlist.",
+                "type": "string"
+              },
+              "roles": {
+                "description": "Roles represents the list of roles of this member.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "role"
+            ],
+            "type": "object",
+            "x-kubernetes-map-type": "atomic",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "namespace": {
+          "description": "Namespace is the name of the namespace that has been created for the Project object.\nA nil value means that Gardener will determine the name of the namespace.\nIf set, its value must be prefixed with `garden-`.\nThis field is immutable.",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owner is a subject representing a user name, an email address, or any other identifier of a user owning\nthe project.\nIMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `owner`\nrole. The only way to change the owner will be by moving the `owner` role. In this API version the only way\nto change the owner is to use this field.",
+          "properties": {
+            "apiGroup": {
+              "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the object being referenced.",
+              "type": "string"
+            },
+            "namespace": {
+              "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object",
+          "x-kubernetes-map-type": "atomic",
+          "additionalProperties": false
+        },
+        "purpose": {
+          "description": "Purpose is a human-readable explanation of the project's purpose.\nOnly letters, digits and certain punctuation characters are allowed for this field.",
+          "type": "string"
+        },
+        "tolerations": {
+          "description": "Tolerations contains the tolerations for taints on seed clusters.",
+          "properties": {
+            "defaults": {
+              "description": "Defaults contains a list of tolerations that are added to the shoots in this project by default.",
+              "items": {
+                "description": "Toleration is a toleration for a seed taint.",
+                "properties": {
+                  "key": {
+                    "description": "Key is the toleration key to be applied to a project or shoot.",
+                    "type": "string"
+                  },
+                  "value": {
+                    "description": "Value is the toleration value corresponding to the toleration key.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            },
+            "whitelist": {
+              "description": "Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note\nthat this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.",
+              "items": {
+                "description": "Toleration is a toleration for a seed taint.",
+                "properties": {
+                  "key": {
+                    "description": "Key is the toleration key to be applied to a project or shoot.",
+                    "type": "string"
+                  },
+                  "value": {
+                    "description": "Value is the toleration value corresponding to the toleration key.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    },
+    "status": {
+      "description": "Most recently observed status of the Project.",
+      "properties": {
+        "lastActivityTimestamp": {
+          "description": "LastActivityTimestamp contains the timestamp from the last activity performed in this project.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the most recent generation observed for this project.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is the current phase of the project.",
+          "type": "string"
+        },
+        "staleAutoDeleteTimestamp": {
+          "description": "StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted\nbecause it's stale/unused.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "staleSinceTimestamp": {
+          "description": "StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "type": "object"
+}

@@ -1,0 +1,6 @@
+---
+# crd-ref-docs configuration.
+#
+# See https://github.com/elastic/crd-ref-docs for more details on this config.
+render:
+  kubernetesVersion: 1.34

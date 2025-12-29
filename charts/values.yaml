@@ -1,0 +1,185 @@
+# Default chart values.
+
+# Number of replicas.
+replicaCount: 2
+# Gardener extension settings.
+extension:
+  # Name of the Gardener extension.
+  #
+  # This name will be used when registering the extension with Gardener.
+  #
+  # Also, it will be used as the name for the Deployment, Service and
+  # ServiceAccount resources.
+  name: gardener-extension-otelcol
+  # Logging settings.
+  logging:
+    # Logging level. Valid values are `info', `debug' and `error'.
+    level: info
+    # Logging format. Valid values are `json' and `text'.
+    format: json
+  # Controller manager settings
+  manager:
+    # Set to true in order to ignore operation annotation
+    ignore_operation_annotation: false
+    # Max concurrent reconciles
+    max_concurrent_reconciles: 5
+    # Number of Queries Per Second for client connections
+    qps: 100.0
+    # Extra queries to accumulate when a client is exceeding its rate.
+    burst: 130
+    # Requeue interval
+    resync_interval: 30s
+  # Metrics settings
+  metrics:
+    # Set to false in order to disable scraping from Prometheus.
+    enable_scraping: true
+    # Metrics server will bind to this address. Set this value to 0 in order to
+    # disable metrics server.
+    bind_address: ":8080"
+  # Health settings
+  health:
+    bind_address: ":8081"
+  # pprof settings. Set this to 0 in order to disable pprof.
+  pprof:
+    bind_address: ":9090"
+  # Heartbeat settings
+  heartbeat:
+    renew_interval: 30s
+  # Leader election settings
+  leader_election:
+    enabled: true
+    election_id: gardener-extension-otelcol-leader-election
+# Extra values provided by gardenlet during extension deployment.
+#
+# See the links below for more details.
+#
+# https://gardener.cloud/docs/gardener/extensions/registration/#helm-values
+# https://github.com/gardener/gardener/blob/d5071c800378616eb6bb2c7662b4b28f4cfe7406/pkg/gardenlet/controller/controllerinstallation/controllerinstallation/reconciler.go#L236-L263
+gardener:
+  version: "unknown"
+  gardenlet:
+    featureGates: {}
+# ServiceAccount settings.
+#
+# The name of the service account is derived from the .Values.extension.name
+# value.
+#
+# See the link below for more details:
+#
+# https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automount API credentials, if set to true.
+  automount: false
+  # Additional annotations to add to the service account
+  annotations: {}
+# Extension image settings.
+#
+# https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/gardener-extension-otelcol
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "v0.1.0-dev"
+# Image pull secrets settings.
+#
+# https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# Additional annotations to attach to pods.
+#
+# Check the following link for more details about annotations.
+#
+# https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# Additional labels to attach to pods.
+#
+# Check the following link for more details about labels.
+#
+# https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels:
+  networking.gardener.cloud/to-runtime-apiserver: allowed
+  networking.gardener.cloud/to-dns: allowed
+# Pod and container security context settings.
+#
+# For more details about security context check the following documentation.
+#
+# https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+podSecurityContext: {}
+# runAsUser: 1000
+# runAsGroup: 2000
+# fsGroup: 3000
+
+# Security Context for pod containers.
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+# Service settings.
+#
+# Check the following link for more details.
+#
+# https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # Specifies whether a service should be created
+  create: true
+  # Service type.
+  # See: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # Service port.
+  # See: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 80
+# Resources limits and requests
+#
+# Check the following link for more details.
+#
+# https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+# Horizontal Pod Autoscaling (HPA) settings.
+#
+# Check the following documentation for more details.
+#
+# https://kubernetes.io/docs/concepts/workloads/autoscaling/
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+# Vertical Pod Autoscaler (VPA) settings.
+#
+# Check the following documentation for more details.
+#
+# https://kubernetes.io/docs/concepts/workloads/autoscaling/
+vpa:
+  enabled: true
+  resourcePolicy:
+    minAllowed:
+      memory: 32Mi
+    controlledValues: RequestsOnly
+  updatePolicy:
+    updateMode: Recreate
+# Additional volumes for the Deployment resource.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts for the Deployment resource.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

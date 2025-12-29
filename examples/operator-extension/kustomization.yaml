@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+buildMetadata:
+- originAnnotations
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+resources:
+- base
+
+patches:
+- path: patches/extension.yaml
+  target:
+    group: operator.gardener.cloud
+    version: v1alpha1
+    kind: Extension
+    name: gardener-extension-otelcol
