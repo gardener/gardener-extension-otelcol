@@ -16,4 +16,4 @@ patches:
     group: operator.gardener.cloud
     version: v1alpha1
     kind: Extension
-    name: gardener-extension-otelcol
+    name: otelcol

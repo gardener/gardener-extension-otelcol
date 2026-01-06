@@ -5,6 +5,9 @@ metadata:
   annotations:
     security.gardener.cloud/pod-security-enforce: baseline
 spec:
+  deployment:
+    extension:
+      values: {}
   resources:
     - kind: Extension
       type: otelcol
