@@ -78,7 +78,7 @@ serviceAccount:
 #
 # https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/gardener-extension-otelcol
+  repository: registry.local.gardener.cloud:5001/extensions/gardener-extension-otelcol
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
