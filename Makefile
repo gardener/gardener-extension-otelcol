@@ -35,11 +35,11 @@ ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
 endif
 
-# Name for the extension image
-IMAGE ?= europe-docker.pkg.dev/gardener-project/public/gardener/extensions/gardener-extension-otelcol
-
 # Name and version of the Gardener extension.
 EXTENSION_NAME ?= gardener-extension-otelcol
+
+# Name for the extension image
+IMAGE ?= europe-docker.pkg.dev/gardener-project/public/gardener/extensions/$(EXTENSION_NAME)
 
 # Registry used for local development
 LOCAL_REGISTRY ?= registry.local.gardener.cloud:5001
@@ -166,6 +166,12 @@ docker-build:
 		-t $(IMAGE):$(EFFECTIVE_VERSION) \
 		-t $(IMAGE):latest .
 
+.PHONY: docker-push
+docker-push:
+	@docker push --quiet $(IMAGE):$(VERSION)
+	@docker push --quiet $(IMAGE):$(EFFECTIVE_VERSION)
+	@docker push --quiet $(IMAGE):latest
+
 .PHONY: update-tools
 update-tools:
 	$(GOCMD) get -u -modfile $(TOOLS_MOD_FILE) tool
@@ -221,7 +227,6 @@ check-examples:
 
 .PHONY: kind-load-image
 kind-load-image:
-	@$(MAKE) docker-build
 	@kind load docker-image --name $(KIND_CLUSTER) $(IMAGE):$(VERSION)
 	@kind load docker-image --name $(KIND_CLUSTER) $(IMAGE):$(EFFECTIVE_VERSION)
 	@kind load docker-image --name $(KIND_CLUSTER) $(IMAGE):latest
@@ -243,12 +248,11 @@ update-version-tags:
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
 		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml
 
+deploy deploy-operator: export IMAGE=$(LOCAL_REGISTRY)/extensions/$(EXTENSION_NAME)
+
 .PHONY: deploy
-deploy: generate update-version-tags
-	$(MAKE) KIND_CLUSTER=$(GARDENER_DEV_CLUSTER) kind-load-image
-	$(MAKE) helm-load-chart
-	@$(GO_TOOL) kustomize build $(SRC_ROOT)/examples/dev-setup | \
-		kubectl apply -f -
+deploy: generate update-version-tags docker-build docker-push helm-load-chart
+	@env WITH_GARDENER_OPERATOR=false EXTENSION_IMAGE=$(IMAGE):$(VERSION) $(HACK_DIR)/deploy-dev-setup.sh
 
 .PHONY: undeploy
 undeploy:
@@ -256,11 +260,8 @@ undeploy:
 		kubectl delete --ignore-not-found=true -f -
 
 .PHONY: deploy-operator
-deploy-operator: generate update-version-tags
-	$(MAKE) KIND_CLUSTER=$(GARDENER_DEV_OPERATOR_CLUSTER) kind-load-image
-	$(MAKE) helm-load-chart
-	@$(GO_TOOL) kustomize build $(SRC_ROOT)/examples/operator-extension | \
-		kubectl apply -f -
+deploy-operator: generate update-version-tags docker-build docker-push helm-load-chart
+	@env WITH_GARDENER_OPERATOR=true EXTENSION_IMAGE=$(IMAGE):$(VERSION) $(HACK_DIR)/deploy-dev-setup.sh
 
 .PHONY: undeploy-operator
 undeploy-operator:
