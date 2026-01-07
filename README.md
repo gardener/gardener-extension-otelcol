@@ -203,23 +203,6 @@ creating the dev environment.
 export KUBECONFIG=/path/to/gardener/example/gardener-local/kind/local/kubeconfig
 ```
 
-You can use the following command in order to load the OCI image to the nodes of
-your local Gardener cluster, which is running in
-[kind](https://kind.sigs.k8s.io/).
-
-``` shell
-make kind-load-image
-```
-
-The Helm charts, which are used by the
-[gardenlet](https://gardener.cloud/docs/gardener/concepts/gardenlet/) for
-deploying the extension can be pushed to the local OCI registry using the
-following command.
-
-``` shell
-make helm-load-chart
-```
-
 In the [examples/dev-setup](./examples/dev-setup) directory you can find
 [kustomize](https://kustomize.io/]) resources, which can be used to create the
 `ControllerDeployment` and `ControllerRegistration` resources.
@@ -312,7 +295,7 @@ NAME                      MODE          VERSION   READY   AGE     IMAGE         
 external-otelcol          statefulset   0.141.0   1/1     6m45s   europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.141.0   managed
 ```
 
-We should also see that the Collector and Target Allocator are running and
+We should also see that the Collector and Target Allocator are running and are
 healthy.
 
 ``` shell
