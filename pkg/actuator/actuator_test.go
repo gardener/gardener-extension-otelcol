@@ -97,8 +97,6 @@ var _ = Describe("Actuator", Ordered, func() {
 
 	BeforeAll(func() {
 		actuatorOpts = []actuator.Option{
-			actuator.WithClient(k8sClient),
-			actuator.WithReader(k8sClient),
 			actuator.WithGardenerVersion("1.0.0"),
 			actuator.WithDecoder(decoder),
 			actuator.WithGardenletFeatures(featureGates),
@@ -158,7 +156,7 @@ var _ = Describe("Actuator", Ordered, func() {
 	})
 
 	It("should successfully create an actuator", func() {
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
@@ -173,7 +171,7 @@ var _ = Describe("Actuator", Ordered, func() {
 		// non-existing cluster is looked up.
 		extResource.Namespace = "non-existing-namespace"
 
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		err = act.Reconcile(ctx, logger, extResource)
@@ -182,7 +180,7 @@ var _ = Describe("Actuator", Ordered, func() {
 	})
 
 	It("should fail to reconcile without provider config", func() {
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 
@@ -204,7 +202,7 @@ var _ = Describe("Actuator", Ordered, func() {
 			Raw: data,
 		}
 
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 
@@ -219,7 +217,7 @@ var _ = Describe("Actuator", Ordered, func() {
 			Raw: providerConfigData,
 		}
 
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		Expect(act.Reconcile(ctx, logger, extResource)).To(Succeed())
@@ -228,7 +226,7 @@ var _ = Describe("Actuator", Ordered, func() {
 	})
 
 	It("should succeed on Delete", func() {
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		Expect(act.Delete(ctx, logger, extResource)).To(Succeed())
@@ -237,7 +235,7 @@ var _ = Describe("Actuator", Ordered, func() {
 	})
 
 	It("should succeed on ForceDelete", func() {
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		Expect(act.ForceDelete(ctx, logger, extResource)).To(Succeed())
@@ -251,7 +249,7 @@ var _ = Describe("Actuator", Ordered, func() {
 			Raw: providerConfigData,
 		}
 
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		Expect(act.Restore(ctx, logger, extResource)).To(Succeed())
@@ -265,7 +263,7 @@ var _ = Describe("Actuator", Ordered, func() {
 			Raw: providerConfigData,
 		}
 
-		act, err := actuator.New(actuatorOpts...)
+		act, err := actuator.New(k8sClient, actuatorOpts...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
 		Expect(act.Migrate(ctx, logger, extResource)).To(Succeed())

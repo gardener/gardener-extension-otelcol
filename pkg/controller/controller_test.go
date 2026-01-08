@@ -26,7 +26,7 @@ var _ = Describe("Controller", Ordered, func() {
 	var act *actuator.Actuator
 
 	BeforeAll(func() {
-		a, err := actuator.New()
+		a, err := actuator.New(k8sClient)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(a).NotTo(BeNil())
 		act = a
