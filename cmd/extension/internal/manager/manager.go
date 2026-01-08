@@ -319,8 +319,7 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 	logger.Info("creating actuators")
 	decoder := serializer.NewCodecFactory(m.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 	act, err := actuator.New(
-		actuator.WithReader(m.GetAPIReader()),
-		actuator.WithClient(m.GetClient()),
+		m.GetClient(),
 		actuator.WithDecoder(decoder),
 		actuator.WithGardenerVersion(flags.gardenerVersion),
 		actuator.WithGardenletFeatures(flags.gardenletFeatureGates),
