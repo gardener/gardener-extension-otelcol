@@ -493,6 +493,120 @@ kubectl --kubeconfig $KUBECONFIG_VIRTUAL delete -f examples/secret-tls.yaml --ig
 kubectl --kubeconfig $KUBECONFIG_VIRTUAL delete -f examples/secret-bearer-token.yaml --ignore-not-found=true --wait=false
 ```
 
+# Troubleshooting
+
+This section provides some hints related to troubleshooting the OpenTelemetry
+Collector, which is managed by the Gardener extension.
+
+## Check the official OpenTelemetry Troubleshooting Guides
+
+Make sure that you check the following official OpenTelemetry documentation:
+
+- [Troubleshooting the OpenTelemetry Operator for Kubernetes](https://opentelemetry.io/docs/platforms/kubernetes/operator/troubleshooting/)
+- [Troubleshooting: Target Allocator](https://opentelemetry.io/docs/platforms/kubernetes/operator/troubleshooting/target-allocator/)
+
+## Check the logs of the OpenTelemetry Collector and Target Allocator
+
+Check the logs of the `deployment/external-otelcol-targetallocator` and
+`statefulset/external-otelcol-collector`, e.g.
+
+``` shell
+kubectl --namespace shoot--local--local logs -f deployments/external-otelcol-targetallocator
+kubectl --namespace shoot--local--local logs -f statefulset/external-otelcol-collector
+```
+
+## Verify that there are `ServiceMonitors` in the shoot control-plane namespace
+
+The Target Allocator deployed by the extension is configured to discover
+`ServiceMonitor` resources with the following labels:
+
+- `prometheus=shoot`
+
+Confirm that `ServiceMonitors` with these labels exist in the shoot
+control-plane namespace, e.g.
+
+``` shell
+kubectl --namespace shoot--local--local get servicemonitors -l prometheus=shoot
+```
+
+## Check the configuration of the Collector and Target Allocator
+
+The Target Allocator and Collector `configmaps` are labeled with
+`observability.gardener.cloud/app=external-otelcol`. Check and confirm that the
+configuration settings in these `configmaps` are correct.
+
+``` shell
+$ kubectl --namespace shoot--local--local get cm -l observability.gardener.cloud/app=external-otelcol
+NAME                                      DATA   AGE
+external-otelcol-collector-c30d03f4       1      13m
+external-otelcol-targetallocator-config   1      13m
+```
+
+## Verify that the Target Allocator discovers scrape targets
+
+The communication between the Target Allocator and the Collector happens over
+mTLS, so we will need the client certificate of the collector, in order to
+confirm that the Target Allocator has discovered targets for scraping.
+
+First, get the secret which contains the client certificate used by the
+Collector, e.g.
+
+``` shell
+kubectl --namespace shoot--local--local get secret -l name=otelcol-collector-client
+```
+
+Save the client TLS secret locally:
+
+``` shell
+mkdir client-cert
+for k in tls.key tls.crt; do
+  kubectl --namespace shoot--local--local get secret -l name=otelcol-collector-client -o yaml | \
+    yq ".items[0].data.\"${k}\"" | base64 -d > "./client-cert/${k}"
+done
+```
+
+Next, we need to port-forward the Target Allocator service locally.
+
+``` shell
+kubectl --namespace shoot--local--local port-forward service/external-otelcol-targetallocator-https 8443:443
+```
+
+Now we can query the Target Allocator and review the jobs and the scrape targets
+it can dispatch to collectors.
+
+``` shell
+curl -k --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/jobs' | jq '.'
+```
+
+The following command will query the Target Allocator for the scrape configs.
+
+``` shell
+curl -k --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/scrape_configs' | jq '.'
+```
+
+In addition to the API paths served by the Target Allocator you can also inspect
+the configuration via `/debug` endpoints using your browser.
+
+In order to do that we can use [mitmproxy](https://www.mitmproxy.org/). Keep in
+mind that `mitmpoxy` expects to find the key and certificate in a single
+PEM-encoded file.
+
+``` shell
+cat client-cert/tls.crt client-cert/tls.key > client-cert/mitmproxy.pem
+```
+
+Now we can start the `mitmproxy`.
+
+``` shell
+mitmproxy -k \
+          --listen-port=8080 \
+          --set client_certs=client-cert/mitmproxy.pem \
+          --mode upstream:https://localhost:8443
+```
+
+Open up your browser at http://localhost:8080/ in order to view the Target
+Collector jobs, scrape configs, and assigned collectors.
+
 # Tests
 
 In order to run the tests use the command below:
