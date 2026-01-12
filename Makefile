@@ -1,12 +1,3 @@
-# Generate resources (kubebuilder)
-#
-# .PHONY: manifests
-# manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-#         $(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-# TODO(dnaeon): Do we want to keep the test/manifests/crd/kustomization.yaml ? or drop it?
-
-
 .DEFAULT_GOAL := build
 
 # Set SHELL to bash and configure options
