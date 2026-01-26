@@ -115,15 +115,15 @@ const (
 	// retry interval is multiplied on each attempt.
 	DefaultRetryMultiplier = 1.5
 
-	// DefaultExporterClientTimeout specifies the default client timeout for
+	// DefaultHTTPExporterClientTimeout specifies the default client timeout for
 	// HTTP requests made by exporters.
-	DefaultExporterClientTimeout = 30 * time.Second
-	// DefaultExporterClientReadBufferSize specifies the default
+	DefaultHTTPExporterClientTimeout = 30 * time.Second
+	// DefaultHTTPExporterClientReadBufferSize specifies the default
 	// ReadBufferSize for the HTTP client used by exporters.
-	DefaultExporterClientReadBufferSize = 0
-	// DefaultExporterClientWriteBufferSize specifies the default
+	DefaultHTTPExporterClientReadBufferSize = 0
+	// DefaultHTTPExporterClientWriteBufferSize specifies the default
 	// WriteBufferSize for the HTTP client used by the exporters.
-	DefaultExporterClientWriteBufferSize = 512 * 1024
+	DefaultHTTPExporterClientWriteBufferSize = 512 * 1024
 )
 
 // RetryOnFailureConfig provides the retry policy for an exporter.
@@ -222,31 +222,32 @@ type OTLPHTTPExporterConfig struct {
 	// TLS specifies the TLS configuration settings for the exporter.
 	//
 	// +k8s:optional
-	TLS *TLSConfig `json:"tls,omitempty"`
+	TLS *TLSConfig `json:"tls,omitzero"`
+
 	// Token references a bearer token for authentication.
 	//
 	// +k8s:optional
 	Token *ResourceReference `json:"token,omitempty"`
 
 	// Timeout specifies the HTTP request time limit. Default value is
-	// [DefaultExporterClientTimeout].
+	// [DefaultHTTPExporterClientTimeout].
 	//
 	// +k8s:optional
-	// +default=ref(DefaultExporterClientTimeout)
+	// +default=ref(DefaultHTTPExporterClientTimeout)
 	Timeout time.Duration `json:"timeout,omitzero"`
 
 	// ReadBufferSize specifies the ReadBufferSize for the HTTP
-	// client. Default value is [DefaultExporterClientReadBufferSize].
+	// client. Default value is [DefaultHTTPExporterClientReadBufferSize].
 	//
 	// +k8s:optional
-	// +default=ref(DefaultExporterClientReadBufferSize)
+	// +default=ref(DefaultHTTPExporterClientReadBufferSize)
 	ReadBufferSize int `json:"read_buffer_size,omitzero"`
 
 	// WriteBufferSize specifies the WriteBufferSize for the HTTP
-	// client. Default value is [DefaultExporterClientWriteBufferSize].
+	// client. Default value is [DefaultHTTPExporterClientWriteBufferSize].
 	//
 	// +k8s:optional
-	// +default=ref(DefaultExporterClientWriteBufferSize)
+	// +default=ref(DefaultHTTPExporterClientWriteBufferSize)
 	WriteBufferSize int `json:"write_buffer_size,omitzero"`
 
 	// Encoding specifies the encoding to use for the messages. The default

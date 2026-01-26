@@ -31,13 +31,13 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 		}
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Timeout == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.Timeout = time.Duration(DefaultExporterClientTimeout)
+		in.Spec.Exporters.OTLPHTTPExporter.Timeout = time.Duration(DefaultHTTPExporterClientTimeout)
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize = int(DefaultExporterClientReadBufferSize)
+		in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize = int(DefaultHTTPExporterClientReadBufferSize)
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize = int(DefaultExporterClientWriteBufferSize)
+		in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize = int(DefaultHTTPExporterClientWriteBufferSize)
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Encoding == "" {
 		in.Spec.Exporters.OTLPHTTPExporter.Encoding = MessageEncoding(MessageEncodingProto)
