@@ -831,10 +831,8 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	}
 
 	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
-		exporters["otlphttp"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
+		exporters["otlp_http"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
 	}
-
-	// TODO(dnaeon): add OTLP gRPC exporter
 
 	return exporters
 }

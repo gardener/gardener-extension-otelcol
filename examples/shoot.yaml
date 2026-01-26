@@ -30,7 +30,7 @@ spec:
               verbosity: basic  # basic, normal or detailed
 
             # OTLP HTTP exporter settings
-            otlphttp:
+            otlp_http:
               enabled: true
               endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:8443"
               token:

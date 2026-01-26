@@ -85,7 +85,7 @@ spec:
         spec:
           exporters:
             # OTLP HTTP exporter settings
-            otlphttp:
+            otlp_http:
               enabled: true
               endpoint: "https://opentelemetry-receiver.example.org"
 ```
@@ -106,7 +106,7 @@ spec:
         spec:
           exporters:
             # OTLP HTTP exporter settings
-            otlphttp:
+            otlp_http:
               enabled: true
               endpoint: "https://opentelemetry-receiver.example.org"
               token:
