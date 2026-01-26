@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package manager
+package main
 
 import (
 	"context"
@@ -123,8 +123,8 @@ func getFlags(ctx context.Context) *flags {
 	return conf
 }
 
-// New creates a new [cli.Command] for running the controller manager.
-func New() *cli.Command {
+// NewManagerCommand creates a new [cli.Command] for running the controller manager.
+func NewManagerCommand() *cli.Command {
 	flags := flags{
 		gardenletFeatureGates: make(map[featuregate.Feature]bool),
 	}
