@@ -185,7 +185,7 @@ type OTLPHTTPExporterConfig struct {
 
 // IsEnabled is a predicate which returns whether the exporter is enabled or
 // not.
-func (cfg *OTLPHTTPExporterConfig) IsEnabled() bool {
+func (cfg OTLPHTTPExporterConfig) IsEnabled() bool {
 	if cfg.Enabled != nil {
 		return *cfg.Enabled
 	}
@@ -216,7 +216,59 @@ type DebugExporterConfig struct {
 
 // IsEnabled is a predicate which returns whether the exporter is enabled or
 // not.
-func (cfg *DebugExporterConfig) IsEnabled() bool {
+func (cfg DebugExporterConfig) IsEnabled() bool {
+	if cfg.Enabled != nil {
+		return *cfg.Enabled
+	}
+
+	return false
+}
+
+// OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
+//
+// See [OTLP gRPC Exporter] for more details.
+//
+// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+type OTLPGRPCExporterConfig struct {
+	// Enabled specifies whether the OTLP gRPC exporter is enabled or not.
+	Enabled *bool
+
+	// Endpoint specifies the gRPC endpoint to which signals will be exported.
+	//
+	// Check the link below for more details about the format of this field.
+	//
+	// https://github.com/grpc/grpc/blob/master/doc/naming.md
+	Endpoint string
+
+	// TLS specifies the TLS configuration settings for the exporter.
+	TLS *TLSConfig
+
+	// Token references a bearer token for authentication.
+	Token *ResourceReference
+
+	// Timeout specifies the time to wait per individual attempt to send
+	// data to the backend.
+	Timeout time.Duration
+
+	// ReadBufferSize specifies the ReadBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientReadBufferSize].
+	ReadBufferSize int
+
+	// WriteBufferSize specifies the WriteBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientWriteBufferSize].
+	WriteBufferSize int
+
+	// RetryOnFailure specifies the retry policy of the exporter.
+	RetryOnFailure RetryOnFailureConfig
+
+	// Compression specifies the compression to use. The default value is
+	// [CompressionGzip].
+	Compression Compression
+}
+
+// IsEnabled is a predicate which returns whether the exporter is enabled or
+// not.
+func (cfg OTLPGRPCExporterConfig) IsEnabled() bool {
 	if cfg.Enabled != nil {
 		return *cfg.Enabled
 	}
@@ -226,6 +278,9 @@ func (cfg *DebugExporterConfig) IsEnabled() bool {
 
 // CollectorExportersConfig provides the OTLP exporter settings.
 type CollectorExportersConfig struct {
+	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
+	OTLPGRPCExporter OTLPGRPCExporterConfig
+
 	// HTTPExporter provides the OTLP HTTP Exporter settings.
 	OTLPHTTPExporter OTLPHTTPExporterConfig
 

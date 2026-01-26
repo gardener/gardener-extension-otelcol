@@ -124,6 +124,16 @@ const (
 	// DefaultHTTPExporterClientWriteBufferSize specifies the default
 	// WriteBufferSize for the HTTP client used by the exporters.
 	DefaultHTTPExporterClientWriteBufferSize = 512 * 1024
+
+	// DefaultGRPCExporterClientTimeout specifies the default client timeout
+	// of the OTLP gRPC exporter.
+	DefaultGRPCExporterClientTimeout = 5 * time.Second
+	// DefaultGRPCExporterClientReadBufferSize specifies the default
+	// ReadBufferSize for the gRPC client used by exporters.
+	DefaultGRPCExporterClientReadBufferSize = 32 * 1024
+	// DefaultGRPCExporterClientWriteBufferSize specifies the default
+	// WriteBufferSize for the gRPC client used by the exporters.
+	DefaultGRPCExporterClientWriteBufferSize = 32 * 1024
 )
 
 // RetryOnFailureConfig provides the retry policy for an exporter.
@@ -299,8 +309,76 @@ type DebugExporterConfig struct {
 	Verbosity DebugExporterVerbosity `json:"verbosity,omitzero"`
 }
 
+// OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
+//
+// See [OTLP gRPC Exporter] for more details.
+//
+// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+type OTLPGRPCExporterConfig struct {
+	// Enabled specifies whether the OTLP gRPC exporter is enabled or not.
+	//
+	// +k8s:optional
+	// +default=false
+	Enabled *bool `json:"enabled,omitzero"`
+
+	// Endpoint specifies the gRPC endpoint to which signals will be exported.
+	//
+	// Check the link below for more details about the format of this field.
+	//
+	// https://github.com/grpc/grpc/blob/master/doc/naming.md
+	//
+	// +k8s:required
+	Endpoint string `json:"endpoint,omitzero"`
+
+	// TLS specifies the TLS configuration settings for the exporter.
+	//
+	// +k8s:optional
+	TLS *TLSConfig `json:"tls,omitzero"`
+
+	// Token references a bearer token for authentication.
+	Token *ResourceReference `json:"token,omitzero"`
+
+	// Timeout specifies the time to wait per individual attempt to send
+	// data to the backend.
+	//
+	// +k8s:optional
+	// +default=ref(DefaultGRPCExporterClientTimeout)
+	Timeout time.Duration `json:"timeout,omitzero"`
+
+	// ReadBufferSize specifies the ReadBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientReadBufferSize].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultGRPCExporterClientReadBufferSize)
+	ReadBufferSize int `json:"read_buffer_size,omitzero"`
+
+	// WriteBufferSize specifies the WriteBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientWriteBufferSize].
+	//
+	// +k8s:optional
+	// +default=ref(DefaultGRPCExporterClientWriteBufferSize)
+	WriteBufferSize int `json:"write_buffer_size,omitzero"`
+
+	// RetryOnFailure specifies the retry policy of the exporter.
+	//
+	// +k8s:optional
+	RetryOnFailure RetryOnFailureConfig `json:"retry_on_failure,omitzero"`
+
+	// Compression specifies the compression to use. The default value is
+	// [CompressionGzip].
+	//
+	// +k8s:optional
+	// +default=ref(CompressionGzip)
+	Compression Compression `json:"compression,omitzero"`
+}
+
 // CollectorExportersConfig provides the OTLP exporter settings.
 type CollectorExportersConfig struct {
+	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
+	//
+	// +k8s:optional
+	OTLPGRPCExporter OTLPGRPCExporterConfig `json:"otlp_grpc,omitzero"`
+
 	// HTTPExporter provides the OTLP HTTP Exporter settings.
 	//
 	// +k8s:optional
