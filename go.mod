@@ -10,7 +10,7 @@ require (
 	github.com/open-telemetry/opentelemetry-operator v0.141.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.6.2
-	go.yaml.in/yaml/v4 v4.0.0-rc.3
+	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	k8s.io/api v0.35.0
 	k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery v0.35.0
