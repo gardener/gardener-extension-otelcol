@@ -20,6 +20,44 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
+	if in.Spec.Exporters.OTLPGRPCExporter.Enabled == nil {
+		var ptrVar1 bool = false
+		in.Spec.Exporters.OTLPGRPCExporter.Enabled = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.TLS != nil {
+		if in.Spec.Exporters.OTLPGRPCExporter.TLS.InsecureSkipVerify == nil {
+			var ptrVar1 bool = false
+			in.Spec.Exporters.OTLPGRPCExporter.TLS.InsecureSkipVerify = &ptrVar1
+		}
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.Timeout == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.Timeout = time.Duration(DefaultGRPCExporterClientTimeout)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.ReadBufferSize == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.ReadBufferSize = int(DefaultGRPCExporterClientReadBufferSize)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.WriteBufferSize == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.WriteBufferSize = int(DefaultGRPCExporterClientWriteBufferSize)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Enabled == nil {
+		var ptrVar1 bool = true
+		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Enabled = &ptrVar1
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.InitialInterval == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxInterval == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Multiplier == 0 {
+		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
+	}
+	if in.Spec.Exporters.OTLPGRPCExporter.Compression == "" {
+		in.Spec.Exporters.OTLPGRPCExporter.Compression = Compression(CompressionGzip)
+	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Enabled == nil {
 		var ptrVar1 bool = false
 		in.Spec.Exporters.OTLPHTTPExporter.Enabled = &ptrVar1
