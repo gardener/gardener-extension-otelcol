@@ -363,4 +363,4 @@ require (
 // TODO: a fix until the following upstream issue is clarified.
 //
 // https://github.com/kubernetes/kubernetes/issues/135417
-replace k8s.io/code-generator => github.com/dnaeon/code-generator v0.34.2-fixed-defaulter-gen
+replace k8s.io/code-generator => github.com/dnaeon/code-generator v0.34.2

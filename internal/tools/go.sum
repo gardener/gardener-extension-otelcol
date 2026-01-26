@@ -189,8 +189,8 @@ github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5Qvfr
 github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
 github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZQ=
 github.com/dlclark/regexp2 v1.11.5/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
-github.com/dnaeon/code-generator v0.34.2-fixed-defaulter-gen h1:1emfFebTOOglv6XMxtWEBB4CzDzy8n3QJxrdIk3ukG8=
-github.com/dnaeon/code-generator v0.34.2-fixed-defaulter-gen/go.mod h1:oOuD4QZQ/4OhuWuA/BFKvAgmO7YYKwKvfWAW693Nhn0=
+github.com/dnaeon/code-generator v0.34.2 h1:YeL7cBDfJ40Q8LD5bSvoPpjdvTGxU70VfB8PQBA2SHY=
+github.com/dnaeon/code-generator v0.34.2/go.mod h1:dnDDEd6S/z4uZ+PG1aE58ySCi/lR4+qT3a4DddE4/2I=
 github.com/docker/docker-credential-helpers v0.8.2 h1:bX3YxiGzFP5sOXWc3bTPEXdEaZSeVMrFgOr3T+zrFAo=
 github.com/docker/docker-credential-helpers v0.8.2/go.mod h1:P3ci7E3lwkZg6XiHdRKft1KckHiO9a2rNtyFbZ/ry9M=
 github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c h1:+pKlWGMw7gf6bQ+oDZB4KHQFypsfjYlq/C4rfL7D3g8=
