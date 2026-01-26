@@ -382,7 +382,7 @@ type CollectorExportersConfig struct {
 	// HTTPExporter provides the OTLP HTTP Exporter settings.
 	//
 	// +k8s:optional
-	OTLPHTTPExporter OTLPHTTPExporterConfig `json:"otlphttp,omitzero"`
+	OTLPHTTPExporter OTLPHTTPExporterConfig `json:"otlp_http,omitzero"`
 
 	// DebugExporter provides the settings for the debug exporter.
 	//
