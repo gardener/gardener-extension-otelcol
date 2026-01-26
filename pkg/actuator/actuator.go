@@ -329,6 +329,15 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
+	otelCollector := a.getOtelCollector(
+		ex.Namespace,
+		caBundleSecret,
+		clientSecret,
+		cfg,
+		cluster.Shoot.Spec.Resources,
+		collectorImage,
+	)
+
 	data, err := registry.AddAllAndSerialize(
 		taConfigMap,
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
@@ -337,7 +346,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorHTTPSService(ex.Namespace),
 		a.getTargetAllocatorDeployment(ex.Namespace, caBundleSecret, serverSecret, taImage),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
-		a.getOtelCollector(ex.Namespace, caBundleSecret, clientSecret, cfg, cluster.Shoot.Spec.Resources, collectorImage),
+		otelCollector,
 	)
 	if err != nil {
 		return err
@@ -729,7 +738,7 @@ func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[st
 	// See the link below for more details about each config setting for the
 	// debug exporter.
 	//
-	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter
+	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
 	exporter := map[string]any{
 		"verbosity": cfg.Verbosity,
 	}
@@ -820,6 +829,7 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
 		exporters["debug"] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
 	}
+
 	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
 		exporters["otlphttp"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
 	}
@@ -849,11 +859,9 @@ func (a *Actuator) getOtelCollector(
 		volumeMountPathBearerTokenFile = "/etc/auth/bearer"  // #nosec: G101
 	)
 
-	var (
-		exporters     = a.getOtelExporters(cfg)
-		exporterNames = slices.Sorted(maps.Keys(exporters))
-		allLabels     = utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
-	)
+	exporters := a.getOtelExporters(cfg)
+	exporterNames := slices.Sorted(maps.Keys(exporters))
+	allLabels := utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
 
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
