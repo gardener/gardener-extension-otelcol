@@ -163,14 +163,24 @@ data:
         protocols:
           http:
             include_metadata: true
-            endpoint: 0.0.0.0:55690
-            compression_algorithms: ["", "gzip"]
+            endpoint: 0.0.0.0:4318
             # Enable TLS with client certificate verification
             tls:
               cert_file: /etc/otel/tls/tls.crt
               key_file: /etc/otel/tls/tls.key
               client_ca_file: /etc/otel/tls/ca.crt
             # Enable authentication for HTTP endpoint
+            auth:
+              authenticator: bearertokenauth/server
+          grpc:
+            include_metadata: true
+            endpoint: 0.0.0.0:4317
+            # Enable TLS with client certificate verification
+            tls:
+              cert_file: /etc/otel/tls/tls.crt
+              key_file: /etc/otel/tls/tls.key
+              client_ca_file: /etc/otel/tls/ca.crt
+            # Enable authentication for gRPC endpoint
             auth:
               authenticator: bearertokenauth/server
 
@@ -207,9 +217,14 @@ metadata:
   namespace: default
 spec:
   ports:
-  - port: 8443
+  - name: otlp-grpc
+    port: 4317
     protocol: TCP
-    targetPort: 55690
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
   selector:
     app.kubernetes.io/component: opentelemetry-receiver
   type: ClusterIP
@@ -242,7 +257,7 @@ spec:
             secretKeyRef:
               name: opentelemetry-receiver-auth
               key: bearertoken
-        image: otel/opentelemetry-collector-contrib:0.141.0
+        image: otel/opentelemetry-collector-contrib:0.144.0
         imagePullPolicy: IfNotPresent
         name: otc-container
         resources:
