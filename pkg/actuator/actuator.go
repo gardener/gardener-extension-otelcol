@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
@@ -727,10 +728,20 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 }
 
 const (
-	bearerTokenAuthName = "bearertokenauth"
+	// bearertokenauthextension names used by the exporters.
+	baseBearerTokenAuthName         = "bearertokenauth"
+	httpExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-http"
+	grpcExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-grpc"
 
-	volumeNameTLS      = "tls"
-	volumeMountPathTLS = "/etc/ssl/tls"
+	// TLS volume names for the exporters.
+	baseVolumeNameTLS         = "tls"
+	httpExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-http"
+	grpcExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-grpc"
+
+	// TLS volume mounts for the exporters.
+	baseVolumeMountPathTLS         = "/etc/ssl/tls"
+	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
+	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
 )
 
 // getDebugExporterConfig returns the OTel settings for the debug exporter.
@@ -799,13 +810,13 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
 		}
 		if tls.CA != nil {
-			tlsConfig["ca_file"] = volumeMountPathTLS + "/" + tls.CA.ResourceRef.DataKey
+			tlsConfig["ca_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
 		}
 		if tls.Cert != nil {
-			tlsConfig["cert_file"] = volumeMountPathTLS + "/" + tls.Cert.ResourceRef.DataKey
+			tlsConfig["cert_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
 		}
 		if tls.Key != nil {
-			tlsConfig["key_file"] = volumeMountPathTLS + "/" + tls.Key.ResourceRef.DataKey
+			tlsConfig["key_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
 		}
 
 		exporter["tls"] = tlsConfig
@@ -814,7 +825,62 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 	// Bearer Token Authentication settings
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
-			"authenticator": bearerTokenAuthName,
+			"authenticator": httpExporterBearerTokenAuthName,
+		}
+	}
+
+	return exporter
+}
+
+// getOTLPGRPCExporterConfig returns the OTel settings for the OTLP gRPC
+// exporter.
+func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) map[string]any {
+	// See the link below for more details about each config setting of the
+	// OTLP gRPC exporter.
+	//
+	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+	exporter := map[string]any{
+		"endpoint":          cfg.Endpoint,
+		"read_buffer_size":  cfg.ReadBufferSize,
+		"write_buffer_size": cfg.WriteBufferSize,
+		"timeout":           cfg.Timeout.String(),
+		"compression":       string(cfg.Compression),
+	}
+
+	// Retry on Failure settings
+	if cfg.RetryOnFailure.Enabled != nil {
+		exporter["retry_on_failure"] = map[string]any{
+			"enabled":          *cfg.RetryOnFailure.Enabled,
+			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
+			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
+			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
+			"multiplier":       cfg.RetryOnFailure.Multiplier,
+		}
+	}
+
+	// TLS settings
+	if tls := cfg.TLS; tls != nil {
+		tlsConfig := map[string]any{}
+		if tls.InsecureSkipVerify != nil {
+			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+		}
+		if tls.CA != nil {
+			tlsConfig["ca_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
+		}
+		if tls.Cert != nil {
+			tlsConfig["cert_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
+		}
+		if tls.Key != nil {
+			tlsConfig["key_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
+		}
+
+		exporter["tls"] = tlsConfig
+	}
+
+	// Bearer Token Authentication settings
+	if cfg.Token != nil {
+		exporter["auth"] = map[string]any{
+			"authenticator": grpcExporterBearerTokenAuthName,
 		}
 	}
 
@@ -832,6 +898,10 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 
 	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
 		exporters["otlp_http"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
+	}
+
+	if cfg.Spec.Exporters.OTLPGRPCExporter.IsEnabled() {
+		exporters["otlp_grpc"] = a.getOTLPGRPCExporterConfig(cfg.Spec.Exporters.OTLPGRPCExporter)
 	}
 
 	return exporters
@@ -853,8 +923,13 @@ func (a *Actuator) getOtelCollector(
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
 
-		volumeNameBearerToken          = "bearer-token-auth" // #nosec: G101
-		volumeMountPathBearerTokenFile = "/etc/auth/bearer"  // #nosec: G101
+		baseVolumeNameBearerToken         = "bearer-token-auth"                               // #nosec: G101
+		httpExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-http" // #nosec: G101
+		grpcExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-grpc" // #nosec: G101
+
+		baseVolumeMountPathBearerTokenFile         = "/etc/auth/bearer"                                         // #nosec: G101
+		httpExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-http" // #nosec: G101
+		grpcExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-grpc" // #nosec: G101
 	)
 
 	exporters := a.getOtelExporters(cfg)
@@ -966,7 +1041,7 @@ func (a *Actuator) getOtelCollector(
 						},
 					},
 					Pipelines: map[string]*otelv1beta1.Pipeline{
-						// TODO(dnaeon): add a pipeline for logs, once we have them enabled
+						// TODO(dnaeon): add the otlp grpc receiver
 						"metrics": {
 							Receivers:  []string{"prometheus"},
 							Processors: []string{"batch"},
@@ -978,45 +1053,47 @@ func (a *Actuator) getOtelCollector(
 		},
 	}
 
-	// TLS
-	if tls := cfg.Spec.Exporters.OTLPHTTPExporter.TLS; tls != nil {
-		volume := corev1.Volume{Name: volumeNameTLS, VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{}}}
-		addSecretToProjectedVolume := func(resourceRef config.ResourceReferenceDetails) {
-			volume.Projected.Sources = append(volume.Projected.Sources, corev1.VolumeProjection{Secret: &corev1.SecretProjection{
-				LocalObjectReference: corev1.LocalObjectReference{Name: secretNameForResource(resourceRef.Name, resources)},
-				Items:                []corev1.KeyToPath{{Key: resourceRef.DataKey, Path: resourceRef.DataKey}},
-			}})
-		}
+	// OTLP HTTP exporter TLS settings
+	a.configureVolumeForTLS(
+		obj,
+		cfg.Spec.Exporters.OTLPHTTPExporter.TLS,
+		httpExporterVolumeNameTLS,
+		httpExporterVolumeMountPathTLS,
+		resources,
+	)
 
-		if tls.CA != nil {
-			addSecretToProjectedVolume(tls.CA.ResourceRef)
-		}
-		if tls.Cert != nil {
-			addSecretToProjectedVolume(tls.Cert.ResourceRef)
-		}
-		if tls.Key != nil {
-			addSecretToProjectedVolume(tls.Key.ResourceRef)
-		}
+	// OTLP HTTP exporter Bearer Token Authentication settings
+	//
+	// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
+	a.configureVolumeForBearerTokenAuthExtension(
+		obj,
+		cfg.Spec.Exporters.OTLPHTTPExporter.Token,
+		httpExporterBearerTokenAuthName,
+		httpExporterVolumeMountPathBearerTokenFile,
+		httpExporterVolumeNameBearerToken,
+		httpExporterVolumeMountPathBearerTokenFile,
+		resources,
+	)
 
-		obj.Spec.Volumes = append(obj.Spec.Volumes, volume)
-		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{Name: volumeNameTLS, MountPath: volumeMountPathTLS})
-	}
+	// OTLP gRPC exporter TLS settings
+	a.configureVolumeForTLS(
+		obj,
+		cfg.Spec.Exporters.OTLPGRPCExporter.TLS,
+		grpcExporterVolumeNameTLS,
+		grpcExporterVolumeMountPathTLS,
+		resources,
+	)
 
-	// Bearer Token Authentication
-	if token := cfg.Spec.Exporters.OTLPHTTPExporter.Token; token != nil {
-		if obj.Spec.Config.Extensions == nil {
-			obj.Spec.Config.Extensions = &otelv1beta1.AnyConfig{}
-		}
-
-		if obj.Spec.Config.Extensions.Object == nil {
-			obj.Spec.Config.Extensions.Object = make(map[string]any)
-		}
-
-		obj.Spec.Config.Extensions.Object[bearerTokenAuthName] = map[string]any{"filename": volumeMountPathBearerTokenFile + "/" + token.ResourceRef.DataKey}
-		obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, bearerTokenAuthName)
-		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{Name: volumeNameBearerToken, MountPath: volumeMountPathBearerTokenFile})
-		obj.Spec.Volumes = append(obj.Spec.Volumes, corev1.Volume{Name: volumeNameBearerToken, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: secretNameForResource(token.ResourceRef.Name, resources)}}})
-	}
+	// OTLP gRPC exporter Bearer Token Authentication settings
+	a.configureVolumeForBearerTokenAuthExtension(
+		obj,
+		cfg.Spec.Exporters.OTLPGRPCExporter.Token,
+		grpcExporterBearerTokenAuthName,
+		grpcExporterVolumeMountPathBearerTokenFile,
+		grpcExporterVolumeNameBearerToken,
+		grpcExporterVolumeMountPathBearerTokenFile,
+		resources,
+	)
 
 	return obj
 }
@@ -1030,4 +1107,108 @@ func secretNameForResource(resourceName string, resources []gardencorev1beta1.Na
 	}
 
 	return ""
+}
+
+// configureVolumeForTLS configures a volume for the OpenTelemetry collector for
+// TLS secrets.
+func (a *Actuator) configureVolumeForTLS(
+	obj *otelv1beta1.OpenTelemetryCollector,
+	tls *config.TLSConfig,
+	volumeName string,
+	volumeMount string,
+	resources []gardencorev1beta1.NamedResourceReference,
+) {
+	if obj == nil || tls == nil {
+		return
+	}
+
+	volume := corev1.Volume{
+		Name: volumeName,
+		VolumeSource: corev1.VolumeSource{
+			Projected: &corev1.ProjectedVolumeSource{},
+		},
+	}
+
+	addSecretToProjectedVolume := func(resourceRef config.ResourceReferenceDetails) {
+		volume.Projected.Sources = append(
+			volume.Projected.Sources,
+			corev1.VolumeProjection{
+				Secret: &corev1.SecretProjection{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: secretNameForResource(resourceRef.Name, resources),
+					},
+					Items: []corev1.KeyToPath{{Key: resourceRef.DataKey, Path: resourceRef.DataKey}},
+				},
+			},
+		)
+	}
+
+	if tls.CA != nil {
+		addSecretToProjectedVolume(tls.CA.ResourceRef)
+	}
+	if tls.Cert != nil {
+		addSecretToProjectedVolume(tls.Cert.ResourceRef)
+	}
+	if tls.Key != nil {
+		addSecretToProjectedVolume(tls.Key.ResourceRef)
+	}
+
+	obj.Spec.Volumes = append(obj.Spec.Volumes, volume)
+	obj.Spec.VolumeMounts = append(
+		obj.Spec.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: volumeMount,
+		},
+	)
+}
+
+// configureVolumeForBearerTokenAuthExtension configures a volume for the
+// OpenTelemetry collector for the bearertokenauth extension.
+func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
+	obj *otelv1beta1.OpenTelemetryCollector,
+	ref *config.ResourceReference,
+	authExtensionName string,
+	tokenBasePath string,
+	volumeName string,
+	volumeMount string,
+	resources []gardencorev1beta1.NamedResourceReference,
+) {
+	if obj == nil || ref == nil {
+		return
+	}
+
+	if obj.Spec.Config.Extensions == nil {
+		obj.Spec.Config.Extensions = &otelv1beta1.AnyConfig{}
+	}
+
+	if obj.Spec.Config.Extensions.Object == nil {
+		obj.Spec.Config.Extensions.Object = make(map[string]any)
+	}
+
+	obj.Spec.Config.Extensions.Object[authExtensionName] = map[string]any{
+		"filename": filepath.Join(tokenBasePath, ref.ResourceRef.DataKey),
+	}
+
+	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, authExtensionName)
+
+	obj.Spec.Volumes = append(
+		obj.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretNameForResource(ref.ResourceRef.Name, resources),
+				},
+			},
+		},
+	)
+
+	obj.Spec.VolumeMounts = append(
+		obj.Spec.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: volumeMount,
+		},
+	)
 }
