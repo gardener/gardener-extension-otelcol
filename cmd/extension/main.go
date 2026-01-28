@@ -11,7 +11,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	managercmd "github.com/gardener/gardener-extension-otelcol/cmd/extension/internal/manager"
 	"github.com/gardener/gardener-extension-otelcol/pkg/version"
 )
 
@@ -22,7 +21,7 @@ func main() {
 		EnableShellCompletion: true,
 		Usage:                 "Gardener Extension for OpenTelemetry Collector",
 		Commands: []*cli.Command{
-			managercmd.New(),
+			NewManagerCommand(),
 		},
 	}
 
