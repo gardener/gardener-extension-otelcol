@@ -43,7 +43,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `otlphttp` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  |  |
+| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  |  |
+| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  |  |
 | `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  |  |
 
 
@@ -98,6 +99,7 @@ Compression specifies the compression used by the collector.
 
 
 _Appears in:_
+- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
 - [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
 
 | Field | Description |
@@ -228,6 +230,34 @@ _Appears in:_
 | `detailed` | MetricsVerbosityLevelDetailed configures the collector with the most<br />verbose level, which includes dimensions and views.<br /> |
 
 
+#### OTLPGRPCExporterConfig
+
+
+
+OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
+
+See [OTLP gRPC Exporter] for more details.
+
+[OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+
+
+
+_Appears in:_
+- [CollectorExportersConfig](#collectorexportersconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled specifies whether the OTLP gRPC exporter is enabled or not. |  |  |
+| `endpoint` _string_ | Endpoint specifies the gRPC endpoint to which signals will be exported.<br />Check the link below for more details about the format of this field.<br />https://github.com/grpc/grpc/blob/master/doc/naming.md |  |  |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  |  |
+| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
+| `timeout` _[Duration](#duration)_ | Timeout specifies the time to wait per individual attempt to send<br />data to the backend. |  |  |
+| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientReadBufferSize]. |  |  |
+| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientWriteBufferSize]. |  |  |
+| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
+| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
+
+
 #### OTLPHTTPExporterConfig
 
 
@@ -253,9 +283,9 @@ _Appears in:_
 | `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  |  |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  |  |
 | `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
-| `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultExporterClientTimeout]. |  |  |
-| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientReadBufferSize]. |  |  |
-| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultExporterClientWriteBufferSize]. |  |  |
+| `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. |  |  |
+| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientReadBufferSize]. |  |  |
+| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientWriteBufferSize]. |  |  |
 | `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. |  |  |
 | `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
 | `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
@@ -270,6 +300,7 @@ ResourceReference references data from a Secret.
 
 
 _Appears in:_
+- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
 - [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
 - [TLSConfig](#tlsconfig)
 
@@ -304,6 +335,7 @@ RetryOnFailureConfig provides the retry policy for an exporter.
 
 
 _Appears in:_
+- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
 - [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
 
 | Field | Description | Default | Validation |
@@ -324,6 +356,7 @@ TLSConfig provides the TLS settings used by exporters.
 
 
 _Appears in:_
+- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
 - [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
 
 | Field | Description | Default | Validation |
