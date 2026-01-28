@@ -32,7 +32,29 @@ spec:
             # OTLP HTTP exporter settings
             otlp_http:
               enabled: true
-              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:8443"
+              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+              token:
+                resourceRef:
+                  name: otelcol-bearer-token
+                  dataKey: token
+              tls:
+                ca:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: ca.crt
+                cert:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.crt
+                key:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.key
+
+            # OTLP gRPC exporter settings
+            otlp_grpc:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
               token:
                 resourceRef:
                   name: otelcol-bearer-token
