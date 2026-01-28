@@ -144,6 +144,41 @@ the example above to the extension, you should first create the respective
 secrets in the shoot project namespace, which can then be referenced via
 [Gardener Referenced Resources](https://gardener.cloud/docs/gardener/extensions/referenced-resources/#referenced-resources).
 
+This example snippet enables the extension to forward the signals of the
+control-plane components to a remote collector using the [OTLP gRPC exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter).
+
+``` yaml
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          # Exporters settings
+          exporters:
+            # OTLP gRPC exporter settings
+            otlp_grpc:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+              token:
+                resourceRef:
+                  name: otelcol-bearer-token
+                  dataKey: token
+              tls:
+                ca:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: ca.crt
+                cert:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.crt
+                key:
+                  resourceRef:
+                    name: otelcol-tls
+                    dataKey: client.key
+```
+
 For additional configuration settings, which can be provided to the extension,
 please make sure to check the
 [OTel Extension API spec documentation](./docs/api-reference/otelcol.extensions.gardener.cloud.md).
