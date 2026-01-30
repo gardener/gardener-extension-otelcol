@@ -408,9 +408,9 @@ func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, names
 		log,
 		clock.RealClock{},
 		a.client,
-		namespace,
 		secretsManagerIdentity,
 		secretsmanager.Config{CASecretAutoRotation: true},
+		namespace,
 	)
 }
 
