@@ -126,6 +126,10 @@ build: $(BINARY)
 run: $(BINARY)
 	$(BINARY) manager
 
+.PHONY: clean
+clean:
+	rm -f $(BINARY)
+
 .PHONY: get
 get:
 	@$(GOCMD) mod download
