@@ -209,6 +209,16 @@ data:
             - debug
           receivers:
             - otlp
+        logs:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - debug
+          receivers:
+            - otlp
 ---
 apiVersion: v1
 kind: Service
