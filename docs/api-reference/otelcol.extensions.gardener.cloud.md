@@ -25,9 +25,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  |  |
-| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  |  |
-| `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  |  |
+| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
+| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
+| `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
 
 
 #### CollectorExportersConfig
@@ -43,9 +43,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  |  |
-| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  |  |
-| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  |  |
+| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  | Optional: \{\} <br /> |
+| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  | Optional: \{\} <br /> |
+| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  | Optional: \{\} <br /> |
 
 
 #### CollectorLogsConfig
@@ -65,8 +65,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `level` _[LogLevel](#loglevel)_ | Level specifies the log level of the collector. |  |  |
-| `encoding` _[LogEncoding](#logencoding)_ | Encoding specifies the encoding for logs of the collector. |  |  |
+| `level` _[LogLevel](#loglevel)_ | Level specifies the log level of the collector. | <nil> | Optional: \{\} <br /> |
+| `encoding` _[LogEncoding](#logencoding)_ | Encoding specifies the encoding for logs of the collector. | <nil> | Optional: \{\} <br /> |
 
 
 #### CollectorMetricsConfig
@@ -87,7 +87,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `level` _[MetricsVerbosityLevel](#metricsverbositylevel)_ | Level specifies the collector internal metrics verbosity level. |  |  |
+| `level` _[MetricsVerbosityLevel](#metricsverbositylevel)_ | Level specifies the collector internal metrics verbosity level. | <nil> | Optional: \{\} <br /> |
 
 
 #### Compression
@@ -123,8 +123,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the debug exporter is enabled or not. |  |  |
-| `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level for the debug exporter. |  |  |
+| `enabled` _boolean_ | Enabled specifies whether the debug exporter is enabled or not. | false | Optional: \{\} <br /> |
+| `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level for the debug exporter. | <nil> | Optional: \{\} <br /> |
 
 
 #### DebugExporterVerbosity
@@ -247,15 +247,15 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP gRPC exporter is enabled or not. |  |  |
-| `endpoint` _string_ | Endpoint specifies the gRPC endpoint to which signals will be exported.<br />Check the link below for more details about the format of this field.<br />https://github.com/grpc/grpc/blob/master/doc/naming.md |  |  |
-| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  |  |
+| `enabled` _boolean_ | Enabled specifies whether the OTLP gRPC exporter is enabled or not. | false | Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint specifies the gRPC endpoint to which signals will be exported.<br />Check the link below for more details about the format of this field.<br />https://github.com/grpc/grpc/blob/master/doc/naming.md |  | Required: \{\} <br /> |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
 | `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
-| `timeout` _[Duration](#duration)_ | Timeout specifies the time to wait per individual attempt to send<br />data to the backend. |  |  |
-| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientReadBufferSize]. |  |  |
-| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientWriteBufferSize]. |  |  |
-| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
-| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
+| `timeout` _[Duration](#duration)_ | Timeout specifies the time to wait per individual attempt to send<br />data to the backend. | <nil> | Optional: \{\} <br /> |
+| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientReadBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientWriteBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
+| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
 
 
 #### OTLPHTTPExporterConfig
@@ -275,20 +275,20 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. |  |  |
-| `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  |  |
-| `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  |  |
-| `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  |  |
-| `logs_endpoint` _string_ | LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs<br />When this setting is present the base endpoint setting is ignored for<br />logs. |  |  |
-| `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  |  |
-| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  |  |
-| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
-| `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. |  |  |
-| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientReadBufferSize]. |  |  |
-| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientWriteBufferSize]. |  |  |
-| `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. |  |  |
-| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  |  |
-| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. |  |  |
+| `enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. | false | Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  | Optional: \{\} <br /> |
+| `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  | Optional: \{\} <br /> |
+| `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  | Optional: \{\} <br /> |
+| `logs_endpoint` _string_ | LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs<br />When this setting is present the base endpoint setting is ignored for<br />logs. |  | Optional: \{\} <br /> |
+| `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  | Optional: \{\} <br /> |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
+| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  | Optional: \{\} <br /> |
+| `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. | <nil> | Optional: \{\} <br /> |
+| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientReadBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientWriteBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. | <nil> | Optional: \{\} <br /> |
+| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
+| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
 
 
 #### ResourceReference
@@ -306,7 +306,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `resourceRef` _[ResourceReferenceDetails](#resourcereferencedetails)_ | ResourceRef references a resource in the shoot. |  |  |
+| `resourceRef` _[ResourceReferenceDetails](#resourcereferencedetails)_ | ResourceRef references a resource in the shoot. |  | Required: \{\} <br /> |
 
 
 #### ResourceReferenceDetails
@@ -322,8 +322,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the name of thresource e reference in `.spec.resources` in the Shoot resource. |  |  |
-| `dataKey` _string_ | DataKey is the key in the resource data map. |  |  |
+| `name` _string_ | Name is the name of thresource e reference in `.spec.resources` in the Shoot resource. |  | Required: \{\} <br /> |
+| `dataKey` _string_ | DataKey is the key in the resource data map. |  | Required: \{\} <br /> |
 
 
 #### RetryOnFailureConfig
@@ -340,11 +340,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether retry on failure is enabled or not. Default<br />is true. |  |  |
-| `initial_interval` _[Duration](#duration)_ | InitialInterval specifies the time to wait after the first failure<br />before retrying. The default value is [DefaultRetryInitialInterval]. |  |  |
-| `max_interval` _[Duration](#duration)_ | MaxInterval specifies the upper bound on backoff. Default value is<br />[DefaultRetryMaxInterval]. |  |  |
-| `max_elapsed_time` _[Duration](#duration)_ | MaxElapsedTime specifies the maximum amount of time spent trying to<br />send a batch. If set to 0, the retries are never stopped. The default<br />value is [DefaultRetryMaxElapsedTime]. |  |  |
-| `multiplier` _float_ | Multiplier specifies the factor by which the retry interval is<br />multiplied on each attempt. The default value is<br />[DefaultRetryMultiplier]. |  |  |
+| `enabled` _boolean_ | Enabled specifies whether retry on failure is enabled or not. Default<br />is true. | true | Optional: \{\} <br /> |
+| `initial_interval` _[Duration](#duration)_ | InitialInterval specifies the time to wait after the first failure<br />before retrying. The default value is [DefaultRetryInitialInterval]. | <nil> | Optional: \{\} <br /> |
+| `max_interval` _[Duration](#duration)_ | MaxInterval specifies the upper bound on backoff. Default value is<br />[DefaultRetryMaxInterval]. | <nil> | Optional: \{\} <br /> |
+| `max_elapsed_time` _[Duration](#duration)_ | MaxElapsedTime specifies the maximum amount of time spent trying to<br />send a batch. If set to 0, the retries are never stopped. The default<br />value is [DefaultRetryMaxElapsedTime]. | <nil> | Optional: \{\} <br /> |
+| `multiplier` _float_ | Multiplier specifies the factor by which the retry interval is<br />multiplied on each attempt. The default value is<br />[DefaultRetryMultiplier]. | <nil> | Optional: \{\} <br /> |
 
 
 #### TLSConfig
@@ -361,9 +361,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `insecureSkipVerify` _boolean_ | InsecureSkipVerify specifies whether to skip verifying the<br />certificate or not. |  |  |
-| `ca` _[ResourceReference](#resourcereference)_ | CA references the CA certificate to use for verifying the server certificate.<br />For a client this verifies the server certificate.<br />For a server this verifies client certificates.<br />If empty uses system root CA. |  |  |
-| `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  |  |
-| `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  |  |
+| `insecureSkipVerify` _boolean_ | InsecureSkipVerify specifies whether to skip verifying the<br />certificate or not. | false | Optional: \{\} <br /> |
+| `ca` _[ResourceReference](#resourcereference)_ | CA references the CA certificate to use for verifying the server certificate.<br />For a client this verifies the server certificate.<br />For a server this verifies client certificates.<br />If empty uses system root CA. |  | Optional: \{\} <br /> |
+| `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  | Optional: \{\} <br /> |
+| `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  | Optional: \{\} <br /> |
 
 
