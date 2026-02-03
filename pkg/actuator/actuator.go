@@ -86,6 +86,9 @@ const (
 	// otelCollectorServiceAccountName is the name of the service account
 	// for the OTel Collector.
 	otelCollectorServiceAccountName = otelCollectorName + "-collector"
+	// otelCollectorGRPCReceiverPort is the port on which the OTel collector
+	// binds the gRPC receiver.
+	otelCollectorGRPCReceiverPort = 4317
 
 	// secretsManagerIdentity is the identity used for secrets management.
 	secretsManagerIdentity = "gardener-extension-" + Name
@@ -330,15 +333,6 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	otelCollector := a.getOtelCollector(
-		ex.Namespace,
-		caBundleSecret,
-		clientSecret,
-		cfg,
-		cluster.Shoot.Spec.Resources,
-		collectorImage,
-	)
-
 	data, err := registry.AddAllAndSerialize(
 		taConfigMap,
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
@@ -347,8 +341,16 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		a.getTargetAllocatorHTTPSService(ex.Namespace),
 		a.getTargetAllocatorDeployment(ex.Namespace, caBundleSecret, serverSecret, taImage),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
-		otelCollector,
+		a.getOtelCollector(
+			ex.Namespace,
+			caBundleSecret,
+			clientSecret,
+			cfg,
+			cluster.Shoot.Spec.Resources,
+			collectorImage,
+		),
 	)
+
 	if err != nil {
 		return err
 	}
@@ -451,7 +453,7 @@ func (a *Actuator) getAnnotations() map[string]string {
 	fromAllScrapeTargetsAnnotation := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "from-all-scrape-targets-allowed-ports"
 
 	items := map[string]string{
-		fromAllScrapeTargetsAnnotation: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, otelCollectorMetricsPort),
+		fromAllScrapeTargetsAnnotation: fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, otelCollectorMetricsPort, otelCollectorGRPCReceiverPort),
 	}
 
 	return items
@@ -934,14 +936,22 @@ func (a *Actuator) getOtelCollector(
 
 	exporters := a.getOtelExporters(cfg)
 	exporterNames := slices.Sorted(maps.Keys(exporters))
-	allLabels := utils.MergeStringMaps(a.getCommonLabels(), a.getNetworkLabels())
+	allLabels := utils.MergeStringMaps(
+		a.getCommonLabels(),
+		a.getNetworkLabels(),
+	)
 
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        otelCollectorName,
-			Namespace:   namespace,
-			Labels:      allLabels,
-			Annotations: a.getAnnotations(),
+			Name:      otelCollectorName,
+			Namespace: namespace,
+			Labels:    allLabels,
+			Annotations: utils.MergeStringMaps(
+				a.getAnnotations(),
+				map[string]string{
+					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "pod-label-selector-namespace-alias": "all-shoots",
+					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+				}),
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
 			// Note that the Target Allocator expects either a
@@ -983,16 +993,22 @@ func (a *Actuator) getOtelCollector(
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
-						// TODO(dnaeon): enable OTLP gRPC receiver for logs
+						"otlp": map[string]any{
+							"protocols": map[string]any{
+								"grpc": map[string]any{
+									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
+								},
+							},
+						},
 						"prometheus": map[string]any{
 							"target_allocator": map[string]any{
 								"collector_id": "${POD_NAME}",
 								"endpoint":     "https://" + targetAllocatorHTTPSServiceName,
 								"interval":     "30s",
 								"tls": map[string]any{
-									"ca_file":   volumeMountPathCACertificate + "/" + secretsutils.DataKeyCertificateBundle,
-									"cert_file": volumeMountPathClientCertificate + "/" + secretsutils.DataKeyCertificate,
-									"key_file":  volumeMountPathClientCertificate + "/" + secretsutils.DataKeyPrivateKey,
+									"ca_file":   filepath.Join(volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
+									"cert_file": filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyCertificate),
+									"key_file":  filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyPrivateKey),
 								},
 							},
 							"config": map[string]any{
@@ -1041,7 +1057,11 @@ func (a *Actuator) getOtelCollector(
 						},
 					},
 					Pipelines: map[string]*otelv1beta1.Pipeline{
-						// TODO(dnaeon): add the otlp grpc receiver
+						"logs": {
+							Receivers:  []string{"otlp"},
+							Processors: []string{"batch"},
+							Exporters:  exporterNames,
+						},
 						"metrics": {
 							Receivers:  []string{"prometheus"},
 							Processors: []string{"batch"},
