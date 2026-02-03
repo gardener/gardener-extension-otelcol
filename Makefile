@@ -129,6 +129,7 @@ run: $(BINARY)
 .PHONY: clean
 clean:
 	rm -f $(BINARY)
+	$(GO_TOOL) setup-envtest --bin-dir $(LOCAL_BIN) cleanup
 
 .PHONY: get
 get:
