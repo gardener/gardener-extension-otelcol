@@ -40,6 +40,7 @@ type mgr struct {
 	leaderElectionEnabled   bool
 	leaderElectionID        string
 	leaderElectionNamespace string
+	leaderElectionConfig    *rest.Config
 	webhookServer           webhook.Server
 	baseCtxFunc             manager.BaseContextFunc
 	controllerOpts          controllerconfig.Controller
@@ -269,6 +270,18 @@ func WithLeaderElectionID(id string) Option {
 func WithLeaderElectionNamespace(ns string) Option {
 	opt := func(m *mgr) error {
 		m.leaderElectionNamespace = ns
+
+		return nil
+	}
+
+	return opt
+}
+
+// WithLeaderElectionConfig is an [Option], which configures the leader election
+// client to use the specified [rest.Config].
+func WithLeaderElectionConfig(config *rest.Config) Option {
+	opt := func(m *mgr) error {
+		m.leaderElectionConfig = config
 
 		return nil
 	}

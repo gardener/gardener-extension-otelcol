@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHeartbeat(t *testing.T) {
+func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Validation Suite")
 }
