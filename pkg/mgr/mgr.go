@@ -279,9 +279,9 @@ func WithLeaderElectionNamespace(ns string) Option {
 
 // WithLeaderElectionConfig is an [Option], which configures the leader election
 // client to use the specified [rest.Config].
-func WithLeaderElectionConfig(config *rest.Config) Option {
+func WithLeaderElectionConfig(cfg *rest.Config) Option {
 	opt := func(m *mgr) error {
-		m.leaderElectionConfig = config
+		m.leaderElectionConfig = cfg
 
 		return nil
 	}
