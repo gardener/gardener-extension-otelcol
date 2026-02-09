@@ -255,14 +255,14 @@ func New() *cli.Command {
 			&cli.Float32Flag{
 				Name:        "client-conn-qps",
 				Usage:       "allowed client queries per second for the connection",
-				Value:       100.0,
+				Value:       -1.0,
 				Sources:     cli.EnvVars("CLIENT_CONNECTION_QPS"),
 				Destination: &flags.clientConnQPS,
 			},
 			&cli.Int32Flag{
 				Name:        "client-conn-burst",
 				Usage:       "client connection burst size",
-				Value:       130,
+				Value:       0,
 				Sources:     cli.EnvVars("CLIENT_CONNECTION_BURST"),
 				Destination: &flags.clientConnBurst,
 			},
