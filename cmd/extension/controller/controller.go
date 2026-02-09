@@ -275,6 +275,7 @@ func New() *cli.Command {
 			&cli.StringFlag{
 				Name:        "gardener-version",
 				Usage:       "version of gardener provided by gardenlet or gardener-operator",
+				Sources:     cli.EnvVars("GARDENER_VERSION"),
 				Destination: &flags.gardenerVersion,
 			},
 			&cli.StringMapFlag{
@@ -354,9 +355,6 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.Info("starting manager")
-	if err := m.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start manager: %w", err)
-	}
 
-	return nil
+	return m.Start(ctx)
 }
