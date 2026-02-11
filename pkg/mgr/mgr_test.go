@@ -61,6 +61,7 @@ var _ = Describe("Manager", Ordered, func() {
 			mgr.WithLeaderElection(true),
 			mgr.WithLeaderElectionID("foobar"),
 			mgr.WithLeaderElectionNamespace("default"),
+			mgr.WithLeaderElectionConfig(cfg),
 			mgr.WithContext(ctx),
 			mgr.WithMaxConcurrentReconciles(42),
 			mgr.WithControllerOptions(controllerconfig.Controller{RecoverPanic: ptr.To(true)}),
