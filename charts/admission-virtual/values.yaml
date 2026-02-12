@@ -1,0 +1,21 @@
+# Gardener extension settings.
+extension:
+  # Name of the Gardener extension.
+  #
+  # This name will be used as the name for the ServiceAccount.
+  name: gardener-extension-example-admission
+
+# Extra values provided by gardenlet / gardener-operator during deployment.
+#
+# See the links below for more details.
+#
+# https://gardener.cloud/docs/gardener/extensions/registration/#helm-values
+# https://github.com/gardener/gardener/blob/d5071c800378616eb6bb2c7662b4b28f4cfe7406/pkg/gardenlet/controller/controllerinstallation/controllerinstallation/reconciler.go#L236-L263
+# https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/operator/controller/extension/extension/admission/admission.go#L188-L198
+# https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/operator/controller/extension/extension/admission/admission.go#L101-L111
+gardener:
+  virtualCluster:
+    enabled: true
+    serviceAccount: {}
+#     name: gardener-extension-example-admission
+#     namespace: kube-system
