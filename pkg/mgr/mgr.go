@@ -111,6 +111,7 @@ func New(opts ...Option) (manager.Manager, error) {
 			LeaderElectionID:           m.leaderElectionID,
 			LeaderElectionNamespace:    m.leaderElectionNamespace,
 			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
+			LeaderElectionConfig:       m.leaderElectionConfig,
 			BaseContext:                m.baseCtxFunc,
 			Controller:                 m.controllerOpts,
 			WebhookServer:              m.webhookServer,

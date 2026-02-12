@@ -10,7 +10,7 @@ extension:
   #
   # Also, it will be used as the name for the Deployment, Service and
   # ServiceAccount resources.
-  name: gardener-extension-example-admission
+  name: gardener-extension-otelcol-admission
   # Logging settings.
   logging:
     # Logging level. Valid values are `info', `debug' and `error'.
@@ -41,7 +41,7 @@ extension:
   # Leader election settings
   leader_election:
     enabled: true
-    election_id: gardener-extension-example-admission
+    election_id: gardener-extension-otelcol-admission
   # Webhook server settings
   webhook:
     port: 8088
@@ -78,7 +78,7 @@ serviceAccount:
 #
 # https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: registry.local.gardener.cloud:5001/extensions/gardener-extension-example
+  repository: registry.local.gardener.cloud:5001/extensions/gardener-extension-otelcol
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.

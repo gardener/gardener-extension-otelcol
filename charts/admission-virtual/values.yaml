@@ -3,7 +3,7 @@ extension:
   # Name of the Gardener extension.
   #
   # This name will be used as the name for the ServiceAccount.
-  name: gardener-extension-example-admission
+  name: gardener-extension-otelcol-admission
 
 # Extra values provided by gardenlet / gardener-operator during deployment.
 #
@@ -17,5 +17,5 @@ gardener:
   virtualCluster:
     enabled: true
     serviceAccount: {}
-#     name: gardener-extension-example-admission
+#     name: gardener-extension-otelcol-admission
 #     namespace: kube-system
