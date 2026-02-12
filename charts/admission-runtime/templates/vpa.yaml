@@ -1,0 +1,31 @@
+{{- if .Values.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Values.extension.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.extension.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if .Values.vpa.resourcePolicy }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: {{ .Values.extension.name }}
+      {{- with .Values.vpa.resourcePolicy.minAllowed }}
+      minAllowed: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.vpa.resourcePolicy.maxAllowed }}
+      maxAllowed: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.vpa.resourcePolicy.controlledValues }}
+      controlledValues: {{ .Values.vpa.resourcePolicy.controlledValues }}
+      {{- end }}
+  {{- end }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.extension.name }}
+  updatePolicy:
+    updateMode: {{ .Values.vpa.updatePolicy.updateMode }}
+{{- end }}

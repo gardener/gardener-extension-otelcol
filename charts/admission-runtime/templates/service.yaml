@@ -1,0 +1,22 @@
+{{- if .Values.service.create -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.extension.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":{{ .Values.extension.webhook.port }}}]'
+  labels:
+    app.kubernetes.io/name: {{ .Values.extension.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.extension.webhook.port }}
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ .Values.extension.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end}}
