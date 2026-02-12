@@ -130,9 +130,9 @@ func New() *cli.Command {
 	}
 
 	cmd := &cli.Command{
-		Name:    "manager",
-		Aliases: []string{"m"},
-		Usage:   "start controller manager",
+		Name:    "controller",
+		Aliases: []string{"c"},
+		Usage:   "start extension controller manager",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "extension-name",

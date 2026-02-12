@@ -12,6 +12,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	controllercmd "github.com/gardener/gardener-extension-otelcol/cmd/extension/controller"
+	webhookcmd "github.com/gardener/gardener-extension-otelcol/cmd/extension/webhook"
 	"github.com/gardener/gardener-extension-otelcol/pkg/version"
 )
 
@@ -23,6 +24,7 @@ func main() {
 		Usage:                 "Gardener Extension for OpenTelemetry Collector",
 		Commands: []*cli.Command{
 			controllercmd.New(),
+			webhookcmd.New(),
 		},
 	}
 
