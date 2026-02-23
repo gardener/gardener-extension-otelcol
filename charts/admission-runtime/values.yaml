@@ -10,7 +10,7 @@ extension:
   #
   # Also, it will be used as the name for the Deployment, Service and
   # ServiceAccount resources.
-  name: gardener-extension-otelcol
+  name: gardener-extension-otelcol-admission
   # Logging settings.
   logging:
     # Logging level. Valid values are `info', `debug' and `error'.
@@ -19,20 +19,16 @@ extension:
     format: json
   # Controller manager settings
   manager:
-    # Set to true in order to ignore operation annotation
-    ignore_operation_annotation: false
-    # Max concurrent reconciles
-    max_concurrent_reconciles: 5
-    # Number of Queries Per Second for client connections
-    qps: 100.0
+    # Number of Queries Per Second for client connections. Set to -1.0 in order
+    # to disable client-side rate limiting and rely on API priority and
+    # fairness.
+    qps: -1.0
     # Extra queries to accumulate when a client is exceeding its rate.
-    burst: 130
-    # Requeue interval
-    resync_interval: 30s
+    burst: 0
   # Metrics settings
   metrics:
     # Set to false in order to disable scraping from Prometheus.
-    enable_scraping: true
+    enable_scraping: false
     # Metrics server will bind to this address. Set this value to 0 in order to
     # disable metrics server.
     bind_address: ":8080"
@@ -42,23 +38,27 @@ extension:
   # pprof settings. Set this to 0 in order to disable pprof.
   pprof:
     bind_address: ":9090"
-  # Heartbeat settings
-  heartbeat:
-    renew_interval: 30s
   # Leader election settings
   leader_election:
     enabled: true
-    election_id: gardener-extension-otelcol-leader-election
-# Extra values provided by gardenlet during extension deployment.
+    election_id: gardener-extension-otelcol-admission
+  # Webhook server settings
+  webhook:
+    port: 8088
+# Extra values provided by gardenlet / gardener-operator during deployment.
 #
 # See the links below for more details.
 #
 # https://gardener.cloud/docs/gardener/extensions/registration/#helm-values
 # https://github.com/gardener/gardener/blob/d5071c800378616eb6bb2c7662b4b28f4cfe7406/pkg/gardenlet/controller/controllerinstallation/controllerinstallation/reconciler.go#L236-L263
+# https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/operator/controller/extension/extension/admission/admission.go#L188-L198
+# https://github.com/gardener/gardener/blob/485c25124ea536e4610c627109017dd34d434921/pkg/operator/controller/extension/extension/admission/admission.go#L101-L111
 gardener:
-  version: "unknown"
-  gardenlet:
-    featureGates: {}
+  version: unknown
+  virtualCluster:
+    enabled: true
+  runtimeCluster:
+    priorityClassName: gardener-garden-system-400
 # ServiceAccount settings.
 #
 # The name of the service account is derived from the .Values.extension.name
@@ -117,7 +117,10 @@ securityContext:
   capabilities:
     drop:
       - ALL
-  readOnlyRootFilesystem: true
+  # The Gardener Secrets Manager will dump the TLS secrets for the webhook
+  # server on the filesystem, so make sure that we don't run with read-only
+  # root filesystem.
+  readOnlyRootFilesystem: false
   runAsNonRoot: true
   runAsUser: 1000
 # Service settings.
@@ -133,7 +136,7 @@ service:
   type: ClusterIP
   # Service port.
   # See: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
+  port: 443
 # Resources limits and requests
 #
 # Check the following link for more details.

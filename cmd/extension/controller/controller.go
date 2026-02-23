@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package controller
 
 import (
 	"context"
@@ -123,16 +123,16 @@ func getFlags(ctx context.Context) *flags {
 	return conf
 }
 
-// NewManagerCommand creates a new [cli.Command] for running the controller manager.
-func NewManagerCommand() *cli.Command {
+// New creates a new [cli.Command] for running the extension controller manager.
+func New() *cli.Command {
 	flags := flags{
 		gardenletFeatureGates: make(map[featuregate.Feature]bool),
 	}
 
 	cmd := &cli.Command{
-		Name:    "manager",
-		Aliases: []string{"m"},
-		Usage:   "start controller manager",
+		Name:    "controller",
+		Aliases: []string{"c"},
+		Usage:   "start extension controller manager",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "extension-name",
@@ -255,14 +255,14 @@ func NewManagerCommand() *cli.Command {
 			&cli.Float32Flag{
 				Name:        "client-conn-qps",
 				Usage:       "allowed client queries per second for the connection",
-				Value:       100.0,
+				Value:       -1.0,
 				Sources:     cli.EnvVars("CLIENT_CONNECTION_QPS"),
 				Destination: &flags.clientConnQPS,
 			},
 			&cli.Int32Flag{
 				Name:        "client-conn-burst",
 				Usage:       "client connection burst size",
-				Value:       130,
+				Value:       0,
 				Sources:     cli.EnvVars("CLIENT_CONNECTION_BURST"),
 				Destination: &flags.clientConnBurst,
 			},
@@ -274,7 +274,8 @@ func NewManagerCommand() *cli.Command {
 			// values to Helm, which our CLI app can pick up.
 			&cli.StringFlag{
 				Name:        "gardener-version",
-				Usage:       "version of gardener provided by gardenlet during deployment",
+				Usage:       "version of gardener provided by gardenlet or gardener-operator",
+				Sources:     cli.EnvVars("GARDENER_VERSION"),
 				Destination: &flags.gardenerVersion,
 			},
 			&cli.StringMapFlag{
@@ -354,9 +355,6 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.Info("starting manager")
-	if err := m.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start manager: %w", err)
-	}
 
-	return nil
+	return m.Start(ctx)
 }

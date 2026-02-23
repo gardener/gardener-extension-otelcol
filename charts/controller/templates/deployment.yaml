@@ -44,7 +44,7 @@ spec:
         - name: {{ .Values.extension.name }}
           command:
             - extension
-            - manager
+            - controller
             - --extension-name={{ .Values.extension.name }}
             - --metrics-bind-address={{ .Values.extension.metrics.bind_address }}
             - --pprof-bind-address={{ .Values.extension.pprof.bind_address }}

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validation_test
+package validator_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidation(t *testing.T) {
+func TestValidators(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Validation Suite")
+	RunSpecs(t, "Validation Webhooks Suite")
 }

@@ -54,6 +54,8 @@ linters:
           disabled: true
         - name: unused-parameter
           disabled: true
+        - name: confusing-naming
+          disabled: true
         - name: var-naming
           arguments:
             - []

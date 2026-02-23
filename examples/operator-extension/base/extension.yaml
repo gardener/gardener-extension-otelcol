@@ -8,6 +8,15 @@ spec:
       helm:
         ociRepository:
           ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol:v0.1.0-dev
+    admission:
+      runtimeCluster:
+        helm:
+          ociRepository:
+            ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol-admission-runtime:v0.1.0-dev
+      virtualCluster:
+        helm:
+          ociRepository:
+            ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol-admission-virtual:v0.1.0-dev
   resources:
     - kind: Extension
       type: otelcol
