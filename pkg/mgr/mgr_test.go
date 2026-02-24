@@ -7,6 +7,7 @@ package mgr_test
 import (
 	"context"
 	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,6 +65,7 @@ var _ = Describe("Manager", Ordered, func() {
 			mgr.WithLeaderElectionConfig(cfg),
 			mgr.WithContext(ctx),
 			mgr.WithMaxConcurrentReconciles(42),
+			mgr.WithReconciliationTimeout(3 * time.Minute),
 			mgr.WithControllerOptions(controllerconfig.Controller{RecoverPanic: ptr.To(true)}),
 			mgr.WithHealthzCheck("healthz", healthz.Ping),
 			mgr.WithReadyzCheck("readyz", healthz.Ping),

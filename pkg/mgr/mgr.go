@@ -10,8 +10,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -64,6 +66,7 @@ func New(opts ...Option) (manager.Manager, error) {
 		baseCtxFunc:       context.Background,
 		controllerOpts: controllerconfig.Controller{
 			MaxConcurrentReconciles: 5,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 			RecoverPanic:            ptr.To(true),
 		},
 		runnables:            make([]manager.Runnable, 0),
@@ -319,6 +322,18 @@ func WithControllerOptions(opts controllerconfig.Controller) Option {
 func WithMaxConcurrentReconciles(val int) Option {
 	opt := func(m *mgr) error {
 		m.controllerOpts.MaxConcurrentReconciles = val
+
+		return nil
+	}
+
+	return opt
+}
+
+// WithReconciliationTimeout is an [Option], which configures the
+// [manager.Manager] with the given reconciliation timeout duration.
+func WithReconciliationTimeout(val time.Duration) Option {
+	opt := func(m *mgr) error {
+		m.controllerOpts.ReconciliationTimeout = val
 
 		return nil
 	}
