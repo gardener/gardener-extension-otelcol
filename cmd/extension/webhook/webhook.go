@@ -11,11 +11,13 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"time"
 
 	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	glogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/go-logr/logr"
@@ -65,6 +67,8 @@ type flags struct {
 	gardenerVersion             string
 	selfHostedShootCluster      bool
 	sourceCluster               cluster.Cluster
+	maxConcurrentReconciles     int
+	reconciliationTimeout       time.Duration
 }
 
 // getLogger returns a [logr.Logger] based on the specified command-line
@@ -135,6 +139,8 @@ func (f *flags) getManager(ctx context.Context) (ctrl.Manager, error) {
 		mgr.WithLeaderElectionID(f.leaderElectionID),
 		mgr.WithLeaderElectionNamespace(f.leaderElectionNamespace),
 		mgr.WithLeaderElectionConfig(sourceClusterConfig),
+		mgr.WithMaxConcurrentReconciles(f.maxConcurrentReconciles),
+		mgr.WithReconciliationTimeout(f.reconciliationTimeout),
 		mgr.WithHealthzCheck("healthz", healthz.Ping),
 		mgr.WithReadyzCheck("readyz", healthz.Ping),
 		mgr.WithPprofAddress(f.pprofBindAddr),
@@ -258,6 +264,20 @@ func New() *cli.Command {
 				Value:       "gardener-extension-otelcol",
 				Sources:     cli.EnvVars("LEADER_ELECTION_NAMESPACE"),
 				Destination: &flags.leaderElectionNamespace,
+			},
+			&cli.IntFlag{
+				Name:        "max-concurrent-reconciles",
+				Usage:       "max number of concurrent reconciliations",
+				Value:       5,
+				Sources:     cli.EnvVars("MAX_CONCURRENT_RECONCILES"),
+				Destination: &flags.maxConcurrentReconciles,
+			},
+			&cli.DurationFlag{
+				Name:        "reconciliation-timeout",
+				Usage:       "reconcile timeout duration",
+				Value:       controllerutils.DefaultReconciliationTimeout,
+				Sources:     cli.EnvVars("RECONCILIATION_TIMEOUT"),
+				Destination: &flags.reconciliationTimeout,
 			},
 			&cli.StringFlag{
 				Name:        "kubeconfig",
