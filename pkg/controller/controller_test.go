@@ -89,9 +89,10 @@ var _ = Describe("Controller", Ordered, func() {
 			controller.WithExtensionClass(v1alpha1.ExtensionClassShoot),
 			controller.WithFinalizerSuffix("custom-finalizer-suffix"),
 			controller.WithControllerOptions(crctrl.Options{
-				RecoverPanic:            ptr.To(true),
-				MaxConcurrentReconciles: 5,
+				RecoverPanic: ptr.To(true),
 			}),
+			controller.WithReconciliationTimeout(3 * time.Minute),
+			controller.WithMaxConcurrentReconciles(5),
 			controller.WithIgnoreOperationAnnotation(true),
 			controller.WithResyncInterval(30 * time.Second),
 			controller.WithPredicate(predicateutils.HasName("example")),

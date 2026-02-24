@@ -15,6 +15,8 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"k8s.io/utils/ptr"
 	crctrl "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -72,6 +74,11 @@ func New(opts ...Option) (*Controller, error) {
 	c := &Controller{
 		predicates:       make([]predicate.Predicate, 0),
 		extensionClasses: make([]extensionsv1alpha1.ExtensionClass, 0),
+		controllerOptions: crctrl.Options{
+			MaxConcurrentReconciles: 5,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+			RecoverPanic:            ptr.To(true),
+		},
 	}
 
 	for _, opt := range opts {
@@ -169,6 +176,30 @@ func WithFinalizerSuffix(suffix string) Option {
 func WithControllerOptions(opts crctrl.Options) Option {
 	opt := func(c *Controller) error {
 		c.controllerOptions = opts
+
+		return nil
+	}
+
+	return opt
+}
+
+// WithMaxConcurrentReconciles is an [Option], which configures the
+// [Controller] with the given max concurrent reconciles.
+func WithMaxConcurrentReconciles(val int) Option {
+	opt := func(m *Controller) error {
+		m.controllerOptions.MaxConcurrentReconciles = val
+
+		return nil
+	}
+
+	return opt
+}
+
+// WithReconciliationTimeout is an [Option], which configures the
+// [Controller] with the given reconciliation timeout duration.
+func WithReconciliationTimeout(val time.Duration) Option {
+	opt := func(m *Controller) error {
+		m.controllerOptions.ReconciliationTimeout = val
 
 		return nil
 	}
