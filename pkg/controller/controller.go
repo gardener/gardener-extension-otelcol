@@ -16,7 +16,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"k8s.io/utils/ptr"
 	crctrl "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -77,7 +76,7 @@ func New(opts ...Option) (*Controller, error) {
 		controllerOptions: crctrl.Options{
 			MaxConcurrentReconciles: 5,
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
-			RecoverPanic:            ptr.To(true),
+			RecoverPanic:            new(true),
 		},
 	}
 

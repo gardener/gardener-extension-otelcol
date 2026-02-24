@@ -468,7 +468,7 @@ func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.Se
 			Namespace: namespace,
 			Labels:    a.getCommonLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 
 	return obj
@@ -658,7 +658,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 			Labels:    a.getCommonLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To(targetAllocatorReplicas),
+			Replicas:             new(targetAllocatorReplicas),
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: allLabels,
@@ -671,7 +671,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 					PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
 					ServiceAccountName: targetAllocatorServiceAccountName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -699,7 +699,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 								{Name: volumeNameTargetAllocatorConfig, MountPath: volumeMountTargetAllocatorConfig, ReadOnly: true},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 					},
@@ -723,7 +723,7 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 			Namespace: namespace,
 			Labels:    a.getCommonLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 
 	return obj
@@ -967,7 +967,7 @@ func (a *Actuator) getOtelCollector(
 			UpgradeStrategy: otelv1beta1.UpgradeStrategyNone,
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:    image.String(),
-				Replicas: ptr.To(otelCollectorReplicas),
+				Replicas: new(otelCollectorReplicas),
 				VolumeMounts: []corev1.VolumeMount{
 					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
 					{Name: volumeNameClientCertificate, MountPath: volumeMountPathClientCertificate, ReadOnly: true},
@@ -984,7 +984,7 @@ func (a *Actuator) getOtelCollector(
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 				},
 				ServiceAccount: otelCollectorServiceAccountName,
 			},

@@ -40,7 +40,7 @@ var _ = Describe("Actuator", Ordered, func() {
 			Spec: config.CollectorConfigSpec{
 				Exporters: config.CollectorExportersConfig{
 					DebugExporter: config.DebugExporterConfig{
-						Enabled:   ptr.To(true),
+						Enabled:   new(true),
 						Verbosity: config.DebugExporterVerbosityNormal,
 					},
 				},
@@ -86,7 +86,7 @@ var _ = Describe("Actuator", Ordered, func() {
 				Namespace: projectNamespace.Name,
 			},
 			Spec: corev1beta1.ShootSpec{
-				SeedName: ptr.To("local"),
+				SeedName: new("local"),
 				Provider: corev1beta1.Provider{
 					Type: "local",
 				},
