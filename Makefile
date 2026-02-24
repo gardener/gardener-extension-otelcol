@@ -56,7 +56,7 @@ K8S_GEN_TOOLS_LOG_LEVEL ?= 0
 # ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{ printf "1.%d.%d", $$3, $$4 }')
 #
 # Or set the version here explicitly.
-ENVTEST_K8S_VERSION ?= 1.34.1
+ENVTEST_K8S_VERSION ?= 1.35.0
 
 # Common options for the `kubeconform' tool
 KUBECONFORM_OPTS ?= 	-strict \
