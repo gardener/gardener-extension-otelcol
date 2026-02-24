@@ -1,6 +1,6 @@
 module github.com/gardener/gardener-extension-otelcol/internal/tools
 
-go 1.25.3
+go 1.26.0
 
 tool (
 	github.com/elastic/crd-ref-docs
