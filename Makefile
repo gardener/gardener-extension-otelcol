@@ -148,6 +148,14 @@ gotidy:  ## Run go mod tidy in main and tools modules.
 	@$(GOCMD) mod tidy
 	@cd $(TOOLS_MOD_DIR) && $(GOCMD) mod tidy
 
+.PHONY: gofix
+gofix:  ## Run go fix and apply suggested changes.
+	@$(GOCMD) fix $(GO_MODULE)/...
+
+.PHONY: check-gofix
+check-gofix:  ## Run go fix and check for suggested changes.
+	@$(GOCMD) fix -diff $(GO_MODULE)/...
+
 .PHONY: test
 test:  ## Start envtest and run the unit tests.
 	@echo "Setting up envtest for Kubernetes version v$(ENVTEST_K8S_VERSION) ..."
