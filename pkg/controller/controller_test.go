@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	crctrl "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -89,9 +88,10 @@ var _ = Describe("Controller", Ordered, func() {
 			controller.WithExtensionClass(v1alpha1.ExtensionClassShoot),
 			controller.WithFinalizerSuffix("custom-finalizer-suffix"),
 			controller.WithControllerOptions(crctrl.Options{
-				RecoverPanic:            ptr.To(true),
-				MaxConcurrentReconciles: 5,
+				RecoverPanic: new(true),
 			}),
+			controller.WithReconciliationTimeout(3 * time.Minute),
+			controller.WithMaxConcurrentReconciles(5),
 			controller.WithIgnoreOperationAnnotation(true),
 			controller.WithResyncInterval(30 * time.Second),
 			controller.WithPredicate(predicateutils.HasName("example")),

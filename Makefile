@@ -56,7 +56,7 @@ K8S_GEN_TOOLS_LOG_LEVEL ?= 0
 # ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{ printf "1.%d.%d", $$3, $$4 }')
 #
 # Or set the version here explicitly.
-ENVTEST_K8S_VERSION ?= 1.34.1
+ENVTEST_K8S_VERSION ?= 1.35.0
 
 # Common options for the `kubeconform' tool
 KUBECONFORM_OPTS ?= 	-strict \
@@ -147,6 +147,14 @@ get:  ## Download Go modules and run go mod tidy.
 gotidy:  ## Run go mod tidy in main and tools modules.
 	@$(GOCMD) mod tidy
 	@cd $(TOOLS_MOD_DIR) && $(GOCMD) mod tidy
+
+.PHONY: gofix
+gofix:  ## Run go fix and apply suggested changes.
+	@$(GOCMD) fix $(GO_MODULE)/...
+
+.PHONY: check-gofix
+check-gofix:  ## Run go fix and check for suggested changes.
+	@$(GOCMD) fix -diff $(GO_MODULE)/...
 
 .PHONY: test
 test:  ## Start envtest and run the unit tests.

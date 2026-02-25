@@ -15,6 +15,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	glogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/urfave/cli/v3"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -45,6 +46,7 @@ type flags struct {
 	leaderElectionNamespace   string
 	ignoreOperationAnnotation bool
 	maxConcurrentReconciles   int
+	reconciliationTimeout     time.Duration
 	kubeconfig                string
 	zapLogLevel               string
 	zapLogFormat              string
@@ -79,6 +81,7 @@ func (f *flags) getManager(ctx context.Context) (ctrl.Manager, error) {
 		mgr.WithLeaderElectionID(f.leaderElectionID),
 		mgr.WithLeaderElectionNamespace(f.leaderElectionNamespace),
 		mgr.WithMaxConcurrentReconciles(f.maxConcurrentReconciles),
+		mgr.WithReconciliationTimeout(f.reconciliationTimeout),
 		mgr.WithHealthzCheck("healthz", healthz.Ping),
 		mgr.WithReadyzCheck("readyz", healthz.Ping),
 		mgr.WithPprofAddress(f.pprofBindAddr),
@@ -210,6 +213,13 @@ func New() *cli.Command {
 				Sources:     cli.EnvVars("MAX_CONCURRENT_RECONCILES"),
 				Destination: &flags.maxConcurrentReconciles,
 			},
+			&cli.DurationFlag{
+				Name:        "reconciliation-timeout",
+				Usage:       "reconcile timeout duration",
+				Value:       controllerutils.DefaultReconciliationTimeout,
+				Sources:     cli.EnvVars("RECONCILIATION_TIMEOUT"),
+				Destination: &flags.reconciliationTimeout,
+			},
 			&cli.StringFlag{
 				Name:        "kubeconfig",
 				Usage:       "path to a kubeconfig when running out-of-cluster",
@@ -338,6 +348,8 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 		controller.WithExtensionClass(act.ExtensionClass()),
 		controller.WithIgnoreOperationAnnotation(flags.ignoreOperationAnnotation),
 		controller.WithResyncInterval(flags.resyncInterval),
+		controller.WithMaxConcurrentReconciles(flags.maxConcurrentReconciles),
+		controller.WithReconciliationTimeout(flags.reconciliationTimeout),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create a controller: %w", err)

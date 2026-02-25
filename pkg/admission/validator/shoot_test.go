@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/actuator"
 	"github.com/gardener/gardener-extension-otelcol/pkg/admission/validator"
@@ -41,7 +40,7 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 			Spec: config.CollectorConfigSpec{
 				Exporters: config.CollectorExportersConfig{
 					DebugExporter: config.DebugExporterConfig{
-						Enabled:   ptr.To(true),
+						Enabled:   new(true),
 						Verbosity: config.DebugExporterVerbosityBasic,
 					},
 				},
@@ -71,7 +70,7 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 				Namespace: projectNamespace.Name,
 			},
 			Spec: core.ShootSpec{
-				SeedName: ptr.To("local"),
+				SeedName: new("local"),
 				Provider: core.Provider{
 					Type: "local",
 				},
