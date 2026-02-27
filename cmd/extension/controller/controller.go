@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	glogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/collector/extension/memorylimiterextension"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -54,6 +55,13 @@ type flags struct {
 	pprofBindAddr             string
 	clientConnQPS             float32
 	clientConnBurst           int32
+
+	// Memory Limiter Extension flags
+	memLimiterCheckInterval        time.Duration
+	memLimiterLimitMiB             uint32
+	memLimiterSpikeLimitMiB        uint32
+	memLimiterLimitPercentage      uint32
+	memLimiterSpikeLimitPercentage uint32
 
 	// The following flags are meant to be specified by the Helm chart,
 	// which gardenlet will invoke during deployment. The value of each flag
@@ -303,6 +311,38 @@ func New() *cli.Command {
 					return nil
 				},
 			},
+			&cli.DurationFlag{
+				Name:        "mem-limiter-check-interval",
+				Usage:       "time between measurements of the memory usage",
+				Value:       time.Second,
+				Sources:     cli.EnvVars("MEM_LIMITER_CHECK_INTERVAL"),
+				Destination: &flags.memLimiterCheckInterval,
+			},
+			&cli.Uint32Flag{
+				Name:        "mem-limiter-limit-mib",
+				Usage:       "max amount of memory in MiB allocated to the process",
+				Sources:     cli.EnvVars("MEM_LIMITER_LIMIT_MIB"),
+				Destination: &flags.memLimiterLimitMiB,
+			},
+			&cli.Uint32Flag{
+				Name:        "mem-limiter-limit-percentage",
+				Usage:       "max amount of memory allocated to the process in percentage of total memory",
+				Value:       75,
+				Sources:     cli.EnvVars("MEM_LIMITER_LIMIT_PERCENTAGE"),
+				Destination: &flags.memLimiterLimitPercentage,
+			},
+			&cli.Uint32Flag{
+				Name:        "mem-limiter-spike-limit-mib",
+				Usage:       "max amount of spike between measurements in MiB",
+				Sources:     cli.EnvVars("MEM_LIMITER_SPIKE_LIMIT_MIB"),
+				Destination: &flags.memLimiterSpikeLimitMiB,
+			},
+			&cli.Uint32Flag{
+				Name:        "mem-limiter-spike-limit-percentage",
+				Usage:       "max amount of spike between measurements in percentage of total memory",
+				Sources:     cli.EnvVars("MEM_LIMITER_SPIKE_LIMIT_PERCENTAGE"),
+				Destination: &flags.memLimiterSpikeLimitPercentage,
+			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			ctrllog.SetLogger(glogger.MustNewZapLogger(flags.zapLogLevel, flags.zapLogFormat))
@@ -328,12 +368,22 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.Info("creating actuators")
+
+	memLimiterConfig := &memorylimiterextension.Config{
+		CheckInterval:         flags.memLimiterCheckInterval,
+		MemoryLimitMiB:        flags.memLimiterLimitMiB,
+		MemoryLimitPercentage: flags.memLimiterLimitPercentage,
+		MemorySpikeLimitMiB:   flags.memLimiterSpikeLimitMiB,
+		MemorySpikePercentage: flags.memLimiterSpikeLimitPercentage,
+	}
+
 	decoder := serializer.NewCodecFactory(m.GetScheme(), serializer.EnableStrict).UniversalDecoder()
 	act, err := actuator.New(
 		m.GetClient(),
 		actuator.WithDecoder(decoder),
 		actuator.WithGardenerVersion(flags.gardenerVersion),
 		actuator.WithGardenletFeatures(flags.gardenletFeatureGates),
+		actuator.WithMemoryLimiterExtensionConfig(memLimiterConfig),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create actuator: %w", err)
