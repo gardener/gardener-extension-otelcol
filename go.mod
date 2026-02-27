@@ -10,6 +10,7 @@ require (
 	github.com/open-telemetry/opentelemetry-operator v0.145.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.7.0
+	go.opentelemetry.io/collector/extension/memorylimiterextension v0.146.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	k8s.io/api v0.35.2
 	k8s.io/apiextensions-apiserver v0.35.2
@@ -139,7 +140,6 @@ require (
 	go.opentelemetry.io/collector/component v1.52.0 // indirect
 	go.opentelemetry.io/collector/extension v1.52.0 // indirect
 	go.opentelemetry.io/collector/extension/extensionmiddleware v0.146.1 // indirect
-	go.opentelemetry.io/collector/extension/memorylimiterextension v0.146.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.52.0 // indirect
 	go.opentelemetry.io/collector/internal/componentalias v0.146.1 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.146.1 // indirect
