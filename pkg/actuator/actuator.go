@@ -35,6 +35,7 @@ import (
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	"go.opentelemetry.io/collector/extension/memorylimiterextension"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.yaml.in/yaml/v4"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -143,9 +144,10 @@ const (
 
 // Actuator is an implementation of [extension.Actuator].
 type Actuator struct {
-	client              client.Client
-	decoder             runtime.Decoder
-	memoryLimiterConfig *memorylimiterextension.Config
+	client               client.Client
+	decoder              runtime.Decoder
+	memoryLimiterConfig  *memorylimiterextension.Config
+	batchProcessorConfig *batchprocessor.Config
 
 	// The following fields are usually derived from the list of extra Helm
 	// values provided by gardenlet during the deployment of the extension.
@@ -180,6 +182,10 @@ func New(c client.Client, opts ...Option) (*Actuator, error) {
 			//
 			// https://github.com/open-telemetry/opentelemetry-collector/blob/168030d61d7db2a15176f3e52ab4fd1e96012f15/internal/memorylimiter/config.go#L61
 			MinGCIntervalWhenSoftLimited: 10 * time.Second,
+		},
+		batchProcessorConfig: &batchprocessor.Config{
+			Timeout:       5 * time.Second,
+			SendBatchSize: 8192,
 		},
 	}
 
@@ -245,6 +251,24 @@ func WithMemoryLimiterExtensionConfig(cfg *memorylimiterextension.Config) Option
 
 		if cfg == nil {
 			return errors.New("invalid memory limiter configuration specified")
+		}
+
+		return cfg.Validate()
+	}
+
+	return opt
+
+}
+
+// WithBatchProcessorConfig is an [Option], which configures the [Actuator] to
+// create an OTel collector configured with the Batch Processor based on the
+// provided configuration.
+func WithBatchProcessorConfig(cfg *batchprocessor.Config) Option {
+	opt := func(a *Actuator) error {
+		a.batchProcessorConfig = cfg
+
+		if cfg == nil {
+			return errors.New("invalid batch processor configuration specified")
 		}
 
 		return cfg.Validate()
@@ -1028,10 +1052,10 @@ func (a *Actuator) getOtelCollector(
 							"protocols": map[string]any{
 								"grpc": map[string]any{
 									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
-								},
-								"middlewares": []map[string]any{
-									{
-										"id": memoryLimiterExtensionName,
+									"middlewares": []map[string]any{
+										{
+											"id": memoryLimiterExtensionName,
+										},
 									},
 								},
 							},
@@ -1061,7 +1085,9 @@ func (a *Actuator) getOtelCollector(
 				Processors: &otelv1beta1.AnyConfig{
 					Object: map[string]any{
 						"batch": map[string]any{
-							"timeout": "15s",
+							"timeout":             a.batchProcessorConfig.Timeout.String(),
+							"send_batch_size":     a.batchProcessorConfig.SendBatchSize,
+							"send_batch_max_size": a.batchProcessorConfig.SendBatchMaxSize,
 						},
 					},
 				},
@@ -1271,10 +1297,10 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 	)
 }
 
-// configureMemoryLimiterExtension configures the [OpenTelemetry Memory Limiter]
+// configureMemoryLimiterProcessor configures the [OpenTelemetry Memory Limiter]
 // extension.
 //
-// [OpenTelemetry Memory Limiter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/extension/memorylimiterextension
+// [OpenTelemetry Memory Limiter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor
 func (a *Actuator) configureMemoryLimiterExtension(obj *otelv1beta1.OpenTelemetryCollector) {
 	if obj == nil {
 		return
@@ -1289,13 +1315,11 @@ func (a *Actuator) configureMemoryLimiterExtension(obj *otelv1beta1.OpenTelemetr
 	}
 
 	obj.Spec.Config.Extensions.Object[memoryLimiterExtensionName] = map[string]any{
-		"check_interval":                    a.memoryLimiterConfig.CheckInterval.String(),
-		"min_gc_interval_when_soft_limited": a.memoryLimiterConfig.MinGCIntervalWhenSoftLimited.String(),
-		"min_gc_interval_when_hard_limited": a.memoryLimiterConfig.MinGCIntervalWhenHardLimited.String(),
-		"limit_mib":                         a.memoryLimiterConfig.MemoryLimitMiB,
-		"spike_limit_mib":                   a.memoryLimiterConfig.MemorySpikeLimitMiB,
-		"limit_percentage":                  a.memoryLimiterConfig.MemoryLimitPercentage,
-		"spike_limit_percentage":            a.memoryLimiterConfig.MemorySpikePercentage,
+		"check_interval":         a.memoryLimiterConfig.CheckInterval.String(),
+		"limit_mib":              a.memoryLimiterConfig.MemoryLimitMiB,
+		"spike_limit_mib":        a.memoryLimiterConfig.MemorySpikeLimitMiB,
+		"limit_percentage":       a.memoryLimiterConfig.MemoryLimitPercentage,
+		"spike_limit_percentage": a.memoryLimiterConfig.MemorySpikePercentage,
 	}
 
 	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, memoryLimiterExtensionName)
