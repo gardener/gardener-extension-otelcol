@@ -34,6 +34,7 @@ import (
 	"github.com/go-logr/logr"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	"go.opentelemetry.io/collector/extension/memorylimiterextension"
 	"go.yaml.in/yaml/v4"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -119,12 +120,32 @@ const (
 	// targetAllocatorConfigMapName is the name of the ConfigMap for the
 	// Target Allocator.
 	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
+
+	// bearertokenauthextension names used by the exporters.
+	baseBearerTokenAuthName         = "bearertokenauth"
+	httpExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-http"
+	grpcExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-grpc"
+
+	// TLS volume names for the exporters.
+	baseVolumeNameTLS         = "tls"
+	httpExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-http"
+	grpcExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-grpc"
+
+	// TLS volume mounts for the exporters.
+	baseVolumeMountPathTLS         = "/etc/ssl/tls"
+	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
+	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
+
+	// memoryLimiterExtensionName is the name of the OpenTelemetry Memory
+	// Limiter extension name.
+	memoryLimiterExtensionName = "memory_limiter"
 )
 
 // Actuator is an implementation of [extension.Actuator].
 type Actuator struct {
-	client  client.Client
-	decoder runtime.Decoder
+	client              client.Client
+	decoder             runtime.Decoder
+	memoryLimiterConfig *memorylimiterextension.Config
 
 	// The following fields are usually derived from the list of extra Helm
 	// values provided by gardenlet during the deployment of the extension.
@@ -151,6 +172,15 @@ func New(c client.Client, opts ...Option) (*Actuator, error) {
 	act := &Actuator{
 		client:                c,
 		gardenletFeatureGates: make(map[featuregate.Feature]bool),
+		memoryLimiterConfig: &memorylimiterextension.Config{
+			CheckInterval:         time.Second,
+			MemoryLimitPercentage: 75,
+
+			// Default from OTel
+			//
+			// https://github.com/open-telemetry/opentelemetry-collector/blob/168030d61d7db2a15176f3e52ab4fd1e96012f15/internal/memorylimiter/config.go#L61
+			MinGCIntervalWhenSoftLimited: 10 * time.Second,
+		},
 	}
 
 	for _, opt := range opts {
@@ -204,6 +234,24 @@ func WithGardenletFeatures(feats map[featuregate.Feature]bool) Option {
 	}
 
 	return opt
+}
+
+// WithMemoryLimiterExtensionConfig is an [Option], which configures the
+// [Actuator] to create an OTel collector configured with the Memory Limiter
+// Extension based on the provided configuration.
+func WithMemoryLimiterExtensionConfig(cfg *memorylimiterextension.Config) Option {
+	opt := func(a *Actuator) error {
+		a.memoryLimiterConfig = cfg
+
+		if cfg == nil {
+			return errors.New("invalid memory limiter configuration specified")
+		}
+
+		return cfg.Validate()
+	}
+
+	return opt
+
 }
 
 // Name returns the name of the actuator. This name can be used when registering
@@ -729,23 +777,6 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 	return obj
 }
 
-const (
-	// bearertokenauthextension names used by the exporters.
-	baseBearerTokenAuthName         = "bearertokenauth"
-	httpExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-http"
-	grpcExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-grpc"
-
-	// TLS volume names for the exporters.
-	baseVolumeNameTLS         = "tls"
-	httpExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-http"
-	grpcExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-grpc"
-
-	// TLS volume mounts for the exporters.
-	baseVolumeMountPathTLS         = "/etc/ssl/tls"
-	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
-	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
-)
-
 // getDebugExporterConfig returns the OTel settings for the debug exporter.
 func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[string]any {
 	// See the link below for more details about each config setting for the
@@ -998,6 +1029,11 @@ func (a *Actuator) getOtelCollector(
 								"grpc": map[string]any{
 									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
 								},
+								"middlewares": []map[string]any{
+									{
+										"id": memoryLimiterExtensionName,
+									},
+								},
 							},
 						},
 						"prometheus": map[string]any{
@@ -1115,6 +1151,8 @@ func (a *Actuator) getOtelCollector(
 		resources,
 	)
 
+	a.configureMemoryLimiterExtension(obj)
+
 	return obj
 }
 
@@ -1231,4 +1269,34 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 			MountPath: volumeMount,
 		},
 	)
+}
+
+// configureMemoryLimiterExtension configures the [OpenTelemetry Memory Limiter]
+// extension.
+//
+// [OpenTelemetry Memory Limiter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/extension/memorylimiterextension
+func (a *Actuator) configureMemoryLimiterExtension(obj *otelv1beta1.OpenTelemetryCollector) {
+	if obj == nil {
+		return
+	}
+
+	if obj.Spec.Config.Extensions == nil {
+		obj.Spec.Config.Extensions = &otelv1beta1.AnyConfig{}
+	}
+
+	if obj.Spec.Config.Extensions.Object == nil {
+		obj.Spec.Config.Extensions.Object = make(map[string]any)
+	}
+
+	obj.Spec.Config.Extensions.Object[memoryLimiterExtensionName] = map[string]any{
+		"check_interval":                    a.memoryLimiterConfig.CheckInterval.String(),
+		"min_gc_interval_when_soft_limited": a.memoryLimiterConfig.MinGCIntervalWhenSoftLimited.String(),
+		"min_gc_interval_when_hard_limited": a.memoryLimiterConfig.MinGCIntervalWhenHardLimited.String(),
+		"limit_mib":                         a.memoryLimiterConfig.MemoryLimitMiB,
+		"spike_limit_mib":                   a.memoryLimiterConfig.MemorySpikeLimitMiB,
+		"limit_percentage":                  a.memoryLimiterConfig.MemoryLimitPercentage,
+		"spike_limit_percentage":            a.memoryLimiterConfig.MemorySpikePercentage,
+	}
+
+	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, memoryLimiterExtensionName)
 }
