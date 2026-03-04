@@ -18,8 +18,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	glogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/urfave/cli/v3"
-	"go.opentelemetry.io/collector/extension/memorylimiterextension"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -57,7 +57,7 @@ type flags struct {
 	clientConnQPS             float32
 	clientConnBurst           int32
 
-	// Memory Limiter Extension flags
+	// Memory Limiter Processor flags
 	memLimiterCheckInterval        time.Duration
 	memLimiterLimitMiB             uint32
 	memLimiterSpikeLimitMiB        uint32
@@ -395,7 +395,7 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 
 	logger.Info("creating actuators")
 
-	memLimiterConfig := &memorylimiterextension.Config{
+	memLimiterConfig := &memorylimiterprocessor.Config{
 		CheckInterval:         flags.memLimiterCheckInterval,
 		MemoryLimitMiB:        flags.memLimiterLimitMiB,
 		MemoryLimitPercentage: flags.memLimiterLimitPercentage,
@@ -414,7 +414,7 @@ func runManager(ctx context.Context, cmd *cli.Command) error {
 		actuator.WithDecoder(decoder),
 		actuator.WithGardenerVersion(flags.gardenerVersion),
 		actuator.WithGardenletFeatures(flags.gardenletFeatureGates),
-		actuator.WithMemoryLimiterExtensionConfig(memLimiterConfig),
+		actuator.WithMemoryLimiterProcessorConfig(memLimiterConfig),
 		actuator.WithBatchProcessorConfig(batchProcessorConfig),
 	)
 	if err != nil {

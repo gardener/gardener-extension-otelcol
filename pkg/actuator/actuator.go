@@ -34,8 +34,8 @@ import (
 	"github.com/go-logr/logr"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
-	"go.opentelemetry.io/collector/extension/memorylimiterextension"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.yaml.in/yaml/v4"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -137,16 +137,19 @@ const (
 	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
 	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
 
-	// memoryLimiterExtensionName is the name of the OpenTelemetry Memory
-	// Limiter extension name.
-	memoryLimiterExtensionName = "memory_limiter"
+	// batchProcessorName is the name of the OpenTelemetry Batch processor.
+	batchProcessorName = "batch"
+
+	// memoryLimiterProcessorName is the name of the OpenTelemetry Memory
+	// Limiter processor name.
+	memoryLimiterProcessorName = "memory_limiter"
 )
 
 // Actuator is an implementation of [extension.Actuator].
 type Actuator struct {
 	client               client.Client
 	decoder              runtime.Decoder
-	memoryLimiterConfig  *memorylimiterextension.Config
+	memoryLimiterConfig  *memorylimiterprocessor.Config
 	batchProcessorConfig *batchprocessor.Config
 
 	// The following fields are usually derived from the list of extra Helm
@@ -174,7 +177,7 @@ func New(c client.Client, opts ...Option) (*Actuator, error) {
 	act := &Actuator{
 		client:                c,
 		gardenletFeatureGates: make(map[featuregate.Feature]bool),
-		memoryLimiterConfig: &memorylimiterextension.Config{
+		memoryLimiterConfig: &memorylimiterprocessor.Config{
 			CheckInterval:         time.Second,
 			MemoryLimitPercentage: 75,
 
@@ -242,10 +245,10 @@ func WithGardenletFeatures(feats map[featuregate.Feature]bool) Option {
 	return opt
 }
 
-// WithMemoryLimiterExtensionConfig is an [Option], which configures the
+// WithMemoryLimiterProcessorConfig is an [Option], which configures the
 // [Actuator] to create an OTel collector configured with the Memory Limiter
-// Extension based on the provided configuration.
-func WithMemoryLimiterExtensionConfig(cfg *memorylimiterextension.Config) Option {
+// Processor based on the provided configuration.
+func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option {
 	opt := func(a *Actuator) error {
 		a.memoryLimiterConfig = cfg
 
@@ -1052,11 +1055,6 @@ func (a *Actuator) getOtelCollector(
 							"protocols": map[string]any{
 								"grpc": map[string]any{
 									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
-									"middlewares": []map[string]any{
-										{
-											"id": memoryLimiterExtensionName,
-										},
-									},
 								},
 							},
 						},
@@ -1084,10 +1082,17 @@ func (a *Actuator) getOtelCollector(
 				},
 				Processors: &otelv1beta1.AnyConfig{
 					Object: map[string]any{
-						"batch": map[string]any{
+						batchProcessorName: map[string]any{
 							"timeout":             a.batchProcessorConfig.Timeout.String(),
 							"send_batch_size":     a.batchProcessorConfig.SendBatchSize,
 							"send_batch_max_size": a.batchProcessorConfig.SendBatchMaxSize,
+						},
+						memoryLimiterProcessorName: map[string]any{
+							"check_interval":         a.memoryLimiterConfig.CheckInterval.String(),
+							"limit_mib":              a.memoryLimiterConfig.MemoryLimitMiB,
+							"spike_limit_mib":        a.memoryLimiterConfig.MemorySpikeLimitMiB,
+							"limit_percentage":       a.memoryLimiterConfig.MemoryLimitPercentage,
+							"spike_limit_percentage": a.memoryLimiterConfig.MemorySpikePercentage,
 						},
 					},
 				},
@@ -1121,12 +1126,12 @@ func (a *Actuator) getOtelCollector(
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						"logs": {
 							Receivers:  []string{"otlp"},
-							Processors: []string{"batch"},
+							Processors: []string{memoryLimiterProcessorName, batchProcessorName},
 							Exporters:  exporterNames,
 						},
 						"metrics": {
 							Receivers:  []string{"prometheus"},
-							Processors: []string{"batch"},
+							Processors: []string{memoryLimiterProcessorName, batchProcessorName},
 							Exporters:  exporterNames,
 						},
 					},
@@ -1176,8 +1181,6 @@ func (a *Actuator) getOtelCollector(
 		grpcExporterVolumeMountPathBearerTokenFile,
 		resources,
 	)
-
-	a.configureMemoryLimiterExtension(obj)
 
 	return obj
 }
@@ -1295,32 +1298,4 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 			MountPath: volumeMount,
 		},
 	)
-}
-
-// configureMemoryLimiterProcessor configures the [OpenTelemetry Memory Limiter]
-// extension.
-//
-// [OpenTelemetry Memory Limiter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor
-func (a *Actuator) configureMemoryLimiterExtension(obj *otelv1beta1.OpenTelemetryCollector) {
-	if obj == nil {
-		return
-	}
-
-	if obj.Spec.Config.Extensions == nil {
-		obj.Spec.Config.Extensions = &otelv1beta1.AnyConfig{}
-	}
-
-	if obj.Spec.Config.Extensions.Object == nil {
-		obj.Spec.Config.Extensions.Object = make(map[string]any)
-	}
-
-	obj.Spec.Config.Extensions.Object[memoryLimiterExtensionName] = map[string]any{
-		"check_interval":         a.memoryLimiterConfig.CheckInterval.String(),
-		"limit_mib":              a.memoryLimiterConfig.MemoryLimitMiB,
-		"spike_limit_mib":        a.memoryLimiterConfig.MemorySpikeLimitMiB,
-		"limit_percentage":       a.memoryLimiterConfig.MemoryLimitPercentage,
-		"spike_limit_percentage": a.memoryLimiterConfig.MemorySpikePercentage,
-	}
-
-	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, memoryLimiterExtensionName)
 }
