@@ -61,6 +61,30 @@ spec:
             - --resync-interval={{ .Values.extension.manager.resync_interval }}
             - --client-conn-qps={{ .Values.extension.manager.qps }}
             - --client-conn-burst={{ .Values.extension.manager.burst }}
+            {{- if .Values.extension.memory_limiter.check_interval }}
+            - --mem-limiter-check-interval={{ .Values.extension.memory_limiter.check_interval }}
+            {{- end }}
+            {{- if .Values.extension.memory_limiter.limit_mib }}
+            - --mem-limiter-limit-mib={{ .Values.extension.memory_limiter.limit_mib }}
+            {{- end }}
+            {{- if .Values.extension.memory_limiter.limit_percentage }}
+            - --mem-limiter-limit-percentage={{ .Values.extension.memory_limiter.limit_percentage }}
+            {{- end }}
+            {{- if .Values.extension.memory_limiter.spike_limit_mib }}
+            - --mem-limiter-spike-limit-mib={{ .Values.extension.memory_limiter.spike_limit_mib }}
+            {{- end }}
+            {{- if .Values.extension.memory_limiter.spike_limit_percentage }}
+            - --mem-limiter-spike-limit-percentage={{ .Values.extension.memory_limiter.spike_limit_percentage }}
+            {{- end }}
+            {{- if .Values.extension.batch_processor.timeout }}
+            - --batch-processor-timeout={{ .Values.extension.batch_processor.timeout }}
+            {{- end }}
+            {{- if .Values.extension.batch_processor.batch_size }}
+            - --batch-processor-batch-size={{ .Values.extension.batch_processor.batch_size }}
+            {{- end }}
+            {{- if .Values.extension.batch_processor.batch_max_size }}
+            - --batch-processor-batch-max-size={{ .Values.extension.batch_processor_batch_max_size }}
+            {{- end }}
             - --gardener-version={{ .Values.gardener.version }}
             {{- range $key, $val := .Values.gardener.gardenlet.featureGates }}
             - --gardenlet-feature-gate={{ $key }}={{ $val }}

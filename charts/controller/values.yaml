@@ -51,6 +51,30 @@ extension:
   leader_election:
     enabled: true
     election_id: gardener-extension-otelcol-leader-election
+  # Memory Limiter Processor configuration for the OTel collector
+  memory_limiter:
+    # Time between measurements of the memory usage
+    check_interval: 1s
+    # Max amount of memory in MiB allocated to the process. The `limit_mib'
+    # setting takes precedence over `limit_percentage'.
+    limit_mib: 2000
+    # # Max amount of memory allocated to the process in percentage of total
+    # # memory
+    # limit_percentage: 75
+    # # Max amount of spike between measurements in MiB. The `spike_limit_mib'
+    # # setting takes precendence over `spike_limit_percentage'.
+    # spike_limit_mib: 500
+    # # Max amount of spike between measurements in percentage of total memory
+    # spike_limit_percentage: 10
+  # Batch Processor configuration for the OTel collector
+  batch_processor:
+    # Time after which a batch is sent regardless of its size.
+    timeout: 5s
+    # Send batch when it reaches this size of items.
+    batch_size: 8192
+    # Max size of a batch. When set to a non-zero value, it must be greater than
+    # `batch_size' setting.
+    batch_max_size: 0
 # Extra values provided by gardenlet during extension deployment.
 #
 # See the links below for more details.
