@@ -62,7 +62,7 @@ extension:
     # # memory
     # limit_percentage: 75
     # # Max amount of spike between measurements in MiB. The `spike_limit_mib'
-    # # setting takes precendence over `spike_limit_percentage'.
+    # # setting takes precedence over `spike_limit_percentage'.
     # spike_limit_mib: 500
     # # Max amount of spike between measurements in percentage of total memory
     # spike_limit_percentage: 10

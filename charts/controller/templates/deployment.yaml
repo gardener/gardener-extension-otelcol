@@ -83,7 +83,7 @@ spec:
             - --batch-processor-batch-size={{ .Values.extension.batch_processor.batch_size }}
             {{- end }}
             {{- if .Values.extension.batch_processor.batch_max_size }}
-            - --batch-processor-batch-max-size={{ .Values.extension.batch_processor_batch_max_size }}
+            - --batch-processor-batch-max-size={{ .Values.extension.batch_processor.batch_max_size }}
             {{- end }}
             - --gardener-version={{ .Values.gardener.version }}
             {{- range $key, $val := .Values.gardener.gardenlet.featureGates }}

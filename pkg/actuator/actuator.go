@@ -250,11 +250,13 @@ func WithGardenletFeatures(feats map[featuregate.Feature]bool) Option {
 // Processor based on the provided configuration.
 func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option {
 	opt := func(a *Actuator) error {
-		a.memoryLimiterConfig = cfg
-
 		if cfg == nil {
 			return errors.New("invalid memory limiter configuration specified")
 		}
+
+		// https://github.com/open-telemetry/opentelemetry-collector/blob/168030d61d7db2a15176f3e52ab4fd1e96012f15/internal/memorylimiter/config.go#L61
+		cfg.MinGCIntervalWhenSoftLimited = 10 * time.Second
+		a.memoryLimiterConfig = cfg
 
 		return cfg.Validate()
 	}
@@ -267,11 +269,11 @@ func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option
 // provided configuration.
 func WithBatchProcessorConfig(cfg *batchprocessor.Config) Option {
 	opt := func(a *Actuator) error {
-		a.batchProcessorConfig = cfg
-
 		if cfg == nil {
 			return errors.New("invalid batch processor configuration specified")
 		}
+
+		a.batchProcessorConfig = cfg
 
 		return cfg.Validate()
 	}
