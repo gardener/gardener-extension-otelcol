@@ -260,7 +260,6 @@ func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option
 	}
 
 	return opt
-
 }
 
 // WithBatchProcessorConfig is an [Option], which configures the [Actuator] to
@@ -278,7 +277,6 @@ func WithBatchProcessorConfig(cfg *batchprocessor.Config) Option {
 	}
 
 	return opt
-
 }
 
 // Name returns the name of the actuator. This name can be used when registering
