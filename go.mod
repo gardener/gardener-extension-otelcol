@@ -10,7 +10,6 @@ require (
 	github.com/open-telemetry/opentelemetry-operator v0.145.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.7.0
-	go.opentelemetry.io/collector/extension/memorylimiterextension v0.146.1
 	go.opentelemetry.io/collector/processor/batchprocessor v0.146.1
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.146.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
