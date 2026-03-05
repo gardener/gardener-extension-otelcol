@@ -1075,8 +1075,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0 h1:qPrZsv1cwQiFe
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/controller-runtime v0.22.5 h1:v3nfSUMowX/2WMp27J9slwGFyAt7IV0YwBxAkrUr0GE=
 sigs.k8s.io/controller-runtime v0.22.5/go.mod h1:pc5SoYWnWI6I+cBHYYdZ7B6YHZVY5xNfll88JB+vniI=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20260303114320-955f7df464ad h1:fuolH/J6HGhz2OJaWgWYN2BFRVBe8U5laAY8zXd3dO4=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20260303114320-955f7df464ad/go.mod h1:IlbgWQkCYbpbkygXxnd/sLJWL9WQk9NvvVhkJCm5P7Q=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20260305141020-105baa6284da h1:+ZOpdR6oqNMMm6W3SmTkr0qIlGWciQjCZSDoGKLzuzc=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20260305141020-105baa6284da/go.mod h1:IlbgWQkCYbpbkygXxnd/sLJWL9WQk9NvvVhkJCm5P7Q=
 sigs.k8s.io/controller-tools v0.20.0 h1:VWZF71pwSQ2lZZCt7hFGJsOfDc5dVG28/IysjjMWXL8=
 sigs.k8s.io/controller-tools v0.20.0/go.mod h1:b4qPmjGU3iZwqn34alUU5tILhNa9+VXK+J3QV0fT/uU=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
