@@ -359,13 +359,14 @@ func New() *cli.Command {
 			&cli.Uint32Flag{
 				Name:        "batch-processor-batch-size",
 				Usage:       "send batch when it reaches this size of items",
+				Value:       2000,
 				Sources:     cli.EnvVars("BATCH_PROCESSOR_BATCH_SIZE"),
 				Destination: &flags.batchProcessorBatchSize,
 			},
 			&cli.Uint32Flag{
 				Name:        "batch-processor-batch-max-size",
 				Usage:       "max size of a batch. when non-zero, its value must be larger than batch-size option",
-				Value:       0,
+				Value:       4000,
 				Sources:     cli.EnvVars("BATCH_PROCESSOR_BATCH_MAX_SIZE"),
 				Destination: &flags.batchProcessorBatchMaxSize,
 			},

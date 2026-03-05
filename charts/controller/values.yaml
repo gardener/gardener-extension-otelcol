@@ -71,10 +71,10 @@ extension:
     # Time after which a batch is sent regardless of its size.
     timeout: 5s
     # Send batch when it reaches this size of items.
-    batch_size: 8192
+    batch_size: 2000
     # Max size of a batch. When set to a non-zero value, it must be greater than
     # `batch_size' setting.
-    batch_max_size: 0
+    batch_max_size: 4000
 # Extra values provided by gardenlet during extension deployment.
 #
 # See the links below for more details.
