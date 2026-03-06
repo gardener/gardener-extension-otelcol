@@ -10,7 +10,7 @@ require (
 	github.com/open-telemetry/opentelemetry-operator v0.145.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.7.0
-	go.opentelemetry.io/collector/processor/batchprocessor v0.146.1
+	go.opentelemetry.io/collector/processor/batchprocessor v0.147.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.147.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	k8s.io/api v0.35.2
@@ -138,7 +138,7 @@ require (
 	github.com/zitadel/oidc/v3 v3.38.1 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/collector/client v1.52.0 // indirect
+	go.opentelemetry.io/collector/client v1.53.0 // indirect
 	go.opentelemetry.io/collector/component v1.53.0 // indirect
 	go.opentelemetry.io/collector/consumer v1.53.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.147.0 // indirect
@@ -149,7 +149,7 @@ require (
 	go.opentelemetry.io/collector/internal/telemetry v0.147.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.53.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.147.0 // indirect
-	go.opentelemetry.io/collector/pdata/xpdata v0.146.1 // indirect
+	go.opentelemetry.io/collector/pdata/xpdata v0.147.0 // indirect
 	go.opentelemetry.io/collector/pipeline v1.53.0 // indirect
 	go.opentelemetry.io/collector/pipeline/xpipeline v0.147.0 // indirect
 	go.opentelemetry.io/collector/processor v1.53.0 // indirect
