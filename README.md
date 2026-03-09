@@ -391,10 +391,10 @@ Gardener Operator.
 There will be two kubeconfig files created for you, after the dev environment
 has been created.
 
-| Path                                                                  | Description                                                         |
-|-----------------------------------------------------------------------|---------------------------------------------------------------------|
-| `/path/to/gardener/example/gardener-local/kind/multi-zone/kubeconfig` | Cluster in which `gardener-operator` runs (a.k.a _runtime_ cluster) |
-| `/path/to/gardener/dev-setup/kubeconfigs/virtual-garden/kubeconfig`   | The _virtual_ garden cluster                                        |
+| Path                                                                | Description                                            |
+|---------------------------------------------------------------------|--------------------------------------------------------|
+| `/path/to/gardener/dev-setup/kubeconfigs/runtime/kubeconfig`        | The _runtime_ cluster (`gardener-operator` runs in it) |
+| `/path/to/gardener/dev-setup/kubeconfigs/virtual-garden/kubeconfig` | The _virtual_ garden cluster                           |
 
 Throughout this document we will refer to the kubeconfigs for _runtime_ and
 _virtual_ clusters as `$KUBECONFIG_RUNTIME` and `$KUBECONFIG_VIRTUAL`
