@@ -1,0 +1,47 @@
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: {{ include "fluent-bit.name" . }}-output
+  labels:
+    {{- include "fluent-bit.labels" . | nindent 4 }}
+    {{- include "fluent-bit.enabledLabel" . | nindent 4 }}
+spec:
+  customPlugin:
+    yamlConfig:
+       name: gardener
+       match: "kubernetes.*"
+       LogLevel: debug
+       retry_Limit: 10
+       seed_type: noop
+       shoot_type: otlp_grpc
+       endpoint: ":4317"
+       insecure: true
+
+       watch_open_telemetry_collector: true
+       open_telemetry_collector_label_selector: '{"matchLabels":{"observability.gardener.cloud/app":"external-otelcol"}}'
+       open_telemetry_collector_namespace_label_selector: '{"matchLabels":{"gardener.cloud/role":"shoot"}}'
+
+
+       dynamic_host_path: '{"kubernetes": {"namespace_name": "namespace"}}'
+       dynamic_host_prefix: external-otelcol-collector.
+       dynamic_host_suffix: .svc.cluster.local:4317
+       dynamic_host_regex: "^shoot-"
+
+       use_sdk_batch_processor: true
+       sdk_batch_max_queue_size: 2048
+       sdk_batch_export_timeout: 30s
+       sdk_batch_export_interval: 1s
+       sdk_batch_export_max_batch_size: 512
+
+       retry_enabled: true
+       retry_initial_interval: 1s
+       retry_max_interval: 5m
+       retry_max_elapsed_time: 15m
+
+       origin: seed
+       tag_key: tag
+
+       fallback_to_tag_when_metadata_is_missing: true
+       send_logs_to_seed_when_shoot_is_in_hibernated_state: false
+       send_logs_to_shoot_when_is_in_deletion_state: false
+

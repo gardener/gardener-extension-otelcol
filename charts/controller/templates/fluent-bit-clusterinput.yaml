@@ -1,0 +1,28 @@
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: {{ include "fluent-bit.name" . }}-tail
+  labels:
+    {{- include "fluent-bit.labels" . | nindent 4 }}
+    {{- include "fluent-bit.enabledLabel" . | nindent 4 }}
+spec:
+  tail:
+    tag: kubernetes.*
+    db: /var/fluentbit/flb_kube.db
+    dbSync: Normal
+    path: '/var/log/containers/*_shoot--*_*.log'
+    ignoredOlder: 30m
+    memBufLimit: 60MB
+    parser: fluent-bit-extension-otelcol-parser
+    pauseOnChunksOverlimit: "on"
+    refreshIntervalSeconds: 10
+    skipLongLines: true
+  processors:
+    logs:
+      - name: lua
+        code: |
+          function add_tag_to_record(tag, timestamp, record)
+            record["tag"] = tag
+            return 1, timestamp, record
+          end
+        call: add_tag_to_record
