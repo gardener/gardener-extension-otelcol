@@ -3,7 +3,7 @@ kind: Extension
 metadata:
   name: otelcol
   annotations:
-    security.gardener.cloud/pod-security-enforce: baseline
+    security.gardener.cloud/pod-security-enforce: privileged
 spec:
   deployment:
     extension:
