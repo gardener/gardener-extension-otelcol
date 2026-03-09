@@ -146,7 +146,7 @@ func NewShootValidatorWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, 
 	}
 
 	name := fmt.Sprintf("validator.%s", validator.extensionType)
-	extensionLabel := fmt.Sprintf("%s/%s", v1beta1constants.LabelExtensionExtensionTypePrefix, validator.extensionType)
+	extensionLabel := fmt.Sprintf("%s%s", v1beta1constants.LabelExtensionExtensionTypePrefix, validator.extensionType)
 	path := fmt.Sprintf("/webhooks/validate/%s", validator.extensionType)
 
 	logger := mgr.GetLogger()
