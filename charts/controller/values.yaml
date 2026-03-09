@@ -209,3 +209,93 @@ volumeMounts: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
+# Fluent Bit Operator managed resources configuration
+fluentbit:
+  # Enable or disable Fluent Bit deployment
+  enabled: false
+  # Name of the FluentBit resource
+  name: fluent-bit-extension-otelcol
+  # Fluent Bit image
+  image:
+    name: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit:v4.2.3
+    pullPolicy: IfNotPresent
+  # Fluent Bit Plugins image
+  # europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.3.0
+  pluginImage:
+    name: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.3.0
+    pullPolicy: IfNotPresent
+  labels:
+  annotations:
+  # Fluent bit pod probes configuration
+  #
+  # Check the following link for more details.
+  #
+  # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  readinessProbe:
+    httpGet:
+      path: /api/v2/metrics/prometheus
+      port: 2020
+    periodSeconds: 10
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 2021
+    initialDelaySeconds: 120
+    periodSeconds: 60
+  # Resources limits and requests
+  #
+  # Check the following link for more details.
+  #
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 650Mi
+  # Fluent-bit pods additional labels
+  #
+  # Check the following link for more details about labels.
+  #
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  podLabels:
+    networking.resources.gardener.cloud/to-all-shoots-external-otelcol-collector-tcp-4317: "allowed"
+    networking.gardener.cloud/to-dns: allowed
+    networking.gardener.cloud/to-runtime-apiserver: allowed
+  # Fluent-bit pods additional annotations
+  podAnnotations:
+  # Fluent-bit pods tolerations for running on all nodes
+  #
+  # Check the following link for more details about annotations.
+  #
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+  # Fluent-bit pods priority class name
+  priorityClassName: gardener-system-600
+  # Fluent Bit Service settings.
+  #
+  # Check the following link for more details.
+  #
+  # https://kubernetes.io/docs/concepts/services-networking/service/
+  service:
+    annotations:
+      networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":2020,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]'
+      networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+      networking.resources.gardener.cloud/pod-label-selector-namespace-alias: "extensions"
+  # Fluent Bit configuration  settings
+  config:
+    # Set the flush time in seconds.nanoseconds.
+    flushSeconds: 30
+    # Fluent Bit log level. Valid values are off, error, warn, info, debug, and trace
+    logLevel: info
+    # HTTP server for health checks and metrics.
+    httpServer: true
+    # Set listening interface for HTTP Server when it's enabled.
+    httpListen: "0.0.0.0"
+    # Set TCP Port for the HTTP Server.
+    httpPort: 2020
