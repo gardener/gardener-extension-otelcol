@@ -12,6 +12,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -145,7 +146,7 @@ func NewShootValidatorWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, 
 	}
 
 	name := fmt.Sprintf("validator.%s", validator.extensionType)
-	extensionLabel := fmt.Sprintf("extensions.extensions.gardener.cloud/%s", validator.extensionType)
+	extensionLabel := fmt.Sprintf("%s/%s", v1beta1constants.LabelExtensionExtensionTypePrefix, validator.extensionType)
 	path := fmt.Sprintf("/webhooks/validate/%s", validator.extensionType)
 
 	logger := mgr.GetLogger()
