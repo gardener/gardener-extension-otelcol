@@ -1008,7 +1008,7 @@ func (a *Actuator) getOtelCollector(
 				a.getAnnotations(),
 				map[string]string{
 					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "pod-label-selector-namespace-alias": "all-shoots",
-					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`,
 				}),
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
