@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -143,6 +144,9 @@ const (
 	// memoryLimiterProcessorName is the name of the OpenTelemetry Memory
 	// Limiter processor name.
 	memoryLimiterProcessorName = "memory_limiter"
+
+	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
+	resourceProcessorName = "resource"
 )
 
 // Actuator is an implementation of [extension.Actuator].
@@ -967,6 +971,23 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	return exporters
 }
 
+// parseShootNamespaceAttributes extracts OTel resource attributes from a shoot
+// namespace name of the form "shoot--<project>--<shoot>".
+// The full namespace name maps to k8s.cluster.name; the two segments map to
+// gardener.project.name and gardener.shoot.name respectively.
+// For namespaces that do not follow the pattern, projectName and shootName are
+// returned as empty strings.
+func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, shootName string) {
+	clusterName = namespace
+	parts := strings.SplitN(namespace, "--", 3)
+	if len(parts) == 3 {
+		projectName = parts[1]
+		shootName = parts[2]
+	}
+
+	return clusterName, projectName, shootName
+}
+
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(
@@ -994,6 +1015,7 @@ func (a *Actuator) getOtelCollector(
 
 	exporters := a.getOtelExporters(cfg)
 	exporterNames := slices.Sorted(maps.Keys(exporters))
+	clusterName, projectName, shootName := parseShootNamespaceAttributes(namespace)
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
@@ -1094,6 +1116,13 @@ func (a *Actuator) getOtelCollector(
 							"limit_percentage":       a.memoryLimiterConfig.MemoryLimitPercentage,
 							"spike_limit_percentage": a.memoryLimiterConfig.MemorySpikePercentage,
 						},
+						resourceProcessorName: map[string]any{
+							"attributes": []any{
+								map[string]any{"key": "k8s.cluster.name", "value": clusterName, "action": "upsert"},
+								map[string]any{"key": "gardener.project.name", "value": projectName, "action": "upsert"},
+								map[string]any{"key": "gardener.shoot.name", "value": shootName, "action": "upsert"},
+							},
+						},
 					},
 				},
 				Exporters: otelv1beta1.AnyConfig{
@@ -1126,12 +1155,12 @@ func (a *Actuator) getOtelCollector(
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						"logs": {
 							Receivers:  []string{"otlp"},
-							Processors: []string{memoryLimiterProcessorName, batchProcessorName},
+							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
 							Exporters:  exporterNames,
 						},
 						"metrics": {
 							Receivers:  []string{"prometheus"},
-							Processors: []string{memoryLimiterProcessorName, batchProcessorName},
+							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
 							Exporters:  exporterNames,
 						},
 					},
