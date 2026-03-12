@@ -8,7 +8,9 @@ metadata:
     app.kubernetes.io/name: {{ .Values.extension.name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
   annotations:
-    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":8080,"protocol":"TCP"}]'
+    {{- if .Values.extension.metrics.enable_scraping }}
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ trimPrefix ":" .Values.extension.metrics.bind_address }},"protocol":"TCP"}]'
+    {{- end }}
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: "extensions"
 spec:
@@ -19,7 +21,7 @@ spec:
       protocol: TCP
       name: http
     {{- if .Values.extension.metrics.enable_scraping }}
-    - port: 8080
+    - port: {{ trimPrefix ":" .Values.extension.metrics.bind_address }}
       targetPort: metrics
       protocol: TCP
       name: metrics
