@@ -1,0 +1,32 @@
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFluentBitConfig
+metadata:
+  name: {{ include "fluent-bit.name" . }}-config
+  labels:
+    {{- include "fluent-bit.labels" . | nindent 4 }}
+spec:
+  configFileFormat: yaml
+  namespace: {{ .Release.Namespace }}
+  service:
+    daemon: false
+    flushSeconds: {{ .Values.fluentbit.config.flushSeconds }}
+    logLevel: {{ .Values.fluentbit.config.logLevel }}
+    {{- if .Values.fluentbit.config.httpServer }}
+    httpServer: {{ .Values.fluentbit.config.httpServer }}
+    httpListen: {{ .Values.fluentbit.config.httpListen | quote }}
+    httpPort: {{ .Values.fluentbit.config.httpPort }}
+    {{- end }}
+    parsersFile: parsers.conf
+  multilineParserSelector: {}
+  parserSelector:
+    matchLabels:
+      {{- include "fluent-bit.enabledLabel" . | nindent 6 }}
+  inputSelector:
+    matchLabels:
+      {{- include "fluent-bit.enabledLabel" . | nindent 6 }}
+  filterSelector:
+    matchLabels:
+      {{- include "fluent-bit.enabledLabel" . | nindent 6 }}
+  outputSelector:
+    matchLabels:
+      {{- include "fluent-bit.enabledLabel" . | nindent 6 }}

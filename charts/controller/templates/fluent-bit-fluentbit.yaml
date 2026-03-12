@@ -1,0 +1,108 @@
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: FluentBit
+metadata:
+  name: {{ include "fluent-bit.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fluent-bit.labels" . | nindent 4 }}
+  annotations:
+    {{- include "fluent-bit.annotations" . | nindent 4 }}
+spec:
+  fluentBitConfigName: {{ include "fluent-bit.name" . }}-config
+  {{- with .Values.fluentbit.podLabels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.fluentbit.podAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  initContainers:
+  - command:
+    - /bin/cp
+    - /source/plugins/.
+    - /plugins
+    image: {{ .Values.fluentbit.pluginImage.name }}
+    {{- with .Values.fluentbit.pluginImage.pullPolicy }}
+    imagePullPolicy: {{ . }}
+    {{- end }}
+    name: install-plugin
+    securityContext:
+      allowPrivilegeEscalation: false
+    volumeMounts:
+      - mountPath: /plugins
+        name: plugins
+  command:
+    - /fluent-bit/bin/fluent-bit-watcher
+    - -e
+    - /fluent-bit/plugins/output_plugin.so
+    - -c
+    - /fluent-bit/config/fluent-bit.yaml
+  envVars:
+    - name: OTEL_GO_X_OBSERVABILITY
+      value: "true"
+  image: {{ .Values.fluentbit.image.name }}
+  {{- with .Values.fluentbit.image.pullPolicy }}
+  imagePullPolicy: {{ . }}
+  {{- end }}
+  {{- with .Values.fluentbit.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.fluentbit.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  ports:
+    - containerPort: 2021
+      name: metrics-plugin
+      protocol: TCP
+  positionDB: {}
+  priorityClassName: {{ .Values.fluentbit.priorityClassName }}
+  rbacRules:
+    - apiGroups:
+        - ""
+      resources:
+        - namespaces
+      verbs: ["get", "list", "watch"]
+    - apiGroups:
+        - opentelemetry.io
+      resources:
+        - opentelemetrycollectors
+      verbs: [ "get", "list", "watch" ]
+  {{- with .Values.fluentbit.readinessProbe }}
+  readinessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.fluentbit.livenessProbe }}
+  livenessProbe:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  service:
+    name: {{ include "fluent-bit.name" . }}
+    {{- with .Values.fluentbit.service.labels }}
+    labels:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.fluentbit.service.annotations }}
+    annotations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  disableLogVolumes: true
+  volumesMounts:
+    - mountPath: /var/fluentbit
+      name: varfluentbit
+    - mountPath: /fluent-bit/plugins
+      name: plugins
+    - mountPath: /var/log
+      name: varlog
+      readOnly: true
+  volumes:
+    - hostPath:
+        path: /var/fluentbit
+      name: varfluentbit
+    - hostPath:
+        path: /var/log
+      name: varlog
+    - emptyDir: {}
+      name: plugins

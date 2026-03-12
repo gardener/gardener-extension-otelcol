@@ -1,0 +1,15 @@
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: {{ include "fluent-bit.name" . }}-parser
+  labels:
+    {{- include "fluent-bit.labels" . | nindent 4 }}
+    {{- include "fluent-bit.enabledLabel" . | nindent 4 }}
+spec:
+  decoders:
+    - decodeFieldAs: json log
+  regex:
+    regex: ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+    timeFormat: '%Y-%m-%dT%H:%M:%S.%L%z'
+    timeKeep: true
+    timeKey: time
