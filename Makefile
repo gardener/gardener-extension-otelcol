@@ -63,7 +63,6 @@ KUBECONFORM_OPTS ?= 	-strict \
 			-verbose \
 			-summary \
 			-output pretty \
-			-skip Kustomization \
 			-schema-location default
 
 # Common options for the `addlicense' tool
@@ -238,6 +237,7 @@ check-examples:  ## Lint the generated example resources.
 	@$(GO_TOOL) kubeconform \
 		$(KUBECONFORM_OPTS) \
 		-schema-location "$(SRC_ROOT)/test/schemas/{{.Group}}/{{.ResourceAPIVersion}}/{{.ResourceKind}}.json" \
+		-schema-location https://json.schemastore.org/kustomization.json \
 		./examples
 	@echo "Checking operator extension resource ..."
 	@$(GO_TOOL) kustomize build $(SRC_ROOT)/examples/operator-extension | \
@@ -275,10 +275,12 @@ update-version-tags:  ## Update version tags in helm charts and example resource
 		$(GO_TOOL) yq -i '.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/dev-setup/controllerdeployment.yaml
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
 		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml
+	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
+		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME)-admission-runtime:$(VERSION) \
-		$(GO_TOOL) yq -i '.spec.deployment.admission.runtimeCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml
+		$(GO_TOOL) yq -i '.spec.deployment.admission.runtimeCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME)-admission-virtual:$(VERSION) \
-		$(GO_TOOL) yq -i '.spec.deployment.admission.virtualCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml
+		$(GO_TOOL) yq -i '.spec.deployment.admission.virtualCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
 
 deploy deploy-operator: export IMAGE=$(LOCAL_REGISTRY)/extensions/$(EXTENSION_NAME)
 
