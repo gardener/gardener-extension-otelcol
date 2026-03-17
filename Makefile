@@ -28,6 +28,8 @@ endif
 
 # Name and version of the Gardener extension.
 EXTENSION_NAME ?= gardener-extension-otelcol
+# Name of the extension resource
+EXTENSION_RESOURCE_NAME ?= otelcol
 
 # Name for the extension image
 IMAGE ?= europe-docker.pkg.dev/gardener-project/public/gardener/extensions/$(EXTENSION_NAME)
@@ -213,9 +215,9 @@ generate:  ## Run code-generator tools.
 	$(foreach gen_tool,$(K8S_GEN_TOOLS),$(call run-command,$(GO_TOOL) $(gen_tool) -v=$(K8S_GEN_TOOLS_LOG_LEVEL) ./pkg/apis/...))
 
 .PHONY: generate-operator-extension
-generate-operator-extension:  ## Generate operator extension example resources.
+generate-operator-extension: update-version-tags  ## Generate operator extension example resources.
 	@$(GO_TOOL) extension-generator \
-		--name $(EXTENSION_NAME) \
+		--name $(EXTENSION_RESOURCE_NAME) \
 		--component-category extension \
 		--provider-type otelcol \
 		--destination $(SRC_ROOT)/examples/operator-extension/base/extension.yaml \
@@ -263,22 +265,35 @@ helm-load-chart:  ## Load helm chart to local registry.
 .PHONY: update-version-tags
 update-version-tags:  ## Update version tags in helm charts and example resources based on VERSION file.
 	@for chart in controller admission-runtime admission-virtual; do \
+		echo "Updating Helm chart version for $${chart} ..." >&2; \
 		env version=$(VERSION) $(GO_TOOL) yq -i '.version = env(version)' $(SRC_ROOT)/charts/$${chart}/Chart.yaml; \
 	done
 
 	@for chart in controller admission-runtime; do \
+		echo "Updating Helm chart values for $${chart} ..." >&2; \
 		env image=$(IMAGE) tag=$(VERSION) \
 			$(GO_TOOL) yq -i '(.image.repository = env(image)) | (.image.tag = env(tag))' $(SRC_ROOT)/charts/$${chart}/values.yaml; \
 	done
 
-	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
-		$(GO_TOOL) yq -i '.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/dev-setup/controllerdeployment.yaml
-	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
-		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml
-	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION) \
+	@echo "Updating resource name for ControllerRegistration, ControllerDeployment, and Operator Extension ..." >&2
+	@export ext_resource_name=$(EXTENSION_RESOURCE_NAME); \
+		$(GO_TOOL) yq -i '.metadata.name = env(ext_resource_name)' $(SRC_ROOT)/examples/dev-setup/controllerdeployment.yaml; \
+		$(GO_TOOL) yq -i '.metadata.name = env(ext_resource_name)' $(SRC_ROOT)/examples/dev-setup/controllerregistration.yaml; \
+		$(GO_TOOL) yq -i '.patches[0].target.name = env(ext_resource_name)' $(SRC_ROOT)/examples/operator-extension/kustomization.yaml; \
+		$(GO_TOOL) yq -i '.metadata.name = env(ext_resource_name)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml; \
+		$(GO_TOOL) yq -i '.metadata.name = env(ext_resource_name)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
+
+	@echo "Updating Helm chart image for ControllerDeployment & Extension Controller ..." >&2
+	@export oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME):$(VERSION); \
+		$(GO_TOOL) yq -i '.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/dev-setup/controllerdeployment.yaml; \
+		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/base/extension.yaml; \
 		$(GO_TOOL) yq -i '.spec.deployment.extension.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
+
+	@echo "Updating Helm chart image for runtime cluster ..." >&2
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME)-admission-runtime:$(VERSION) \
 		$(GO_TOOL) yq -i '.spec.deployment.admission.runtimeCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
+
+	@echo "Updating Helm chart image for virtual cluster ..." >&2
 	@env oci_charts=$(LOCAL_REGISTRY)/helm-charts/$(EXTENSION_NAME)-admission-virtual:$(VERSION) \
 		$(GO_TOOL) yq -i '.spec.deployment.admission.virtualCluster.helm.ociRepository.ref = env(oci_charts)' $(SRC_ROOT)/examples/operator-extension/patches/extension.yaml
 
@@ -286,7 +301,11 @@ deploy deploy-operator: export IMAGE=$(LOCAL_REGISTRY)/extensions/$(EXTENSION_NA
 
 .PHONY: deploy
 deploy: generate update-version-tags docker-build docker-push helm-load-chart  ## Deploy to local dev cluster.
-	@env WITH_GARDENER_OPERATOR=false EXTENSION_IMAGE=$(IMAGE):$(VERSION) $(HACK_DIR)/deploy-dev-setup.sh
+	@env \
+		WITH_GARDENER_OPERATOR=false \
+		EXTENSION_IMAGE=$(IMAGE):$(VERSION) \
+		EXTENSION_RESOURCE_NAME=$(EXTENSION_RESOURCE_NAME) \
+		$(HACK_DIR)/deploy-dev-setup.sh
 
 .PHONY: undeploy
 undeploy:  ## Cleanup the deployed extension.
@@ -295,7 +314,11 @@ undeploy:  ## Cleanup the deployed extension.
 
 .PHONY: deploy-operator
 deploy-operator: generate update-version-tags docker-build docker-push helm-load-chart  ## Deploy to local dev cluster with Gardener Operator.
-	@env WITH_GARDENER_OPERATOR=true EXTENSION_IMAGE=$(IMAGE):$(VERSION) $(HACK_DIR)/deploy-dev-setup.sh
+	@env \
+		WITH_GARDENER_OPERATOR=true \
+		EXTENSION_IMAGE=$(IMAGE):$(VERSION) \
+		EXTENSION_RESOURCE_NAME=$(EXTENSION_RESOURCE_NAME) \
+		$(HACK_DIR)/deploy-dev-setup.sh
 
 .PHONY: undeploy-operator
 undeploy-operator:  ## Cleanup the deployed operator extension.
