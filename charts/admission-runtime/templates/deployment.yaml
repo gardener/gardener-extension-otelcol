@@ -66,6 +66,7 @@ spec:
             {{- if .Values.gardener.virtualCluster.enabled }}
             - --webhook-config-mode=url
             - --webhook-config-url={{ printf "%s.%s" .Values.extension.name .Release.Namespace }}
+            - --webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}
             {{- else }}
             - --webhook-config-mode=service
             {{- end}}
