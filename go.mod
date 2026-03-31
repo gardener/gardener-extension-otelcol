@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.8.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.147.0
-	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.147.0
+	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.149.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	k8s.io/api v0.35.3
 	k8s.io/apiextensions-apiserver v0.35.3
