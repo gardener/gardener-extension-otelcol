@@ -11,6 +11,7 @@ spec:
     db: /var/fluentbit/flb_kube.db
     dbSync: Normal
     path: '/var/log/containers/*_shoot--*_*.log'
+    excludePath: '/var/log/containers/*_shoot--*_event-logger_*.log'
     ignoredOlder: 30m
     memBufLimit: 60MB
     parser: fluent-bit-extension-otelcol-parser
