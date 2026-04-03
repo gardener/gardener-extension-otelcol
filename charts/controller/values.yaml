@@ -222,7 +222,7 @@ fluentbit:
   # Fluent Bit Plugins image
   # europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.3.0
   pluginImage:
-    name: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.3.0
+    name: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.4.0
     pullPolicy: IfNotPresent
   labels:
   annotations:
