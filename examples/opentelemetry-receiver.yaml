@@ -184,6 +184,32 @@ data:
             auth:
               authenticator: bearertokenauth/server
 
+    connectors:
+      routing:
+        default_pipelines: [logs/string]
+        error_mode: ignore
+        table:
+          - context: log
+            condition: IsMap(body)
+            pipelines: [logs/objects]
+
+    processors:
+      batch: {}
+
+      # For k8s objects — set _msg from map fields
+      transform/objects:
+        log_statements:
+          - context: log
+            statements:
+              - 'set(attributes["_msg"], Concat([body["object"]["metadata"]["namespace"], "/", body["object"]["metadata"]["name"]], ""))'
+
+      # For string logs — _msg = body directly
+      transform/string:
+        log_statements:
+          - context: log
+            statements:
+              - 'set(attributes["_msg"], body)'
+
     exporters:
       debug:
         verbosity: basic
@@ -205,20 +231,22 @@ data:
                     port: 8888
       pipelines:
         metrics:
-          exporters:
-            - debug
-          receivers:
-            - otlp
-        logs:
-          exporters:
-            - debug
-          receivers:
-            - otlp
+          receivers: [otlp]
+          exporters: [debug]
         traces:
-          exporters:
-            - debug
-          receivers:
-            - otlp
+          receivers: [otlp]
+          exporters: [debug]
+        logs/fanin:
+          receivers: [otlp]
+          exporters: [routing]
+        logs/objects:
+          receivers: [routing]
+          processors: [transform/objects, batch]
+          exporters: [debug]
+        logs/string:
+          receivers: [routing]
+          processors: [transform/string, batch]
+          exporters: [debug]
 ---
 apiVersion: v1
 kind: Service

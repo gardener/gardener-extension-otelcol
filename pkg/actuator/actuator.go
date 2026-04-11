@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerfeatures "github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -122,6 +123,22 @@ const (
 	// targetAllocatorConfigMapName is the name of the ConfigMap for the
 	// Target Allocator.
 	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
+
+	// transformEventsProcessorName is the name of the transform processor for
+	// the k8sobjects/events pipeline.
+	transformEventsProcessorName = "transform/events"
+
+	// shootAccessSecretName is the name of the shoot access secret used by the
+	// k8sobjects/events receiver to authenticate to the shoot cluster.
+	shootAccessSecretName = "shoot-access-" + otelCollectorName // #nosec: G101
+
+	// shootManagedResourceName is the name of the ManagedResource that deploys
+	// RBAC into the shoot cluster for the k8sobjects/events receiver.
+	shootManagedResourceName = baseResourceName + "-shoot"
+
+	// volumeNameShootKubeconfig is the volume name for the shoot kubeconfig
+	// projected into the OTel Collector pod for the k8sobjects/events receiver.
+	volumeNameShootKubeconfig = "shoot-kubeconfig"
 
 	// bearertokenauthextension names used by the exporters.
 	baseBearerTokenAuthName         = "bearertokenauth"
@@ -412,6 +429,13 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
+	shootKubeconfigSecretName := extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
+
+	shootAccessSecret := gardenerutils.NewShootAccessSecret(shootAccessSecretName, ex.Namespace)
+	if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
+		return fmt.Errorf("failed reconciling shoot access secret: %w", err)
+	}
+
 	data, err := registry.AddAllAndSerialize(
 		taConfigMap,
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
@@ -426,12 +450,32 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 			clientSecret,
 			cfg,
 			cluster.Shoot.Spec.Resources,
+			shootKubeconfigSecretName,
+			shootAccessSecret.Secret.Name,
 			collectorImage,
 		),
 	)
 
 	if err != nil {
 		return err
+	}
+
+	shootRegistry := managedresources.NewRegistry(
+		kubernetes.ShootScheme,
+		kubernetes.ShootCodec,
+		kubernetes.ShootSerializer,
+	)
+
+	shootData, err := shootRegistry.AddAllAndSerialize(
+		a.getEventsClusterRole(),
+		a.getEventsClusterRoleBinding(shootAccessSecret.ServiceAccountName),
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := managedresources.CreateForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName, Name, false, shootData); err != nil {
+		return fmt.Errorf("failed creating shoot managed resource: %w", err)
 	}
 
 	return managedresources.CreateForSeed(
@@ -458,6 +502,18 @@ func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extension
 		return fmt.Errorf("failed cleaning up secrets managed by secrets manager: %w", err)
 	}
 
+	if err := client.IgnoreNotFound(managedresources.DeleteForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName)); err != nil {
+		return fmt.Errorf("failed deleting shoot managed resource: %w", err)
+	}
+
+	if err := managedresources.WaitUntilDeleted(ctx, a.client, ex.Namespace, shootManagedResourceName); err != nil {
+		return fmt.Errorf("failed waiting for shoot managed resource to be deleted: %w", err)
+	}
+
+	if err := client.IgnoreNotFound(a.client.Delete(ctx, gardenerutils.NewShootAccessSecret(shootAccessSecretName, ex.Namespace).Secret)); err != nil {
+		return fmt.Errorf("failed deleting shoot access secret: %w", err)
+	}
+
 	return client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, a.client, ex.Namespace, managedResourceName))
 }
 
@@ -476,11 +532,20 @@ func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensio
 	return a.Reconcile(ctx, logger, ex)
 }
 
-// Migrate signals the [Actuator] to reconcile the resources managed by it,
+// Migrate signals the [Actuator] to migrate the resources managed by it,
 // because of a shoot control-plane migration event. This method implements the
 // [extension.Actuator] interface.
+//
+// Shoot-scoped resources (RBAC) must be preserved on the shoot cluster so the
+// target seed can pick them up after migration. SetKeepObjects prevents the
+// ManagedResource controller from deleting them when the ManagedResource is
+// removed from the old seed.
 func (a *Actuator) Migrate(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	return a.Reconcile(ctx, logger, ex)
+	if err := managedresources.SetKeepObjects(ctx, a.client, ex.Namespace, shootManagedResourceName, true); err != nil {
+		return fmt.Errorf("failed setting keep-objects on shoot managed resource: %w", err)
+	}
+
+	return a.Delete(ctx, logger, ex)
 }
 
 func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, namespace string) (secretsmanager.Interface, error) {
@@ -995,6 +1060,8 @@ func (a *Actuator) getOtelCollector(
 	caSecret, clientSecret *corev1.Secret,
 	cfg config.CollectorConfig,
 	resources []gardencorev1beta1.NamedResourceReference,
+	shootKubeconfigSecretName string,
+	accessSecretName string,
 	image *imagevectorutils.Image,
 ) *otelv1beta1.OpenTelemetryCollector {
 	const (
@@ -1051,11 +1118,17 @@ func (a *Actuator) getOtelCollector(
 				VolumeMounts: []corev1.VolumeMount{
 					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
 					{Name: volumeNameClientCertificate, MountPath: volumeMountPathClientCertificate, ReadOnly: true},
+					{Name: volumeNameShootKubeconfig, MountPath: gardenerutils.VolumeMountPathGenericKubeconfig, ReadOnly: true},
 				},
 				Volumes: []corev1.Volume{
 					{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
 					{Name: volumeNameClientCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: clientSecret.Name}}},
+					gardenerutils.GenerateGenericKubeconfigVolume(shootKubeconfigSecretName, accessSecretName, volumeNameShootKubeconfig),
 				},
+				Env: []corev1.EnvVar{{
+					Name:  "KUBECONFIG",
+					Value: gardenerutils.PathGenericKubeconfig,
+				}},
 				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -1100,6 +1173,16 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 						},
+						"k8sobjects/events": map[string]any{
+							"auth_type": "kubeConfig",
+							"objects": []any{
+								map[string]any{
+									"name":  "events",
+									"group": "events.k8s.io",
+									"mode":  "watch",
+								},
+							},
+						},
 					},
 				},
 				Processors: &otelv1beta1.AnyConfig{
@@ -1121,6 +1204,16 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{"key": "k8s.cluster.name", "value": clusterName, "action": "upsert"},
 								map[string]any{"key": "gardener.project.name", "value": projectName, "action": "upsert"},
 								map[string]any{"key": "gardener.shoot.name", "value": shootName, "action": "upsert"},
+							},
+						},
+						transformEventsProcessorName: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`delete_key(body["object"]["metadata"], "managedFields")`,
+									},
+								},
 							},
 						},
 					},
@@ -1156,6 +1249,11 @@ func (a *Actuator) getOtelCollector(
 						"logs": {
 							Receivers:  []string{"otlp"},
 							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+							Exporters:  exporterNames,
+						},
+						"logs/events": {
+							Receivers:  []string{"k8sobjects/events"},
+							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
 							Exporters:  exporterNames,
 						},
 						"metrics": {
@@ -1212,6 +1310,43 @@ func (a *Actuator) getOtelCollector(
 	)
 
 	return obj
+}
+
+// getEventsClusterRole returns the [rbacv1.ClusterRole] granting the OTel
+// Collector's service account in the shoot cluster permission to list and watch
+// events from the events.k8s.io API group.
+func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: otelCollectorName,
+		},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups: []string{"events.k8s.io"},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch"},
+		}},
+	}
+}
+
+// getEventsClusterRoleBinding returns the [rbacv1.ClusterRoleBinding] that
+// binds the events ClusterRole to the OTel Collector's service account in the
+// shoot cluster's kube-system namespace.
+func (a *Actuator) getEventsClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: otelCollectorName,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     otelCollectorName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
 }
 
 func secretNameForResource(resourceName string, resources []gardencorev1beta1.NamedResourceReference) string {
