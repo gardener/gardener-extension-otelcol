@@ -153,9 +153,8 @@ func NewShootValidatorWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, 
 	logger.Info("setting up webhook", "name", name, "path", path, "label", extensionLabel)
 
 	args := extensionswebhook.Args{
-		Provider: validator.extensionType,
-		Name:     name,
-		Path:     path,
+		Name: name,
+		Path: path,
 		Validators: map[extensionswebhook.Validator][]extensionswebhook.Type{
 			validator: {{Obj: &core.Shoot{}}},
 		},
