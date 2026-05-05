@@ -214,157 +214,6 @@ you setup a [development Gardener environment](https://gardener.cloud/docs/garde
 Please refer to the next sections for more information about deploying and
 testing the extension in a Gardener development environment.
 
-## Development Environment without Gardener Operator
-
-The following documents describe how to create a Gardener development
-environment locally. Please make sure to read them in order to familiarize
-yourself with the setup, and also to install any prerequisites.
-
-- [Gardener: Local setup requirements](https://gardener.cloud/docs/gardener/local_setup/)
-- [Gardener: Getting Started Locally](https://gardener.cloud/docs/gardener/deployment/getting_started_locally/)
-
-The steps from this section describe how to deploy and develop the extension
-against a local development environment, without the
-[Gardener Operator](https://gardener.cloud/docs/gardener/concepts/operator/).
-
-In summary, these are the steps you need to follow in order to start a local
-development Gardener environment, however, please make sure that you read the
-documents above for additional details.
-
-``` shell
-make kind-up gardener-up
-```
-
-Before you continue with the next steps, make sure that you configure your
-`KUBECONFIG` to point to the kubeconfig file created by Gardener for you.
-
-This file will be located in the
-`/path/to/gardener/example/gardener-local/kind/local/kubeconfig` path after
-creating the dev environment.
-
-``` shell
-export KUBECONFIG=/path/to/gardener/example/gardener-local/kind/local/kubeconfig
-```
-
-In the [examples/dev-setup](./examples/dev-setup) directory you can find
-[kustomize](https://kustomize.io/]) resources, which can be used to create the
-`ControllerDeployment` and `ControllerRegistration` resources.
-
-For more information about `ControllerDeployment` and `ControllerRegistration`
-resources, please make sure to check the
-[Registering Extension Controllers](https://gardener.cloud/docs/gardener/extensions/registration/)
-documentation.
-
-The `deploy` target takes care of deploying your extension in a local Gardener
-environment. It does the following.
-
-1. Builds a Docker image of the extension
-2. Loads the image into the `kind` cluster nodes
-3. Packages the Helm charts and pushes them to the local registry
-4. Deploys the `ControllerDeployment` and `ControllerRegistration` resources
-
-``` shell
-make deploy
-```
-
-Verify that we have successfully created the `ControllerDeployment` and
-`ControllerRegistration` resources.
-
-``` shell
-$ kubectl get controllerregistrations,controllerdeployments otelcol
-NAME                                                 RESOURCES           AGE
-controllerregistration.core.gardener.cloud/otelcol   Extension/otelcol   108s
-
-NAME                                               AGE
-controllerdeployment.core.gardener.cloud/otelcol   108s
-```
-
-Finally, we can create an example shoot with our extension enabled. The
-[examples/shoot.yaml](./examples/shoot.yaml) file provides a ready-to-use shoot
-manifest with the extension enabled and configured.
-
-The provided example shoot references secrets from the project namespace, which
-are used to configure the TLS settings between the exporter and a local dev
-receiver, running in the `default` namespace.
-
-The following command will create the TLS secrets, a dev OpenTelemetry receiver
-in the `default` namespace, and a dev shoot, configured with the extension.
-
-``` shell
-make create-dev-shoot
-```
-
-If you have an already existing and running shoot, for which you want to enable
-the extension, simply follow the instructions from the previous section in order
-to enable and configure the extension manually.
-
-Once we create the shoot cluster, `gardenlet` will start deploying our
-`gardener-extension-otelcol`, since it is required by our shoot.
-
-Verify that the extension has been successfully installed by checking the
-corresponding `ControllerInstallation` resource.
-
-``` shell
-$ kubectl get controllerinstallations
-NAME                      REGISTRATION        SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
-otelcol-clnw7             otelcol             local   True    True        True      False         91s
-```
-
-After your shoot cluster has been successfully created and reconciled, verify
-that the extension resource in the shoot control-plane namespace is healthy.
-
-``` shell
-$ kubectl --namespace shoot--local--local get extensions
-NAME      TYPE      STATUS      AGE
-otelcol   otelcol   Succeeded   85m
-```
-
-Verify that the
-[ManagedResource](https://gardener.cloud/docs/gardener/concepts/resource-manager/)
-created by the extension is healthy as well.
-
-``` shell
-$ kubectl --namespace shoot--local--local get managedresource external-otelcol
-NAME               CLASS   APPLIED   HEALTHY   PROGRESSING   AGE
-external-otelcol   seed    True      True      False         2m7s
-```
-
-After successful reconciliation we should see the following OpenTelemetry
-collectors in the shoot control-plane namespace.
-
-``` shell
-$ kubectl --namespace shoot--local--local get otelcol external-otelcol
-NAME                      MODE          VERSION   READY   AGE     IMAGE                                                                                                                          MANAGEMENT
-external-otelcol          statefulset   0.141.0   1/1     6m45s   europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.141.0   managed
-```
-
-We should also see that the Collector and Target Allocator are running and are
-healthy.
-
-``` shell
-$ kubectl --namespace shoot--local--local get sts external-otelcol-collector
-NAME                         READY   AGE
-external-otelcol-collector   1/1     8m34s
-
-$ kubectl --namespace shoot--local--local get deployment external-otelcol-targetallocator
-NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
-external-otelcol-targetallocator   1/1     1            1           8m40s
-```
-
-In order to trigger reconciliation of the extension you can annotate the
-extension resource.
-
-``` shell
-kubectl --namespace shoot--local--local annotate extensions otelcol gardener.cloud/operation=reconcile
-```
-
-In order to delete the dev shoot, TLS secrets and dev OpenTelemetry receiver you
-can run the following command.
-
-``` shell
-make delete-dev-shoot
-```
-
 ## Development Environment with Gardener Operator
 
 The extension can also be deployed via the
@@ -374,14 +223,14 @@ In order to start a local development environment with the Gardener Operator,
 please refer to the following documentations.
 
 - [Gardener Operator](https://gardener.cloud/docs/gardener/concepts/operator/)
-- [Gardener: Local setup with gardener-operator](https://gardener.cloud/docs/gardener/deployment/getting_started_locally/#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator)
+- [Gardener: Deploying Gardener Locally](https://gardener.cloud/docs/gardener/deployment/getting_started_locally/)
 
 In summary, these are the steps you need to follow in order to start a local
 development environment with the [Gardener Operator](https://gardener.cloud/docs/gardener/concepts/operator/),
 however, please make sure that you read the documents above for additional details.
 
 ``` shell
-make kind-multi-zone-up operator-up operator-seed-up
+make kind-up gardener-up
 ```
 
 Before you continue with the next steps, make sure that you configure your
@@ -671,6 +520,7 @@ run the following command.
 ``` shell
 make check-examples
 ```
+
 # Documentation
 
 Make sure to check the following documents for more information about Gardener
