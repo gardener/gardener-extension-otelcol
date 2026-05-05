@@ -11,4 +11,4 @@ images:
 - name: otel-targetallocator
   sourceRepository: https://github.com/open-telemetry/opentelemetry-operator
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-operator/target-allocator
-  tag: "v0.144.0"
+  tag: "v0.150.0"
