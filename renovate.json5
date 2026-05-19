@@ -8,5 +8,13 @@
   ],
   "postUpdateOptions": [
     "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "groupName": "otel-collector",
+      "groupSlug": "otel-collector",
+      "matchManagers": ["gomod"],
+      "matchPackagePrefixes": ["go.opentelemetry.io/collector/"]
+    }
   ]
 }
