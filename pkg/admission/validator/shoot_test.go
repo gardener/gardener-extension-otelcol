@@ -24,6 +24,8 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
+const localName = "local"
+
 var _ = Describe("Shoot Validator", Ordered, func() {
 	var (
 		ctx                = context.TODO()
@@ -66,15 +68,15 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 		shoot = &core.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "local",
+				Name:      localName,
 				Namespace: projectNamespace.Name,
 			},
 			Spec: core.ShootSpec{
-				SeedName: new("local"),
+				SeedName: new(localName),
 				Provider: core.Provider{
-					Type: "local",
+					Type: localName,
 				},
-				Region: "local",
+				Region: localName,
 			},
 		}
 	})

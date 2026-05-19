@@ -36,6 +36,10 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/mgr"
 )
 
+// defaultExtensionName is the default value for the --extension-name flag and
+// derived flag defaults (heartbeat namespace, leader election).
+const defaultExtensionName = "gardener-extension-otelcol"
+
 // flags stores the manager flags as provided from the command-line
 type flags struct {
 	extensionName             string
@@ -154,7 +158,7 @@ func New() *cli.Command {
 			&cli.StringFlag{
 				Name:        "extension-name",
 				Usage:       "name of the gardener extension",
-				Value:       "gardener-extension-otelcol",
+				Value:       defaultExtensionName,
 				Sources:     cli.EnvVars("EXTENSION_NAME"),
 				Destination: &flags.extensionName,
 			},
@@ -188,7 +192,7 @@ func New() *cli.Command {
 			&cli.StringFlag{
 				Name:        "heartbeat-namespace",
 				Usage:       "namespace to use for the heartbeat lease",
-				Value:       "gardener-extension-otelcol",
+				Value:       defaultExtensionName,
 				Sources:     cli.EnvVars("HEARTBEAT_NAMESPACE"),
 				Destination: &flags.heartbeatNamespace,
 			},
@@ -209,7 +213,7 @@ func New() *cli.Command {
 			&cli.StringFlag{
 				Name:        "leader-election-namespace",
 				Usage:       "namespace to use for the leader election lease",
-				Value:       "gardener-extension-otelcol",
+				Value:       defaultExtensionName,
 				Sources:     cli.EnvVars("LEADER_ELECTION_NAMESPACE"),
 				Destination: &flags.leaderElectionNamespace,
 			},
