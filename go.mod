@@ -6,7 +6,7 @@ require (
 	github.com/gardener/gardener v1.142.1
 	github.com/gardener/gardener/pkg/apis v1.142.1
 	github.com/go-logr/logr v1.4.3
-	github.com/onsi/ginkgo/v2 v2.28.3
+	github.com/onsi/ginkgo/v2 v2.29.0
 	github.com/onsi/gomega v1.40.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.8.0
