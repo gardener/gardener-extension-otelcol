@@ -24,6 +24,8 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
+const localName = "local"
+
 var _ = Describe("Actuator", Ordered, func() {
 	var (
 		// The serialized objects
@@ -59,38 +61,38 @@ var _ = Describe("Actuator", Ordered, func() {
 		}
 		cloudProfile = &corev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "local",
+				Name: localName,
 			},
 			Spec: corev1beta1.CloudProfileSpec{
-				Type: "local",
+				Type: localName,
 			},
 		}
 		seed = &corev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "local",
+				Name: localName,
 			},
 			Spec: corev1beta1.SeedSpec{
 				Ingress: &corev1beta1.Ingress{
 					Domain: "ingress.local.seed.local.gardener.cloud",
 				},
 				Provider: corev1beta1.SeedProvider{
-					Type:   "local",
-					Region: "local",
+					Type:   localName,
+					Region: localName,
 					Zones:  []string{"0"},
 				},
 			},
 		}
 		shoot = &corev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "local",
+				Name:      localName,
 				Namespace: projectNamespace.Name,
 			},
 			Spec: corev1beta1.ShootSpec{
-				SeedName: new("local"),
+				SeedName: new(localName),
 				Provider: corev1beta1.Provider{
-					Type: "local",
+					Type: localName,
 				},
-				Region: "local",
+				Region: localName,
 			},
 		}
 	)
