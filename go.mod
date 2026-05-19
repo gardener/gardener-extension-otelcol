@@ -10,8 +10,8 @@ require (
 	github.com/onsi/gomega v1.41.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v3 v3.9.0
-	go.opentelemetry.io/collector/processor/batchprocessor v0.152.0
-	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.152.0
+	go.opentelemetry.io/collector/processor/batchprocessor v0.152.1
+	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.152.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	k8s.io/api v0.36.1
 	k8s.io/apiextensions-apiserver v0.36.1
@@ -162,21 +162,21 @@ require (
 	go.opentelemetry.io/collector/client v1.58.0 // indirect
 	go.opentelemetry.io/collector/component v1.58.0 // indirect
 	go.opentelemetry.io/collector/consumer v1.58.0 // indirect
-	go.opentelemetry.io/collector/consumer/consumererror v0.152.0 // indirect
-	go.opentelemetry.io/collector/consumer/xconsumer v0.152.0 // indirect
+	go.opentelemetry.io/collector/consumer/consumererror v0.152.1 // indirect
+	go.opentelemetry.io/collector/consumer/xconsumer v0.152.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.58.0 // indirect
-	go.opentelemetry.io/collector/internal/componentalias v0.152.0 // indirect
-	go.opentelemetry.io/collector/internal/memorylimiter v0.152.0 // indirect
-	go.opentelemetry.io/collector/internal/telemetry v0.152.0 // indirect
+	go.opentelemetry.io/collector/internal/componentalias v0.152.1 // indirect
+	go.opentelemetry.io/collector/internal/memorylimiter v0.152.1 // indirect
+	go.opentelemetry.io/collector/internal/telemetry v0.152.1 // indirect
 	go.opentelemetry.io/collector/pdata v1.58.0 // indirect
-	go.opentelemetry.io/collector/pdata/pprofile v0.152.0 // indirect
-	go.opentelemetry.io/collector/pdata/xpdata v0.152.0 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.152.1 // indirect
+	go.opentelemetry.io/collector/pdata/xpdata v0.152.1 // indirect
 	go.opentelemetry.io/collector/pipeline v1.58.0 // indirect
-	go.opentelemetry.io/collector/pipeline/xpipeline v0.152.0 // indirect
+	go.opentelemetry.io/collector/pipeline/xpipeline v0.152.1 // indirect
 	go.opentelemetry.io/collector/processor v1.58.0 // indirect
-	go.opentelemetry.io/collector/processor/processorhelper v0.152.0 // indirect
-	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.152.0 // indirect
-	go.opentelemetry.io/collector/processor/xprocessor v0.152.0 // indirect
+	go.opentelemetry.io/collector/processor/processorhelper v0.152.1 // indirect
+	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.152.1 // indirect
+	go.opentelemetry.io/collector/processor/xprocessor v0.152.1 // indirect
 	go.opentelemetry.io/contrib/otelconf v0.23.0 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.19.0 // indirect
