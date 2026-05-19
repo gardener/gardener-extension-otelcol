@@ -164,10 +164,34 @@ const (
 
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
+
+	// labelKeyComponent is the standard kubernetes app component label key.
+	labelKeyComponent = "app.kubernetes.io/component"
+	// labelValueTargetAllocator is the component label value identifying the
+	// Target Allocator workload.
+	labelValueTargetAllocator = "opentelemetry-targetallocator"
+
+	// keys used in OTel/Target Allocator config maps.
+	configKeyEnabled    = "enabled"
+	configKeyEndpoint   = "endpoint"
+	configKeyPrometheus = "prometheus"
+	// labelValuePrometheusShoot is the value used for the `prometheus` label on
+	// service monitors that should be scraped in the shoot.
+	labelValuePrometheusShoot = "shoot"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
 var readVerbs = []string{"get", "list", "watch"}
+
+// upsertAttribute returns an OTel resourceprocessor `attributes` entry that
+// adds (or overwrites) the given key/value on the resource.
+func upsertAttribute(key string, value any) map[string]any {
+	return map[string]any{
+		"key":    key,
+		"value":  value,
+		"action": "upsert",
+	}
+}
 
 // Actuator is an implementation of [extension.Actuator].
 type Actuator struct {
@@ -638,7 +662,7 @@ func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Serv
 				TargetPort: intstr.FromInt32(targetAllocatorHTTPSPort),
 			}},
 			Selector: map[string]string{
-				"app.kubernetes.io/component": "opentelemetry-targetallocator",
+				labelKeyComponent: labelValueTargetAllocator,
 			},
 		},
 	}
@@ -653,7 +677,7 @@ func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.Config
 		"collector_namespace":              namespace,
 		"collector_selector": map[string]any{
 			"matchLabels": map[string]any{
-				"app.kubernetes.io/component":  "opentelemetry-collector",
+				labelKeyComponent:              "opentelemetry-collector",
 				"app.kubernetes.io/instance":   fmt.Sprintf("%s.%s", namespace, baseResourceName),
 				"app.kubernetes.io/managed-by": "opentelemetry-operator",
 				"app.kubernetes.io/name":       fmt.Sprintf("%s-collector", baseResourceName),
@@ -662,7 +686,7 @@ func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.Config
 		},
 		"filter_strategy": "relabel-config",
 		"prometheus_cr": map[string]any{
-			"enabled":                true,
+			configKeyEnabled:         true,
 			"allow_namespaces":       []string{namespace},
 			"scrape_interval":        30 * time.Second,
 			"scrape_config_selector": nil,
@@ -671,7 +695,7 @@ func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.Config
 			"deny_namespaces":        nil,
 			"service_monitor_selector": map[string]any{
 				"matchLabels": map[string]any{
-					"prometheus": "shoot",
+					configKeyPrometheus: labelValuePrometheusShoot,
 				},
 			},
 		},
@@ -794,7 +818,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
 		map[string]string{
-			"app.kubernetes.io/component": "opentelemetry-targetallocator",
+			labelKeyComponent: labelValueTargetAllocator,
 		},
 	)
 
@@ -899,7 +923,7 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 	//
 	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
 	if cfg.Endpoint != "" {
-		exporter["endpoint"] = cfg.Endpoint
+		exporter[configKeyEndpoint] = cfg.Endpoint
 	}
 
 	if cfg.TracesEndpoint != "" {
@@ -927,7 +951,7 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 	// Retry on Failure settings
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
-			"enabled":          *cfg.RetryOnFailure.Enabled,
+			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
 			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
 			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
 			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
@@ -972,7 +996,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 	//
 	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
 	exporter := map[string]any{
-		"endpoint":          cfg.Endpoint,
+		configKeyEndpoint:   cfg.Endpoint,
 		"read_buffer_size":  cfg.ReadBufferSize,
 		"write_buffer_size": cfg.WriteBufferSize,
 		"timeout":           cfg.Timeout.String(),
@@ -982,7 +1006,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 	// Retry on Failure settings
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
-			"enabled":          *cfg.RetryOnFailure.Enabled,
+			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
 			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
 			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
 			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
@@ -1152,15 +1176,15 @@ func (a *Actuator) getOtelCollector(
 						"otlp": map[string]any{
 							"protocols": map[string]any{
 								"grpc": map[string]any{
-									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
+									configKeyEndpoint: fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
 								},
 							},
 						},
-						"prometheus": map[string]any{
+						configKeyPrometheus: map[string]any{
 							"target_allocator": map[string]any{
-								"collector_id": "${POD_NAME}",
-								"endpoint":     "https://" + targetAllocatorHTTPSServiceName,
-								"interval":     "30s",
+								"collector_id":    "${POD_NAME}",
+								configKeyEndpoint: "https://" + targetAllocatorHTTPSServiceName,
+								"interval":        "30s",
 								"tls": map[string]any{
 									"ca_file":   filepath.Join(volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
 									"cert_file": filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyCertificate),
@@ -1204,9 +1228,9 @@ func (a *Actuator) getOtelCollector(
 						},
 						resourceProcessorName: map[string]any{
 							"attributes": []any{
-								map[string]any{"key": "k8s.cluster.name", "value": clusterName, "action": "upsert"},
-								map[string]any{"key": "gardener.project.name", "value": projectName, "action": "upsert"},
-								map[string]any{"key": "gardener.shoot.name", "value": shootName, "action": "upsert"},
+								upsertAttribute("k8s.cluster.name", clusterName),
+								upsertAttribute("gardener.project.name", projectName),
+								upsertAttribute("gardener.shoot.name", shootName),
 							},
 						},
 						transformEventsProcessorName: map[string]any{
@@ -1233,7 +1257,7 @@ func (a *Actuator) getOtelCollector(
 									map[string]any{
 										"pull": map[string]any{
 											"exporter": map[string]any{
-												"prometheus": map[string]any{
+												configKeyPrometheus: map[string]any{
 													"host": "0.0.0.0",
 													"port": otelCollectorMetricsPort,
 												},
