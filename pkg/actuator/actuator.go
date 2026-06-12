@@ -975,6 +975,8 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 			tlsConfig["key_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
 		}
 
+		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
+
 		exporter["tls"] = tlsConfig
 	}
 
@@ -1029,6 +1031,8 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 		if tls.Key != nil {
 			tlsConfig["key_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
 		}
+
+		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
 
 		exporter["tls"] = tlsConfig
 	}
