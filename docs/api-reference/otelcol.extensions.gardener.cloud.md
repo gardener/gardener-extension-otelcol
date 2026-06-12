@@ -365,5 +365,6 @@ _Appears in:_
 | `ca` _[ResourceReference](#resourcereference)_ | CA references the CA certificate to use for verifying the server certificate.<br />For a client this verifies the server certificate.<br />For a server this verifies client certificates.<br />If empty uses system root CA. |  | Optional: \{\} <br /> |
 | `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  | Optional: \{\} <br /> |
 | `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  | Optional: \{\} <br /> |
+| `reloadInterval` _[Duration](#duration)_ | ReloadInterval specifies mTLS key and cert reload interval<br />from mounted secret volume | <nil> | Optional: \{\} <br /> |
 
 
