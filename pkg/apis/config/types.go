@@ -348,6 +348,9 @@ type TLSConfig struct {
 	Cert *ResourceReference
 	// Key references the client key to use for TLS required connections.
 	Key *ResourceReference
+	// ReloadInterval specifies the duration after which the certificate will be reloaded.
+	// If not set, it will never be reloaded
+	ReloadInterval time.Duration
 }
 
 // ResourceReference references data from a Secret.

@@ -29,6 +29,9 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 			var ptrVar1 bool = false
 			in.Spec.Exporters.OTLPGRPCExporter.TLS.InsecureSkipVerify = &ptrVar1
 		}
+		if in.Spec.Exporters.OTLPGRPCExporter.TLS.ReloadInterval == 0 {
+			in.Spec.Exporters.OTLPGRPCExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
+		}
 	}
 	if in.Spec.Exporters.OTLPGRPCExporter.Timeout == 0 {
 		in.Spec.Exporters.OTLPGRPCExporter.Timeout = time.Duration(DefaultGRPCExporterClientTimeout)
@@ -66,6 +69,9 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 		if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
 			var ptrVar1 bool = false
 			in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+		}
+		if in.Spec.Exporters.OTLPHTTPExporter.TLS.ReloadInterval == 0 {
+			in.Spec.Exporters.OTLPHTTPExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
 		}
 	}
 	if in.Spec.Exporters.OTLPHTTPExporter.Timeout == 0 {

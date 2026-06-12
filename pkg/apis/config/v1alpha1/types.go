@@ -134,6 +134,14 @@ const (
 	// DefaultGRPCExporterClientWriteBufferSize specifies the default
 	// WriteBufferSize for the gRPC client used by the exporters.
 	DefaultGRPCExporterClientWriteBufferSize = 32 * 1024
+
+	// DefaultTLSReloadInterval specifies the default interval at which the
+	// OTel Collector re-reads TLS material (CA, client cert, client key)
+	// from disk. Without it, the collector loads the certs once at startup
+	// and keeps using the in-memory copy even after the backing Secret is
+	// rotated, leading to handshake failures with an expired client cert
+	// until the pod is restarted.
+	DefaultTLSReloadInterval = 30 * time.Second
 )
 
 // RetryOnFailureConfig provides the retry policy for an exporter.
@@ -473,6 +481,12 @@ type TLSConfig struct {
 	//
 	// +k8s:optional
 	Key *ResourceReference `json:"key,omitempty"`
+	// ReloadInterval specifies mTLS key and cert reload interval
+	// from mounted secret volume
+	//
+	// +k8s:optional
+	// +default=ref(DefaultTLSReloadInterval)
+	ReloadInterval time.Duration `json:"reloadInterval,omitzero"`
 }
 
 // ResourceReference references data from a Secret.

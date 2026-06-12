@@ -473,6 +473,7 @@ func autoConvert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *conf
 	out.CA = (*config.ResourceReference)(unsafe.Pointer(in.CA))
 	out.Cert = (*config.ResourceReference)(unsafe.Pointer(in.Cert))
 	out.Key = (*config.ResourceReference)(unsafe.Pointer(in.Key))
+	out.ReloadInterval = time.Duration(in.ReloadInterval)
 	return nil
 }
 
@@ -486,6 +487,7 @@ func autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, ou
 	out.CA = (*ResourceReference)(unsafe.Pointer(in.CA))
 	out.Cert = (*ResourceReference)(unsafe.Pointer(in.Cert))
 	out.Key = (*ResourceReference)(unsafe.Pointer(in.Key))
+	out.ReloadInterval = time.Duration(in.ReloadInterval)
 	return nil
 }
 
