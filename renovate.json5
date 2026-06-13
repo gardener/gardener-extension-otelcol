@@ -1,20 +1,24 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
   ],
   labels: [
-    "kind/enhancement",
+    'kind/enhancement',
   ],
-  "postUpdateOptions": [
-    "gomodTidy"
+  postUpdateOptions: [
+    'gomodTidy',
   ],
-  "packageRules": [
+  packageRules: [
     {
-      "groupName": "otel-collector",
-      "groupSlug": "otel-collector",
-      "matchManagers": ["gomod"],
-      "matchPackagePrefixes": ["go.opentelemetry.io/collector/"]
-    }
-  ]
+      groupName: 'otel-collector',
+      groupSlug: 'otel-collector',
+      matchManagers: [
+        'gomod',
+      ],
+      matchPackageNames: [
+        'go.opentelemetry.io/collector/{/,}**',
+      ],
+    },
+  ],
 }
