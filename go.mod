@@ -7,7 +7,7 @@ require (
 	github.com/gardener/gardener/pkg/apis v1.144.1
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.31.0
-	github.com/onsi/gomega v1.41.0
+	github.com/onsi/gomega v1.42.0
 	github.com/prometheus/client_golang v1.23.3-0.20260602051030-3537b20ac86b
 	github.com/urfave/cli/v3 v3.10.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.154.0
