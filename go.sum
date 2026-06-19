@@ -415,8 +415,8 @@ github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0 h
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0/go.mod h1:Gfzi4500QCMnptFIQc8YdDi8YZ4QA0vs22LROWZ3+YU=
 github.com/prometheus/alertmanager v0.29.0 h1:/ET4NmAGx2Dv9kStrXIBqBgHyiSgIk4OetY+hoZRfgc=
 github.com/prometheus/alertmanager v0.29.0/go.mod h1:SjI2vhrfdWg10UaRUxTz27rgdJVG3HXrhI5WFjCdBgs=
-github.com/prometheus/client_golang v1.23.3-0.20260602051030-3537b20ac86b h1:QNV54DNcRqdeECNdEXiOqTmI75w2rlZtOq5rt8RKhVo=
-github.com/prometheus/client_golang v1.23.3-0.20260602051030-3537b20ac86b/go.mod h1:kPaff19KETV3GKIZJehgPmlA2Di3jNeWdgKA9RpObuU=
+github.com/prometheus/client_golang v1.23.3-0.20260619092734-443f1ce2973b h1:5Sf1my3CfUYQG9mRB5AclFXzbtXPQGFf0FRawzFIwkw=
+github.com/prometheus/client_golang v1.23.3-0.20260619092734-443f1ce2973b/go.mod h1:kPaff19KETV3GKIZJehgPmlA2Di3jNeWdgKA9RpObuU=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
 github.com/prometheus/client_model v0.6.2/go.mod h1:y3m2F6Gdpfy6Ut/GBsUqTWZqCUvMVzSfMLjcu6wAwpE=
