@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.42.1
-	github.com/prometheus/client_golang v1.23.3-0.20260621222812-74560058a7af
+	github.com/prometheus/client_golang v1.23.3-0.20260624042014-28914d017fba
 	github.com/urfave/cli/v3 v3.10.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.154.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.154.0
@@ -135,7 +135,7 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0 // indirect
 	github.com/prometheus/alertmanager v0.29.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.68.0 // indirect
+	github.com/prometheus/common v0.69.0 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/prometheus/sigv4 v0.4.0 // indirect
