@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
-	github.com/prometheus/client_golang v1.23.3-0.20260706085648-2c6e6c1dea77
+	github.com/prometheus/client_golang v1.23.3-0.20260716094704-78262a77b899
 	github.com/urfave/cli/v3 v3.10.1
 	go.opentelemetry.io/collector/processor/batchprocessor v0.156.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.156.0
