@@ -3,7 +3,7 @@ module github.com/gardener/gardener-extension-otelcol
 go 1.26.0
 
 require (
-	github.com/gardener/gardener v1.144.1
+	github.com/gardener/gardener v1.147.1
 	github.com/gardener/gardener/pkg/apis v1.145.0
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.32.0
