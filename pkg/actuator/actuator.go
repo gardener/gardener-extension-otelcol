@@ -1084,6 +1084,47 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 	return clusterName, projectName, shootName
 }
 
+// buildPipelines returns the collector service pipelines for the signals
+// enabled by cfg. Receivers are always defined (see [Actuator.getOtelCollector]);
+// only the pipelines are gated here.
+func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[string]*otelv1beta1.Pipeline {
+	signals := cfg.Spec.Signals
+	if len(signals) == 0 {
+		signals = []config.SignalType{
+			config.SignalLogs,
+			config.SignalEvents,
+			config.SignalMetrics,
+		}
+	}
+	pipelines := map[string]*otelv1beta1.Pipeline{}
+
+	if slices.Contains(signals, config.SignalLogs) {
+		pipelines["logs"] = &otelv1beta1.Pipeline{
+			Receivers:  []string{"otlp"},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	if slices.Contains(signals, config.SignalEvents) {
+		pipelines["logs/events"] = &otelv1beta1.Pipeline{
+			Receivers:  []string{"k8sobjects/events"},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	if slices.Contains(signals, config.SignalMetrics) {
+		pipelines["metrics"] = &otelv1beta1.Pipeline{
+			Receivers:  []string{"prometheus"},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	return pipelines
+}
+
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(
@@ -1276,23 +1317,7 @@ func (a *Actuator) getOtelCollector(
 							},
 						},
 					},
-					Pipelines: map[string]*otelv1beta1.Pipeline{
-						"logs": {
-							Receivers:  []string{"otlp"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-						"logs/events": {
-							Receivers:  []string{"k8sobjects/events"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-						"metrics": {
-							Receivers:  []string{"prometheus"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-					},
+					Pipelines: buildPipelines(cfg, exporterNames),
 				},
 			},
 		},

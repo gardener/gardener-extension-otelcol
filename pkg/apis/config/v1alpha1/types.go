@@ -34,6 +34,22 @@ const (
 	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
 )
 
+// SignalType identifies a telemetry signal the collector can collect and
+// export.
+//
+// +k8s:enum
+type SignalType string
+
+const (
+	// SignalLogs is the signal for logs received via OTLP.
+	SignalLogs SignalType = "logs"
+	// SignalEvents is the signal for Kubernetes events collected from the
+	// shoot cluster.
+	SignalEvents SignalType = "events"
+	// SignalMetrics is the signal for metrics scraped via Prometheus.
+	SignalMetrics SignalType = "metrics"
+)
+
 // LogLevel specifies the minimum enabled logging level for the collector.
 //
 // See the link below for more details.
@@ -447,6 +463,17 @@ type CollectorConfigSpec struct {
 	//
 	// +k8s:optional
 	Metrics CollectorMetricsConfig `json:"metrics,omitzero"`
+
+	// Signals lists the telemetry signals the collector should collect and
+	// export. Valid values are "logs", "events" and "metrics". If empty, all
+	// signals are enabled.
+	//
+	// When a signal is omitted, its pipeline is not created. The corresponding
+	// receiver is still defined, which the collector reports as an unused
+	// component in its logs; this is expected and harmless.
+	//
+	// +k8s:optional
+	Signals []SignalType `json:"signals,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -7,6 +7,8 @@ package actuator
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
 var _ = Describe("parseShootNamespaceAttributes", func() {
@@ -34,4 +36,52 @@ var _ = Describe("parseShootNamespaceAttributes", func() {
 			"shoot--local", "", "",
 		),
 	)
+})
+
+var _ = Describe("signal selection", func() {
+	configWithSignals := func(signals ...config.SignalType) config.CollectorConfig {
+		return config.CollectorConfig{
+			Spec: config.CollectorConfigSpec{
+				Signals: signals,
+			},
+		}
+	}
+
+	DescribeTable("buildPipelines includes exactly the pipelines for the enabled signals",
+		func(cfg config.CollectorConfig, wantPipelines []string) {
+			pipelines := buildPipelines(cfg, []string{"debug"})
+			Expect(pipelines).To(HaveLen(len(wantPipelines)))
+			for _, name := range wantPipelines {
+				Expect(pipelines).To(HaveKey(name))
+			}
+		},
+		Entry("empty selection enables all pipelines",
+			configWithSignals(),
+			[]string{"logs", "logs/events", "metrics"},
+		),
+		Entry("metrics only",
+			configWithSignals(config.SignalMetrics),
+			[]string{"metrics"},
+		),
+		Entry("logs and events only",
+			configWithSignals(config.SignalLogs, config.SignalEvents),
+			[]string{"logs", "logs/events"},
+		),
+		Entry("events only",
+			configWithSignals(config.SignalEvents),
+			[]string{"logs/events"},
+		),
+	)
+
+	It("wires the enabled receivers and exporters into each pipeline", func() {
+		pipelines := buildPipelines(configWithSignals(), []string{"debug", "otlp_http"})
+
+		Expect(pipelines["logs"].Receivers).To(Equal([]string{"otlp"}))
+		Expect(pipelines["logs/events"].Receivers).To(Equal([]string{"k8sobjects/events"}))
+		Expect(pipelines["metrics"].Receivers).To(Equal([]string{"prometheus"}))
+
+		for _, p := range pipelines {
+			Expect(p.Exporters).To(Equal([]string{"debug", "otlp_http"}))
+		}
+	})
 })

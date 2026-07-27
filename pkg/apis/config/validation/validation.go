@@ -195,5 +195,34 @@ func Validate(cfg config.CollectorConfig) error {
 		}
 	}
 
+	// Validate the selected signals: each must be a known signal type and must
+	// not be duplicated. An empty selection is allowed (all signals enabled).
+	// The map does double duty: an entry only exists for known signals, and its
+	// value counts how many times we have already seen that signal.
+	seenSignals := map[config.SignalType]int{
+		config.SignalLogs:    0,
+		config.SignalEvents:  0,
+		config.SignalMetrics: 0,
+	}
+	signalsPath := field.NewPath("spec.signals")
+	for i, s := range cfg.Spec.Signals {
+		cnt, ok := seenSignals[s]
+		if !ok {
+			allErrs = append(
+				allErrs,
+				field.NotSupported(signalsPath.Index(i), string(s), []string{
+					string(config.SignalLogs),
+					string(config.SignalEvents),
+					string(config.SignalMetrics),
+				}),
+			)
+			continue
+		}
+		if cnt >= 1 {
+			allErrs = append(allErrs, field.Duplicate(signalsPath.Index(i), string(s)))
+		}
+		seenSignals[s]++
+	}
+
 	return allErrs.ToAggregate()
 }

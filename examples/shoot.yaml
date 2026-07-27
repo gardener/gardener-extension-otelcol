@@ -13,6 +13,13 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
+          # Signals to collect and export. Valid values: logs, events, metrics.
+          # If omitted (or empty), all signals are enabled.
+          # signals:
+          #   - logs
+          #   - events
+          #   - metrics
+
           # Collector log settings
           logs:
             level: INFO  # INFO, WARN, ERROR or DEBUG
