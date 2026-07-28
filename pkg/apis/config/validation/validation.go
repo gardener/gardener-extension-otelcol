@@ -216,6 +216,7 @@ func Validate(cfg config.CollectorConfig) error {
 					string(config.SignalMetrics),
 				}),
 			)
+
 			continue
 		}
 		if cnt >= 1 {

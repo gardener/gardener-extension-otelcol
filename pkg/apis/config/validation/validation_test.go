@@ -34,6 +34,7 @@ var _ = Describe("Validate", func() {
 
 			if len(wantErrSubstrings) == 0 {
 				Expect(err).NotTo(HaveOccurred())
+
 				return
 			}
 

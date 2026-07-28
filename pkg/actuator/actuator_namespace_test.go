@@ -49,7 +49,7 @@ var _ = Describe("signal selection", func() {
 
 	DescribeTable("buildPipelines includes exactly the pipelines for the enabled signals",
 		func(cfg config.CollectorConfig, wantPipelines []string) {
-			pipelines := buildPipelines(cfg, []string{"debug"})
+			pipelines := buildPipelines(cfg, []string{debugExporterName})
 			Expect(pipelines).To(HaveLen(len(wantPipelines)))
 			for _, name := range wantPipelines {
 				Expect(pipelines).To(HaveKey(name))
@@ -57,31 +57,31 @@ var _ = Describe("signal selection", func() {
 		},
 		Entry("empty selection enables all pipelines",
 			configWithSignals(),
-			[]string{"logs", "logs/events", "metrics"},
+			[]string{logsPipelineName, eventsPipelineName, metricsPipelineName},
 		),
 		Entry("metrics only",
 			configWithSignals(config.SignalMetrics),
-			[]string{"metrics"},
+			[]string{metricsPipelineName},
 		),
 		Entry("logs and events only",
 			configWithSignals(config.SignalLogs, config.SignalEvents),
-			[]string{"logs", "logs/events"},
+			[]string{logsPipelineName, eventsPipelineName},
 		),
 		Entry("events only",
 			configWithSignals(config.SignalEvents),
-			[]string{"logs/events"},
+			[]string{eventsPipelineName},
 		),
 	)
 
 	It("wires the enabled receivers and exporters into each pipeline", func() {
-		pipelines := buildPipelines(configWithSignals(), []string{"debug", "otlp_http"})
+		pipelines := buildPipelines(configWithSignals(), []string{debugExporterName, "otlp_http"})
 
-		Expect(pipelines["logs"].Receivers).To(Equal([]string{"otlp"}))
-		Expect(pipelines["logs/events"].Receivers).To(Equal([]string{"k8sobjects/events"}))
-		Expect(pipelines["metrics"].Receivers).To(Equal([]string{"prometheus"}))
+		Expect(pipelines[logsPipelineName].Receivers).To(Equal([]string{otlpReceiverName}))
+		Expect(pipelines[eventsPipelineName].Receivers).To(Equal([]string{eventsReceiverName}))
+		Expect(pipelines[metricsPipelineName].Receivers).To(Equal([]string{prometheusReceiverName}))
 
 		for _, p := range pipelines {
-			Expect(p.Exporters).To(Equal([]string{"debug", "otlp_http"}))
+			Expect(p.Exporters).To(Equal([]string{debugExporterName, "otlp_http"}))
 		}
 	})
 })
