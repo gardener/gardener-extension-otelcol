@@ -28,6 +28,7 @@ _Appears in:_
 | `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
+| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled.<br />When a signal is omitted, its pipeline is not created. The corresponding<br />receiver is still defined, which the collector reports as an unused<br />component in its logs; this is expected and harmless. |  | Optional: \{\} <br /> |
 
 
 #### CollectorExportersConfig
@@ -345,6 +346,25 @@ _Appears in:_
 | `max_interval` _[Duration](#duration)_ | MaxInterval specifies the upper bound on backoff. Default value is<br />[DefaultRetryMaxInterval]. | <nil> | Optional: \{\} <br /> |
 | `max_elapsed_time` _[Duration](#duration)_ | MaxElapsedTime specifies the maximum amount of time spent trying to<br />send a batch. If set to 0, the retries are never stopped. The default<br />value is [DefaultRetryMaxElapsedTime]. | <nil> | Optional: \{\} <br /> |
 | `multiplier` _float_ | Multiplier specifies the factor by which the retry interval is<br />multiplied on each attempt. The default value is<br />[DefaultRetryMultiplier]. | <nil> | Optional: \{\} <br /> |
+
+
+#### SignalType
+
+_Underlying type:_ _string_
+
+SignalType identifies a telemetry signal the collector can collect and
+export.
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description |
+| --- | --- |
+| `logs` | SignalLogs is the signal for logs received via OTLP.<br /> |
+| `events` | SignalEvents is the signal for Kubernetes events collected from the<br />shoot cluster.<br /> |
+| `metrics` | SignalMetrics is the signal for metrics scraped via Prometheus.<br /> |
 
 
 #### TLSConfig

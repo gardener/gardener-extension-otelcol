@@ -41,6 +41,11 @@ func (in *CollectorConfigSpec) DeepCopyInto(out *CollectorConfigSpec) {
 	in.Exporters.DeepCopyInto(&out.Exporters)
 	out.Logs = in.Logs
 	out.Metrics = in.Metrics
+	if in.Signals != nil {
+		in, out := &in.Signals, &out.Signals
+		*out = make([]SignalType, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

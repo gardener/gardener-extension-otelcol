@@ -178,6 +178,7 @@ func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *
 	if err := Convert_v1alpha1_CollectorMetricsConfig_To_config_CollectorMetricsConfig(&in.Metrics, &out.Metrics, s); err != nil {
 		return err
 	}
+	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
 	return nil
 }
 
@@ -196,6 +197,7 @@ func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *
 	if err := Convert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(&in.Metrics, &out.Metrics, s); err != nil {
 		return err
 	}
+	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
 	return nil
 }
 

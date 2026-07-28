@@ -165,6 +165,33 @@ const (
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
 
+	// otlpReceiverName is the name of the OTLP receiver.
+	otlpReceiverName = "otlp"
+
+	// eventsReceiverName is the name of the k8sobjects receiver for events.
+	eventsReceiverName = "k8sobjects/events"
+
+	// prometheusReceiverName is the name of the Prometheus receiver.
+	prometheusReceiverName = "prometheus"
+
+	// debugExporterName is the name of the debug exporter.
+	debugExporterName = "debug"
+
+	// logsPipelineName is the name of the logs pipeline.
+	logsPipelineName = "logs"
+
+	// eventsPipelineName is the name of the events pipeline.
+	eventsPipelineName = "logs/events"
+
+	// metricsPipelineName is the name of the metrics pipeline.
+	metricsPipelineName = "metrics"
+
+	// telemetryMetricsKey is the telemetry config key for metrics settings.
+	telemetryMetricsKey = "metrics"
+
+	// telemetryLogsKey is the telemetry config key for logs settings.
+	telemetryLogsKey = "logs"
+
 	// labelKeyComponent is the standard kubernetes app component label key.
 	labelKeyComponent = "app.kubernetes.io/component"
 	// labelValueTargetAllocator is the component label value identifying the
@@ -1053,7 +1080,7 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 	exporters := make(map[string]any)
 
 	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
-		exporters["debug"] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
+		exporters[debugExporterName] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
 	}
 
 	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
@@ -1082,6 +1109,47 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 	}
 
 	return clusterName, projectName, shootName
+}
+
+// buildPipelines returns the collector service pipelines for the signals
+// enabled by cfg. Receivers are always defined (see [Actuator.getOtelCollector]);
+// only the pipelines are gated here.
+func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[string]*otelv1beta1.Pipeline {
+	signals := cfg.Spec.Signals
+	if len(signals) == 0 {
+		signals = []config.SignalType{
+			config.SignalLogs,
+			config.SignalEvents,
+			config.SignalMetrics,
+		}
+	}
+	pipelines := map[string]*otelv1beta1.Pipeline{}
+
+	if slices.Contains(signals, config.SignalLogs) {
+		pipelines[logsPipelineName] = &otelv1beta1.Pipeline{
+			Receivers:  []string{otlpReceiverName},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	if slices.Contains(signals, config.SignalEvents) {
+		pipelines[eventsPipelineName] = &otelv1beta1.Pipeline{
+			Receivers:  []string{eventsReceiverName},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	if slices.Contains(signals, config.SignalMetrics) {
+		pipelines[metricsPipelineName] = &otelv1beta1.Pipeline{
+			Receivers:  []string{prometheusReceiverName},
+			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Exporters:  exporterNames,
+		}
+	}
+
+	return pipelines
 }
 
 // getOTelCollector returns the [otelv1beta1.OpenTelemetryCollector]
@@ -1177,7 +1245,7 @@ func (a *Actuator) getOtelCollector(
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
-						"otlp": map[string]any{
+						otlpReceiverName: map[string]any{
 							"protocols": map[string]any{
 								"grpc": map[string]any{
 									configKeyEndpoint: fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
@@ -1204,7 +1272,7 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 						},
-						"k8sobjects/events": map[string]any{
+						eventsReceiverName: map[string]any{
 							"auth_type": "kubeConfig",
 							"objects": []any{
 								map[string]any{
@@ -1255,7 +1323,7 @@ func (a *Actuator) getOtelCollector(
 				Service: otelv1beta1.Service{
 					Telemetry: &otelv1beta1.AnyConfig{
 						Object: map[string]any{
-							"metrics": map[string]any{
+							telemetryMetricsKey: map[string]any{
 								"level": string(cfg.Spec.Metrics.Level),
 								"readers": []any{
 									map[string]any{
@@ -1270,29 +1338,13 @@ func (a *Actuator) getOtelCollector(
 									},
 								},
 							},
-							"logs": map[string]any{
+							telemetryLogsKey: map[string]any{
 								"level":    string(cfg.Spec.Logs.Level),
 								"encoding": string(cfg.Spec.Logs.Encoding),
 							},
 						},
 					},
-					Pipelines: map[string]*otelv1beta1.Pipeline{
-						"logs": {
-							Receivers:  []string{"otlp"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-						"logs/events": {
-							Receivers:  []string{"k8sobjects/events"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-						"metrics": {
-							Receivers:  []string{"prometheus"},
-							Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-							Exporters:  exporterNames,
-						},
-					},
+					Pipelines: buildPipelines(cfg, exporterNames),
 				},
 			},
 		},
