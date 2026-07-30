@@ -184,6 +184,105 @@ For additional configuration settings, which can be provided to the extension,
 please make sure to check the
 [OTel Extension API spec documentation](./docs/api-reference/otelcol.extensions.gardener.cloud.md).
 
+## Filtering signals
+
+The extension can restrict which telemetry the collector processes at two
+levels:
+- Selecting whole signals.
+- Filtering individual records with OTTL filtration based on OpenTelemetry 
+[filterprocessor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor).
+
+### Select which signals are collected
+
+The `spec.signals` field lists the telemetry signals the collector should
+collect and export. Valid values are `logs`, `events` and `metrics`. When the
+field is omitted, all signals are enabled.
+
+``` yaml
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          # Only collect and export metrics; the logs and events pipelines are
+          # not created.
+          signals:
+            - metrics
+          exporters:
+            otlp_http:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.example.org"
+```
+
+### Drop individual records with the filter processor
+
+The `spec.filter` field configures the filterprocessor, which drops metrics,
+logs and events matching the given [OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry/)
+conditions or match properties. The extension mirrors the filterprocessor filtration, so for more information
+can check the [filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
+
+#### Examples
+
+- The following example drops noisy metrics and logs using OTTL conditions.
+
+``` yaml
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          exporters:
+            otlp_http:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.example.org"
+          filter: 
+            error_mode: ignore  # ignore, silent or propagate
+            metrics:
+              # Drop the whole resource when it originates from the kube-system
+              # namespace.
+              resource:
+                - 'resource.attributes["k8s.namespace.name"] == "kube-system"'
+              # Drop individual metrics by name.
+              metric:
+                - 'name == "apiserver_request_total"'
+              # Drop datapoints by value.
+              datapoint:
+                - 'value_int == 0'
+            logs:
+              # Drop log records whose body matches a pattern.
+              log_record:
+                - 'IsMatch(body, ".*password.*")'
+```
+
+- The next example uses the declarative include/exclude match properties instead
+of OTTL conditions. Here only metrics whose name matches one of the given
+patterns are kept.
+
+``` yaml
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          exporters:
+            otlp_http:
+              enabled: true
+              endpoint: "https://opentelemetry-receiver.example.org"
+          filter:
+            metrics:
+              include:
+                match_type: regexp  # strict or regexp
+                metric_names:
+                  - "apiserver_.*"
+                  - "etcd_.*"
+```
+
 # Development
 
 In order to build a binary of the extension, you can use the following command.
