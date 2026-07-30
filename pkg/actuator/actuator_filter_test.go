@@ -11,6 +11,8 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
+const metricNameFooCondition = `metric.name == "foo"`
+
 var _ = Describe("filter processor", func() {
 	Describe("buildPipelines pipeline wiring", func() {
 		It("does not wire the filter processor when the filter is unset", func() {
@@ -25,7 +27,7 @@ var _ = Describe("filter processor", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Filter: &config.FilterConfig{
-						Metrics: &config.MetricFilters{Metric: []string{`metric.name == "foo"`}},
+						Metrics: &config.MetricFilters{Metric: []string{metricNameFooCondition}},
 					},
 				},
 			}
@@ -58,15 +60,15 @@ var _ = Describe("filter processor", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				Metrics: &config.MetricFilters{
 					Resource:  []string{`resource.attributes["env"] == "dev"`},
-					Metric:    []string{`metric.name == "foo"`},
+					Metric:    []string{metricNameFooCondition},
 					DataPoint: []string{`datapoint.value_int == 0`},
 				},
 			})
 
 			Expect(out["metrics"]).To(Equal(map[string]any{
-				"resource":  []string{`resource.attributes["env"] == "dev"`},
-				"metric":    []string{`metric.name == "foo"`},
-				"datapoint": []string{`datapoint.value_int == 0`},
+				resourceProcessorName: []string{`resource.attributes["env"] == "dev"`},
+				"metric":              []string{metricNameFooCondition},
+				"datapoint":           []string{`datapoint.value_int == 0`},
 			}))
 		})
 
@@ -97,8 +99,8 @@ var _ = Describe("filter processor", func() {
 						"cachemaxnumentries": 10,
 					},
 					"resource_attributes": []any{
-						map[string]any{"key": "service.name", "value": "my-service"},
-						map[string]any{"key": "present-only"},
+						map[string]any{configKeyKey: "service.name", "value": "my-service"},
+						map[string]any{configKeyKey: "present-only"},
 					},
 				},
 			}))
@@ -127,7 +129,7 @@ var _ = Describe("filter processor", func() {
 					"match_type":        "strict",
 					"severity_texts":    []string{"INFO", "DEBUG"},
 					"bodies":            []string{"exact body"},
-					"record_attributes": []any{map[string]any{"key": "foo", "value": "bar"}},
+					"record_attributes": []any{map[string]any{configKeyKey: "foo", "value": "bar"}},
 					"severity_number": map[string]any{
 						"min":             "WARN",
 						"match_undefined": false,
@@ -149,12 +151,12 @@ var _ = Describe("filter processor", func() {
 		It("renders basic context-inferred conditions as bare strings", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				MetricConditions: []config.ContextConditions{
-					{Conditions: []string{`metric.name == "foo"`, `metric.name == "bar"`}},
+					{Conditions: []string{metricNameFooCondition, `metric.name == "bar"`}},
 				},
 			})
 
 			Expect(out["metric_conditions"]).To(Equal([]any{
-				`metric.name == "foo"`,
+				metricNameFooCondition,
 				`metric.name == "bar"`,
 			}))
 		})
@@ -163,7 +165,7 @@ var _ = Describe("filter processor", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				LogConditions: []config.ContextConditions{
 					{
-						Context:    "resource",
+						Context:    resourceProcessorName,
 						Conditions: []string{`attributes["k"] == "v"`},
 						ErrorMode:  config.FilterErrorModeSilent,
 					},
