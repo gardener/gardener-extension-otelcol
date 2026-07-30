@@ -269,15 +269,7 @@ func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *
 		return err
 	}
 	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
-	if in.Filter != nil {
-		in, out := &in.Filter, &out.Filter
-		*out = new(config.FilterConfig)
-		if err := Convert_v1alpha1_FilterConfig_To_config_FilterConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Filter = nil
-	}
+	out.Filter = (*config.FilterConfig)(unsafe.Pointer(in.Filter))
 	return nil
 }
 
@@ -297,15 +289,7 @@ func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *
 		return err
 	}
 	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
-	if in.Filter != nil {
-		in, out := &in.Filter, &out.Filter
-		*out = new(FilterConfig)
-		if err := Convert_config_FilterConfig_To_v1alpha1_FilterConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Filter = nil
-	}
+	out.Filter = (*FilterConfig)(unsafe.Pointer(in.Filter))
 	return nil
 }
 
@@ -462,24 +446,8 @@ func Convert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in *config.Filte
 
 func autoConvert_v1alpha1_FilterConfig_To_config_FilterConfig(in *FilterConfig, out *config.FilterConfig, s conversion.Scope) error {
 	out.ErrorMode = config.FilterErrorMode(in.ErrorMode)
-	if in.Metrics != nil {
-		in, out := &in.Metrics, &out.Metrics
-		*out = new(config.MetricFilters)
-		if err := Convert_v1alpha1_MetricFilters_To_config_MetricFilters(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Metrics = nil
-	}
-	if in.Logs != nil {
-		in, out := &in.Logs, &out.Logs
-		*out = new(config.LogFilters)
-		if err := Convert_v1alpha1_LogFilters_To_config_LogFilters(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logs = nil
-	}
+	out.Metrics = (*config.MetricFilters)(unsafe.Pointer(in.Metrics))
+	out.Logs = (*config.LogFilters)(unsafe.Pointer(in.Logs))
 	out.MetricConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.MetricConditions))
 	out.LogConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.LogConditions))
 	return nil
@@ -492,24 +460,8 @@ func Convert_v1alpha1_FilterConfig_To_config_FilterConfig(in *FilterConfig, out 
 
 func autoConvert_config_FilterConfig_To_v1alpha1_FilterConfig(in *config.FilterConfig, out *FilterConfig, s conversion.Scope) error {
 	out.ErrorMode = FilterErrorMode(in.ErrorMode)
-	if in.Metrics != nil {
-		in, out := &in.Metrics, &out.Metrics
-		*out = new(MetricFilters)
-		if err := Convert_config_MetricFilters_To_v1alpha1_MetricFilters(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Metrics = nil
-	}
-	if in.Logs != nil {
-		in, out := &in.Logs, &out.Logs
-		*out = new(LogFilters)
-		if err := Convert_config_LogFilters_To_v1alpha1_LogFilters(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Logs = nil
-	}
+	out.Metrics = (*MetricFilters)(unsafe.Pointer(in.Metrics))
+	out.Logs = (*LogFilters)(unsafe.Pointer(in.Logs))
 	out.MetricConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.MetricConditions))
 	out.LogConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.LogConditions))
 	return nil
@@ -534,10 +486,10 @@ func Convert_v1alpha1_LogFilters_To_config_LogFilters(in *LogFilters, out *confi
 }
 
 func autoConvert_config_LogFilters_To_v1alpha1_LogFilters(in *config.LogFilters, out *LogFilters, s conversion.Scope) error {
-	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
-	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
 	out.Include = (*LogMatchProperties)(unsafe.Pointer(in.Include))
 	out.Exclude = (*LogMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
 	return nil
 }
 
@@ -613,11 +565,11 @@ func Convert_v1alpha1_MetricFilters_To_config_MetricFilters(in *MetricFilters, o
 }
 
 func autoConvert_config_MetricFilters_To_v1alpha1_MetricFilters(in *config.MetricFilters, out *MetricFilters, s conversion.Scope) error {
+	out.Include = (*MetricMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*MetricMatchProperties)(unsafe.Pointer(in.Exclude))
 	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
 	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
 	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
-	out.Include = (*MetricMatchProperties)(unsafe.Pointer(in.Include))
-	out.Exclude = (*MetricMatchProperties)(unsafe.Pointer(in.Exclude))
 	return nil
 }
 
