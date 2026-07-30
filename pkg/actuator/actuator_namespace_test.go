@@ -5,22 +5,11 @@
 package actuator
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
-
-// These are white-box unit tests for unexported helpers of the actuator
-// package. They deliberately live in package actuator (not actuator_test) so
-// they can reach unexported symbols, and they carry their own Ginkgo suite
-// bootstrap separate from the envtest-backed suite in suite_test.go.
-func TestActuatorInternals(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Actuator Internals Suite")
-}
 
 var _ = Describe("parseShootNamespaceAttributes", func() {
 	DescribeTable("should parse the namespace into OTel resource attributes",
