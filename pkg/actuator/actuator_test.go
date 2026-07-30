@@ -24,7 +24,14 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
-const localName = "local"
+const (
+	localName           = "local"
+	testMetricCondition = `metric.name == "foo"`
+	testKeyMatchType    = "match_type"
+	testKeyKey          = "key"
+	testKeyValue        = "value"
+	testKeyResource     = "resource"
+)
 
 var _ = Describe("Actuator", Ordered, func() {
 	var (
@@ -271,5 +278,250 @@ var _ = Describe("Actuator", Ordered, func() {
 		Expect(act.Migrate(ctx, logger, extResource)).To(Succeed())
 
 		// TODO(user): Add more tests
+	})
+})
+
+var _ = Describe("parseShootNamespaceAttributes", func() {
+	DescribeTable("should parse the namespace into OTel resource attributes",
+		func(namespace, wantCluster, wantProject, wantShoot string) {
+			cluster, project, shoot := parseShootNamespaceAttributes(namespace)
+			Expect(cluster).To(Equal(wantCluster))
+			Expect(project).To(Equal(wantProject))
+			Expect(shoot).To(Equal(wantShoot))
+		},
+		Entry("standard shoot namespace",
+			"shoot--my-project--my-shoot",
+			"shoot--my-project--my-shoot", "my-project", "my-shoot",
+		),
+		Entry("shoot name containing hyphens",
+			"shoot--local--my-complex-shoot-name",
+			"shoot--local--my-complex-shoot-name", "local", "my-complex-shoot-name",
+		),
+		Entry("non-shoot namespace returns empty project and shoot",
+			"kube-system",
+			"kube-system", "", "",
+		),
+		Entry("only two segments returns empty project and shoot",
+			"shoot--local",
+			"shoot--local", "", "",
+		),
+	)
+})
+
+var _ = Describe("signal selection", func() {
+	configWithSignals := func(signals ...config.SignalType) config.CollectorConfig {
+		return config.CollectorConfig{
+			Spec: config.CollectorConfigSpec{
+				Signals: signals,
+			},
+		}
+	}
+
+	DescribeTable("buildPipelines includes exactly the pipelines for the enabled signals",
+		func(cfg config.CollectorConfig, wantPipelines []string) {
+			pipelines := buildPipelines(cfg, []string{debugExporterName})
+			Expect(pipelines).To(HaveLen(len(wantPipelines)))
+			for _, name := range wantPipelines {
+				Expect(pipelines).To(HaveKey(name))
+			}
+		},
+		Entry("empty selection enables all pipelines",
+			configWithSignals(),
+			[]string{logsPipelineName, eventsPipelineName, metricsPipelineName},
+		),
+		Entry("metrics only",
+			configWithSignals(config.SignalMetrics),
+			[]string{metricsPipelineName},
+		),
+		Entry("logs and events only",
+			configWithSignals(config.SignalLogs, config.SignalEvents),
+			[]string{logsPipelineName, eventsPipelineName},
+		),
+		Entry("events only",
+			configWithSignals(config.SignalEvents),
+			[]string{eventsPipelineName},
+		),
+	)
+
+	It("wires the enabled receivers and exporters into each pipeline", func() {
+		pipelines := buildPipelines(configWithSignals(), []string{debugExporterName, "otlp_http"})
+
+		Expect(pipelines[logsPipelineName].Receivers).To(Equal([]string{otlpReceiverName}))
+		Expect(pipelines[eventsPipelineName].Receivers).To(Equal([]string{eventsReceiverName}))
+		Expect(pipelines[metricsPipelineName].Receivers).To(Equal([]string{prometheusReceiverName}))
+
+		for _, p := range pipelines {
+			Expect(p.Exporters).To(Equal([]string{debugExporterName, "otlp_http"}))
+		}
+	})
+})
+
+var _ = Describe("filter processor", func() {
+	Describe("buildPipelines pipeline wiring", func() {
+		It("does not wire the filter processor when the filter is unset", func() {
+			pipelines := buildPipelines(config.CollectorConfig{}, []string{debugExporterName})
+
+			for name, p := range pipelines {
+				Expect(p.Processors).NotTo(ContainElement(filterProcessorName), "pipeline %q", name)
+			}
+		})
+
+		It("wires the filter processor into all pipelines after memory_limiter and before batch", func() {
+			cfg := config.CollectorConfig{
+				Spec: config.CollectorConfigSpec{
+					Filter: &config.FilterConfig{
+						Metrics: &config.MetricFilters{Metric: []string{testMetricCondition}},
+					},
+				},
+			}
+
+			pipelines := buildPipelines(cfg, []string{debugExporterName})
+
+			Expect(pipelines[logsPipelineName].Processors).To(Equal(
+				[]string{resourceProcessorName, memoryLimiterProcessorName, filterProcessorName, batchProcessorName}))
+			Expect(pipelines[eventsPipelineName].Processors).To(Equal(
+				[]string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, filterProcessorName, batchProcessorName}))
+			Expect(pipelines[metricsPipelineName].Processors).To(Equal(
+				[]string{resourceProcessorName, memoryLimiterProcessorName, filterProcessorName, batchProcessorName}))
+		})
+	})
+
+	Describe("getFilterProcessorConfig rendering", func() {
+		var a *Actuator
+
+		BeforeEach(func() {
+			a = &Actuator{}
+		})
+
+		It("renders the error_mode only when set", func() {
+			Expect(a.getFilterProcessorConfig(config.FilterConfig{})).NotTo(HaveKey("error_mode"))
+			Expect(a.getFilterProcessorConfig(config.FilterConfig{ErrorMode: config.FilterErrorModeIgnore})).
+				To(HaveKeyWithValue("error_mode", "ignore"))
+		})
+
+		It("renders the metrics OTTL condition lists", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				Metrics: &config.MetricFilters{
+					Resource:  []string{`resource.attributes["env"] == "dev"`},
+					Metric:    []string{testMetricCondition},
+					DataPoint: []string{`datapoint.value_int == 0`},
+				},
+			})
+
+			Expect(out["metrics"]).To(Equal(map[string]any{
+				testKeyResource: []string{`resource.attributes["env"] == "dev"`},
+				"metric":        []string{testMetricCondition},
+				"datapoint":     []string{`datapoint.value_int == 0`},
+			}))
+		})
+
+		It("renders the metrics include/exclude match properties", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				Metrics: &config.MetricFilters{
+					Include: &config.MetricMatchProperties{
+						MatchType:   config.MatchTypeStrict,
+						MetricNames: []string{"metric.a", "metric.b"},
+						Regexp: &config.RegexpConfig{
+							CacheEnabled:       new(true),
+							CacheMaxNumEntries: 10,
+						},
+						ResourceAttributes: []config.FilterAttribute{
+							{Key: "service.name", Value: "my-service"},
+							{Key: "present-only"},
+						},
+					},
+				},
+			})
+
+			Expect(out["metrics"]).To(Equal(map[string]any{
+				"include": map[string]any{
+					testKeyMatchType: "strict",
+					"metric_names":   []string{"metric.a", "metric.b"},
+					"regexp": map[string]any{
+						"cacheenabled":       true,
+						"cachemaxnumentries": 10,
+					},
+					"resource_attributes": []any{
+						map[string]any{testKeyKey: "service.name", testKeyValue: "my-service"},
+						map[string]any{testKeyKey: "present-only"},
+					},
+				},
+			}))
+		})
+
+		It("renders the logs OTTL conditions and include match properties", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				Logs: &config.LogFilters{
+					LogRecord: []string{`IsMatch(log.body, ".*password.*")`},
+					Include: &config.LogMatchProperties{
+						MatchType:     config.MatchTypeStrict,
+						SeverityTexts: []string{"INFO", "DEBUG"},
+						Bodies:        []string{"exact body"},
+						SeverityNumber: &config.LogSeverityNumberMatchProperties{
+							Min:            "WARN",
+							MatchUndefined: new(false),
+						},
+						RecordAttributes: []config.FilterAttribute{{Key: "foo", Value: "bar"}},
+					},
+				},
+			})
+
+			Expect(out["logs"]).To(Equal(map[string]any{
+				"log_record": []string{`IsMatch(log.body, ".*password.*")`},
+				"include": map[string]any{
+					testKeyMatchType:    "strict",
+					"severity_texts":    []string{"INFO", "DEBUG"},
+					"bodies":            []string{"exact body"},
+					"record_attributes": []any{map[string]any{testKeyKey: "foo", testKeyValue: "bar"}},
+					"severity_number": map[string]any{
+						"min":             "WARN",
+						"match_undefined": false,
+					},
+				},
+			}))
+		})
+
+		It("omits signal keys when their filters are empty", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				ErrorMode: config.FilterErrorModePropagate,
+				Metrics:   &config.MetricFilters{},
+				Logs:      &config.LogFilters{},
+			})
+
+			Expect(out).To(Equal(map[string]any{"error_mode": "propagate"}))
+		})
+
+		It("renders basic context-inferred conditions as bare strings", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				MetricConditions: []config.ContextConditions{
+					{Conditions: []string{testMetricCondition, `metric.name == "bar"`}},
+				},
+			})
+
+			Expect(out["metric_conditions"]).To(Equal([]any{
+				testMetricCondition,
+				`metric.name == "bar"`,
+			}))
+		})
+
+		It("renders advanced context-inferred conditions as objects", func() {
+			out := a.getFilterProcessorConfig(config.FilterConfig{
+				LogConditions: []config.ContextConditions{
+					{
+						Context:    testKeyResource,
+						Conditions: []string{`attributes["k"] == "v"`},
+						ErrorMode:  config.FilterErrorModeSilent,
+					},
+				},
+			})
+
+			Expect(out["log_conditions"]).To(Equal([]any{
+				map[string]any{
+					"context":    testKeyResource,
+					"conditions": []string{`attributes["k"] == "v"`},
+					"error_mode": "silent",
+				},
+			}))
+		})
 	})
 })

@@ -118,6 +118,41 @@ const (
 	CompressionNone Compression = "none"
 )
 
+// FilterErrorMode determines how the filter processor reacts to errors that
+// occur while processing an OTTL condition.
+//
+// See the link below for more details.
+//
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor#error-modes
+//
+// +k8s:enum
+type FilterErrorMode string
+
+const (
+	// FilterErrorModeIgnore means the processor ignores errors returned by
+	// conditions, logs them, and continues on to the next condition.
+	FilterErrorModeIgnore FilterErrorMode = "ignore"
+	// FilterErrorModeSilent means the processor ignores errors returned by
+	// conditions, does not log them, and continues on to the next condition.
+	FilterErrorModeSilent FilterErrorMode = "silent"
+	// FilterErrorModePropagate means the processor returns the error up the
+	// pipeline, which results in the payload being dropped from the collector.
+	FilterErrorModePropagate FilterErrorMode = "propagate"
+)
+
+// FilterMatchType specifies the type of string pattern matching used by the filter
+// processor include/exclude match properties.
+//
+// +k8s:enum
+type FilterMatchType string
+
+const (
+	// MatchTypeStrict matches values by exact string equality.
+	MatchTypeStrict FilterMatchType = "strict"
+	// MatchTypeRegexp matches values against regular expressions.
+	MatchTypeRegexp FilterMatchType = "regexp"
+)
+
 const (
 	// DefaultRetryInitialInterval specifies the default initial interval to
 	// wait after the first failure, before attempting a retry.
@@ -447,6 +482,269 @@ type CollectorMetricsConfig struct {
 	Level MetricsVerbosityLevel `json:"level,omitzero"`
 }
 
+// FilterAttribute specifies an attribute key/value pair that the filter
+// processor match properties evaluate against.
+type FilterAttribute struct {
+	// Key specifies the attribute key to match against.
+	//
+	// +k8s:required
+	Key string `json:"key"`
+
+	// Value specifies the attribute value to match against. If empty, only the
+	// presence of the key is checked.
+	//
+	// +k8s:optional
+	Value string `json:"value,omitzero"`
+}
+
+// RegexpConfig specifies the options for the regexp match type used by the
+// filter processor include/exclude match properties.
+type RegexpConfig struct {
+	// CacheEnabled specifies whether match results are cached.
+	//
+	// +k8s:optional
+	CacheEnabled *bool `json:"cacheenabled,omitzero"`
+
+	// CacheMaxNumEntries specifies the maximum number of entries in the cache.
+	//
+	// +k8s:optional
+	CacheMaxNumEntries int `json:"cachemaxnumentries,omitzero"`
+}
+
+// LogSeverityNumberMatchProperties specifies how the filter processor matches
+// against a log record's severity number.
+type LogSeverityNumberMatchProperties struct {
+	// Min specifies the minimum severity a log record must have to match. This
+	// corresponds to the severity short names, e.g. "INFO", "WARN", "ERROR".
+	// The value is case-insensitive.
+	//
+	// +k8s:required
+	Min string `json:"min"`
+
+	// MatchUndefined specifies whether log records with an "unspecified"
+	// severity match.
+	//
+	// +k8s:optional
+	MatchUndefined *bool `json:"match_undefined,omitzero"`
+}
+
+// MetricMatchProperties specifies the set of properties the filter processor
+// matches metrics against, and the type of string pattern matching to use.
+type MetricMatchProperties struct {
+	// MatchType specifies the type of matching desired.
+	//
+	// +k8s:required
+	MatchType FilterMatchType `json:"match_type"`
+
+	// Regexp specifies the options for the regexp match type.
+	//
+	// +k8s:optional
+	Regexp *RegexpConfig `json:"regexp,omitzero"`
+
+	// MetricNames specifies the list of string patterns to match metric names
+	// against. A match occurs if the metric name matches at least one pattern
+	// in this list.
+	//
+	// +k8s:optional
+	MetricNames []string `json:"metric_names,omitempty"`
+
+	// Expressions specifies the list of expr expressions to match metrics
+	// against. A match occurs if any datapoint in a metric matches at least one
+	// expression in this list.
+	//
+	// +k8s:optional
+	Expressions []string `json:"expressions,omitempty"`
+
+	// ResourceAttributes specifies a list of resource attributes to match
+	// metrics against. A match occurs if any resource attribute matches all
+	// expressions in this list.
+	//
+	// +k8s:optional
+	ResourceAttributes []FilterAttribute `json:"resource_attributes,omitempty"`
+}
+
+// LogMatchProperties specifies the set of properties the filter processor
+// matches logs against, and the type of string pattern matching to use.
+type LogMatchProperties struct {
+	// MatchType specifies the type of matching desired.
+	//
+	// +k8s:required
+	MatchType FilterMatchType `json:"match_type"`
+
+	// ResourceAttributes specifies a list of resource attributes to match logs
+	// against. A match occurs if any resource attribute matches all expressions
+	// in this list.
+	//
+	// +k8s:optional
+	ResourceAttributes []FilterAttribute `json:"resource_attributes,omitempty"`
+
+	// RecordAttributes specifies a list of record attributes to match logs
+	// against. A match occurs if any record attribute matches at least one
+	// expression in this list.
+	//
+	// +k8s:optional
+	RecordAttributes []FilterAttribute `json:"record_attributes,omitempty"`
+
+	// SeverityTexts specifies a list of strings that the log record's severity
+	// text field must match against.
+	//
+	// +k8s:optional
+	SeverityTexts []string `json:"severity_texts,omitempty"`
+
+	// SeverityNumber specifies how to match against a log record's severity
+	// number, if defined.
+	//
+	// +k8s:optional
+	SeverityNumber *LogSeverityNumberMatchProperties `json:"severity_number,omitzero"`
+
+	// Bodies specifies a list of strings that the log record's body field must
+	// match against.
+	//
+	// +k8s:optional
+	Bodies []string `json:"bodies,omitempty"`
+}
+
+// MetricFilters specifies the filter processor settings for the metrics signal.
+//
+// The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
+// match properties (Include, Exclude) are mutually exclusive.
+type MetricFilters struct {
+	// Include specifies the metrics that should be included in the collector
+	// service pipeline; all other metrics are dropped. If both Include and
+	// Exclude are specified, Include filtering occurs first.
+	//
+	// +k8s:optional
+	Include *MetricMatchProperties `json:"include,omitzero"`
+
+	// Exclude specifies the metrics that should be excluded from the collector
+	// service pipeline; all other metrics are included. If both Include and
+	// Exclude are specified, Include filtering occurs first.
+	//
+	// +k8s:optional
+	Exclude *MetricMatchProperties `json:"exclude,omitzero"`
+
+	// Resource is a list of OTTL conditions for an ottlresource context. If any
+	// condition resolves to true, the whole resource is dropped.
+	//
+	// +k8s:optional
+	Resource []string `json:"resource,omitempty"`
+
+	// Metric is a list of OTTL conditions for an ottlmetric context. If any
+	// condition resolves to true, the metric is dropped.
+	//
+	// +k8s:optional
+	Metric []string `json:"metric,omitempty"`
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context. If
+	// any condition resolves to true, the datapoint is dropped.
+	//
+	// +k8s:optional
+	DataPoint []string `json:"datapoint,omitempty"`
+}
+
+// LogFilters specifies the filter processor settings for the logs signal.
+//
+// The OTTL condition lists (Resource, LogRecord) and the object-based match
+// properties (Include, Exclude) are mutually exclusive.
+type LogFilters struct {
+	// Include specifies the logs that should be included in the collector
+	// service pipeline; all other logs are dropped. If both Include and Exclude
+	// are specified, Include filtering occurs first.
+	//
+	// +k8s:optional
+	Include *LogMatchProperties `json:"include,omitzero"`
+
+	// Exclude specifies the logs that should be excluded from the collector
+	// service pipeline; all other logs are included. If both Include and
+	// Exclude are specified, Include filtering occurs first.
+	//
+	// +k8s:optional
+	Exclude *LogMatchProperties `json:"exclude,omitzero"`
+
+	// Resource is a list of OTTL conditions for an ottlresource context. If any
+	// condition resolves to true, the whole resource is dropped. Supports `and`,
+	// `or`, and `()`.
+	//
+	// +k8s:optional
+	Resource []string `json:"resource,omitempty"`
+
+	// LogRecord is a list of OTTL conditions for an ottllog context. If any
+	// condition resolves to true, the log record is dropped. Supports `and`,
+	// `or`, and `()`.
+	//
+	// +k8s:optional
+	LogRecord []string `json:"log_record,omitempty"`
+}
+
+// ContextConditions specifies a group of OTTL conditions for the filter
+// processor's context-inferred condition style (metric_conditions /
+// log_conditions).
+//
+// When Context and ErrorMode are both empty, the group is rendered as a flat
+// list of condition strings (basic style) and the OTTL context is inferred
+// from each expression. Otherwise it is rendered as an explicit group
+// (advanced style).
+type ContextConditions struct {
+	// Context specifies the OTTL context the conditions are evaluated against,
+	// e.g. "resource", "metric", "datapoint", "log". If empty, the context is
+	// inferred from each condition.
+	//
+	// +k8s:optional
+	Context string `json:"context,omitzero"`
+
+	// Conditions is the list of OTTL conditions. If any condition resolves to
+	// true, the matching telemetry is dropped.
+	//
+	// +k8s:required
+	Conditions []string `json:"conditions"`
+
+	// ErrorMode determines how the processor reacts to errors that occur while
+	// processing this group of conditions. When set, it overrides the
+	// top-level ErrorMode. Only honored when the group is rendered in the
+	// advanced style.
+	//
+	// +k8s:optional
+	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
+}
+
+// FilterConfig specifies the settings for the filter processor, which drops
+// metrics and logs matching the given OTTL conditions or match properties.
+//
+// See [Filter Processor] for more details.
+//
+// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+type FilterConfig struct {
+	// ErrorMode determines how the processor reacts to errors that occur while
+	// processing an OTTL condition. If empty, the processor default is used.
+	//
+	// +k8s:optional
+	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
+
+	// Metrics specifies the filter settings for the metrics signal.
+	//
+	// +k8s:optional
+	Metrics *MetricFilters `json:"metrics,omitzero"`
+
+	// Logs specifies the filter settings for the logs signal. Because events
+	// are collected as the logs signal, this also applies to the events
+	// pipeline.
+	//
+	// +k8s:optional
+	Logs *LogFilters `json:"logs,omitzero"`
+
+	// MetricConditions specifies the metrics filter using the context-inferred
+	// condition style. It is mutually exclusive with Metrics.
+	//
+	// +k8s:optional
+	MetricConditions []ContextConditions `json:"metric_conditions,omitempty"`
+
+	// LogConditions specifies the logs filter using the context-inferred
+	// condition style. It is mutually exclusive with Logs.
+	//
+	// +k8s:optional
+	LogConditions []ContextConditions `json:"log_conditions,omitempty"`
+}
+
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
 	// Exporters specifies the exporters configuration of the collector.
@@ -474,6 +772,11 @@ type CollectorConfigSpec struct {
 	//
 	// +k8s:optional
 	Signals []SignalType `json:"signals,omitempty"`
+
+	// Filter specifies the filter processor settings used to drop unwanted signals.
+	//
+	// +k8s:optional
+	Filter *FilterConfig `json:"filter,omitzero"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

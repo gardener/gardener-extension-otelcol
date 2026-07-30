@@ -71,6 +71,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ContextConditions)(nil), (*config.ContextConditions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ContextConditions_To_config_ContextConditions(a.(*ContextConditions), b.(*config.ContextConditions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ContextConditions)(nil), (*ContextConditions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ContextConditions_To_v1alpha1_ContextConditions(a.(*config.ContextConditions), b.(*ContextConditions), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*DebugExporterConfig)(nil), (*config.DebugExporterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_DebugExporterConfig_To_config_DebugExporterConfig(a.(*DebugExporterConfig), b.(*config.DebugExporterConfig), scope)
 	}); err != nil {
@@ -78,6 +88,76 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.DebugExporterConfig)(nil), (*DebugExporterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(a.(*config.DebugExporterConfig), b.(*DebugExporterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*FilterAttribute)(nil), (*config.FilterAttribute)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_FilterAttribute_To_config_FilterAttribute(a.(*FilterAttribute), b.(*config.FilterAttribute), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.FilterAttribute)(nil), (*FilterAttribute)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_FilterAttribute_To_v1alpha1_FilterAttribute(a.(*config.FilterAttribute), b.(*FilterAttribute), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*FilterConfig)(nil), (*config.FilterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_FilterConfig_To_config_FilterConfig(a.(*FilterConfig), b.(*config.FilterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.FilterConfig)(nil), (*FilterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_FilterConfig_To_v1alpha1_FilterConfig(a.(*config.FilterConfig), b.(*FilterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LogFilters)(nil), (*config.LogFilters)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_LogFilters_To_config_LogFilters(a.(*LogFilters), b.(*config.LogFilters), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.LogFilters)(nil), (*LogFilters)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_LogFilters_To_v1alpha1_LogFilters(a.(*config.LogFilters), b.(*LogFilters), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LogMatchProperties)(nil), (*config.LogMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_LogMatchProperties_To_config_LogMatchProperties(a.(*LogMatchProperties), b.(*config.LogMatchProperties), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.LogMatchProperties)(nil), (*LogMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_LogMatchProperties_To_v1alpha1_LogMatchProperties(a.(*config.LogMatchProperties), b.(*LogMatchProperties), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LogSeverityNumberMatchProperties)(nil), (*config.LogSeverityNumberMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_LogSeverityNumberMatchProperties_To_config_LogSeverityNumberMatchProperties(a.(*LogSeverityNumberMatchProperties), b.(*config.LogSeverityNumberMatchProperties), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.LogSeverityNumberMatchProperties)(nil), (*LogSeverityNumberMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_LogSeverityNumberMatchProperties_To_v1alpha1_LogSeverityNumberMatchProperties(a.(*config.LogSeverityNumberMatchProperties), b.(*LogSeverityNumberMatchProperties), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MetricFilters)(nil), (*config.MetricFilters)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MetricFilters_To_config_MetricFilters(a.(*MetricFilters), b.(*config.MetricFilters), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.MetricFilters)(nil), (*MetricFilters)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_MetricFilters_To_v1alpha1_MetricFilters(a.(*config.MetricFilters), b.(*MetricFilters), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MetricMatchProperties)(nil), (*config.MetricMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MetricMatchProperties_To_config_MetricMatchProperties(a.(*MetricMatchProperties), b.(*config.MetricMatchProperties), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.MetricMatchProperties)(nil), (*MetricMatchProperties)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_MetricMatchProperties_To_v1alpha1_MetricMatchProperties(a.(*config.MetricMatchProperties), b.(*MetricMatchProperties), scope)
 	}); err != nil {
 		return err
 	}
@@ -98,6 +178,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.OTLPHTTPExporterConfig)(nil), (*OTLPHTTPExporterConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(a.(*config.OTLPHTTPExporterConfig), b.(*OTLPHTTPExporterConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RegexpConfig)(nil), (*config.RegexpConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RegexpConfig_To_config_RegexpConfig(a.(*RegexpConfig), b.(*config.RegexpConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.RegexpConfig)(nil), (*RegexpConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_RegexpConfig_To_v1alpha1_RegexpConfig(a.(*config.RegexpConfig), b.(*RegexpConfig), scope)
 	}); err != nil {
 		return err
 	}
@@ -179,6 +269,15 @@ func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *
 		return err
 	}
 	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
+	if in.Filter != nil {
+		in, out := &in.Filter, &out.Filter
+		*out = new(config.FilterConfig)
+		if err := Convert_v1alpha1_FilterConfig_To_config_FilterConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Filter = nil
+	}
 	return nil
 }
 
@@ -198,6 +297,15 @@ func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *
 		return err
 	}
 	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
+	if in.Filter != nil {
+		in, out := &in.Filter, &out.Filter
+		*out = new(FilterConfig)
+		if err := Convert_config_FilterConfig_To_v1alpha1_FilterConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Filter = nil
+	}
 	return nil
 }
 
@@ -284,6 +392,30 @@ func Convert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(in
 	return autoConvert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(in, out, s)
 }
 
+func autoConvert_v1alpha1_ContextConditions_To_config_ContextConditions(in *ContextConditions, out *config.ContextConditions, s conversion.Scope) error {
+	out.Context = in.Context
+	out.Conditions = *(*[]string)(unsafe.Pointer(&in.Conditions))
+	out.ErrorMode = config.FilterErrorMode(in.ErrorMode)
+	return nil
+}
+
+// Convert_v1alpha1_ContextConditions_To_config_ContextConditions is an autogenerated conversion function.
+func Convert_v1alpha1_ContextConditions_To_config_ContextConditions(in *ContextConditions, out *config.ContextConditions, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ContextConditions_To_config_ContextConditions(in, out, s)
+}
+
+func autoConvert_config_ContextConditions_To_v1alpha1_ContextConditions(in *config.ContextConditions, out *ContextConditions, s conversion.Scope) error {
+	out.Context = in.Context
+	out.Conditions = *(*[]string)(unsafe.Pointer(&in.Conditions))
+	out.ErrorMode = FilterErrorMode(in.ErrorMode)
+	return nil
+}
+
+// Convert_config_ContextConditions_To_v1alpha1_ContextConditions is an autogenerated conversion function.
+func Convert_config_ContextConditions_To_v1alpha1_ContextConditions(in *config.ContextConditions, out *ContextConditions, s conversion.Scope) error {
+	return autoConvert_config_ContextConditions_To_v1alpha1_ContextConditions(in, out, s)
+}
+
 func autoConvert_v1alpha1_DebugExporterConfig_To_config_DebugExporterConfig(in *DebugExporterConfig, out *config.DebugExporterConfig, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Verbosity = config.DebugExporterVerbosity(in.Verbosity)
@@ -304,6 +436,222 @@ func autoConvert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in *
 // Convert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig is an autogenerated conversion function.
 func Convert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in *config.DebugExporterConfig, out *DebugExporterConfig, s conversion.Scope) error {
 	return autoConvert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_FilterAttribute_To_config_FilterAttribute(in *FilterAttribute, out *config.FilterAttribute, s conversion.Scope) error {
+	out.Key = in.Key
+	out.Value = in.Value
+	return nil
+}
+
+// Convert_v1alpha1_FilterAttribute_To_config_FilterAttribute is an autogenerated conversion function.
+func Convert_v1alpha1_FilterAttribute_To_config_FilterAttribute(in *FilterAttribute, out *config.FilterAttribute, s conversion.Scope) error {
+	return autoConvert_v1alpha1_FilterAttribute_To_config_FilterAttribute(in, out, s)
+}
+
+func autoConvert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in *config.FilterAttribute, out *FilterAttribute, s conversion.Scope) error {
+	out.Key = in.Key
+	out.Value = in.Value
+	return nil
+}
+
+// Convert_config_FilterAttribute_To_v1alpha1_FilterAttribute is an autogenerated conversion function.
+func Convert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in *config.FilterAttribute, out *FilterAttribute, s conversion.Scope) error {
+	return autoConvert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in, out, s)
+}
+
+func autoConvert_v1alpha1_FilterConfig_To_config_FilterConfig(in *FilterConfig, out *config.FilterConfig, s conversion.Scope) error {
+	out.ErrorMode = config.FilterErrorMode(in.ErrorMode)
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = new(config.MetricFilters)
+		if err := Convert_v1alpha1_MetricFilters_To_config_MetricFilters(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Metrics = nil
+	}
+	if in.Logs != nil {
+		in, out := &in.Logs, &out.Logs
+		*out = new(config.LogFilters)
+		if err := Convert_v1alpha1_LogFilters_To_config_LogFilters(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Logs = nil
+	}
+	out.MetricConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.MetricConditions))
+	out.LogConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.LogConditions))
+	return nil
+}
+
+// Convert_v1alpha1_FilterConfig_To_config_FilterConfig is an autogenerated conversion function.
+func Convert_v1alpha1_FilterConfig_To_config_FilterConfig(in *FilterConfig, out *config.FilterConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_FilterConfig_To_config_FilterConfig(in, out, s)
+}
+
+func autoConvert_config_FilterConfig_To_v1alpha1_FilterConfig(in *config.FilterConfig, out *FilterConfig, s conversion.Scope) error {
+	out.ErrorMode = FilterErrorMode(in.ErrorMode)
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = new(MetricFilters)
+		if err := Convert_config_MetricFilters_To_v1alpha1_MetricFilters(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Metrics = nil
+	}
+	if in.Logs != nil {
+		in, out := &in.Logs, &out.Logs
+		*out = new(LogFilters)
+		if err := Convert_config_LogFilters_To_v1alpha1_LogFilters(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Logs = nil
+	}
+	out.MetricConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.MetricConditions))
+	out.LogConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.LogConditions))
+	return nil
+}
+
+// Convert_config_FilterConfig_To_v1alpha1_FilterConfig is an autogenerated conversion function.
+func Convert_config_FilterConfig_To_v1alpha1_FilterConfig(in *config.FilterConfig, out *FilterConfig, s conversion.Scope) error {
+	return autoConvert_config_FilterConfig_To_v1alpha1_FilterConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_LogFilters_To_config_LogFilters(in *LogFilters, out *config.LogFilters, s conversion.Scope) error {
+	out.Include = (*config.LogMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*config.LogMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
+	return nil
+}
+
+// Convert_v1alpha1_LogFilters_To_config_LogFilters is an autogenerated conversion function.
+func Convert_v1alpha1_LogFilters_To_config_LogFilters(in *LogFilters, out *config.LogFilters, s conversion.Scope) error {
+	return autoConvert_v1alpha1_LogFilters_To_config_LogFilters(in, out, s)
+}
+
+func autoConvert_config_LogFilters_To_v1alpha1_LogFilters(in *config.LogFilters, out *LogFilters, s conversion.Scope) error {
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
+	out.Include = (*LogMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*LogMatchProperties)(unsafe.Pointer(in.Exclude))
+	return nil
+}
+
+// Convert_config_LogFilters_To_v1alpha1_LogFilters is an autogenerated conversion function.
+func Convert_config_LogFilters_To_v1alpha1_LogFilters(in *config.LogFilters, out *LogFilters, s conversion.Scope) error {
+	return autoConvert_config_LogFilters_To_v1alpha1_LogFilters(in, out, s)
+}
+
+func autoConvert_v1alpha1_LogMatchProperties_To_config_LogMatchProperties(in *LogMatchProperties, out *config.LogMatchProperties, s conversion.Scope) error {
+	out.MatchType = config.MatchType(in.MatchType)
+	out.ResourceAttributes = *(*[]config.FilterAttribute)(unsafe.Pointer(&in.ResourceAttributes))
+	out.RecordAttributes = *(*[]config.FilterAttribute)(unsafe.Pointer(&in.RecordAttributes))
+	out.SeverityTexts = *(*[]string)(unsafe.Pointer(&in.SeverityTexts))
+	out.SeverityNumber = (*config.LogSeverityNumberMatchProperties)(unsafe.Pointer(in.SeverityNumber))
+	out.Bodies = *(*[]string)(unsafe.Pointer(&in.Bodies))
+	return nil
+}
+
+// Convert_v1alpha1_LogMatchProperties_To_config_LogMatchProperties is an autogenerated conversion function.
+func Convert_v1alpha1_LogMatchProperties_To_config_LogMatchProperties(in *LogMatchProperties, out *config.LogMatchProperties, s conversion.Scope) error {
+	return autoConvert_v1alpha1_LogMatchProperties_To_config_LogMatchProperties(in, out, s)
+}
+
+func autoConvert_config_LogMatchProperties_To_v1alpha1_LogMatchProperties(in *config.LogMatchProperties, out *LogMatchProperties, s conversion.Scope) error {
+	out.MatchType = FilterMatchType(in.MatchType)
+	out.ResourceAttributes = *(*[]FilterAttribute)(unsafe.Pointer(&in.ResourceAttributes))
+	out.RecordAttributes = *(*[]FilterAttribute)(unsafe.Pointer(&in.RecordAttributes))
+	out.SeverityTexts = *(*[]string)(unsafe.Pointer(&in.SeverityTexts))
+	out.SeverityNumber = (*LogSeverityNumberMatchProperties)(unsafe.Pointer(in.SeverityNumber))
+	out.Bodies = *(*[]string)(unsafe.Pointer(&in.Bodies))
+	return nil
+}
+
+// Convert_config_LogMatchProperties_To_v1alpha1_LogMatchProperties is an autogenerated conversion function.
+func Convert_config_LogMatchProperties_To_v1alpha1_LogMatchProperties(in *config.LogMatchProperties, out *LogMatchProperties, s conversion.Scope) error {
+	return autoConvert_config_LogMatchProperties_To_v1alpha1_LogMatchProperties(in, out, s)
+}
+
+func autoConvert_v1alpha1_LogSeverityNumberMatchProperties_To_config_LogSeverityNumberMatchProperties(in *LogSeverityNumberMatchProperties, out *config.LogSeverityNumberMatchProperties, s conversion.Scope) error {
+	out.Min = in.Min
+	out.MatchUndefined = (*bool)(unsafe.Pointer(in.MatchUndefined))
+	return nil
+}
+
+// Convert_v1alpha1_LogSeverityNumberMatchProperties_To_config_LogSeverityNumberMatchProperties is an autogenerated conversion function.
+func Convert_v1alpha1_LogSeverityNumberMatchProperties_To_config_LogSeverityNumberMatchProperties(in *LogSeverityNumberMatchProperties, out *config.LogSeverityNumberMatchProperties, s conversion.Scope) error {
+	return autoConvert_v1alpha1_LogSeverityNumberMatchProperties_To_config_LogSeverityNumberMatchProperties(in, out, s)
+}
+
+func autoConvert_config_LogSeverityNumberMatchProperties_To_v1alpha1_LogSeverityNumberMatchProperties(in *config.LogSeverityNumberMatchProperties, out *LogSeverityNumberMatchProperties, s conversion.Scope) error {
+	out.Min = in.Min
+	out.MatchUndefined = (*bool)(unsafe.Pointer(in.MatchUndefined))
+	return nil
+}
+
+// Convert_config_LogSeverityNumberMatchProperties_To_v1alpha1_LogSeverityNumberMatchProperties is an autogenerated conversion function.
+func Convert_config_LogSeverityNumberMatchProperties_To_v1alpha1_LogSeverityNumberMatchProperties(in *config.LogSeverityNumberMatchProperties, out *LogSeverityNumberMatchProperties, s conversion.Scope) error {
+	return autoConvert_config_LogSeverityNumberMatchProperties_To_v1alpha1_LogSeverityNumberMatchProperties(in, out, s)
+}
+
+func autoConvert_v1alpha1_MetricFilters_To_config_MetricFilters(in *MetricFilters, out *config.MetricFilters, s conversion.Scope) error {
+	out.Include = (*config.MetricMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*config.MetricMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
+	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
+	return nil
+}
+
+// Convert_v1alpha1_MetricFilters_To_config_MetricFilters is an autogenerated conversion function.
+func Convert_v1alpha1_MetricFilters_To_config_MetricFilters(in *MetricFilters, out *config.MetricFilters, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MetricFilters_To_config_MetricFilters(in, out, s)
+}
+
+func autoConvert_config_MetricFilters_To_v1alpha1_MetricFilters(in *config.MetricFilters, out *MetricFilters, s conversion.Scope) error {
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
+	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
+	out.Include = (*MetricMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*MetricMatchProperties)(unsafe.Pointer(in.Exclude))
+	return nil
+}
+
+// Convert_config_MetricFilters_To_v1alpha1_MetricFilters is an autogenerated conversion function.
+func Convert_config_MetricFilters_To_v1alpha1_MetricFilters(in *config.MetricFilters, out *MetricFilters, s conversion.Scope) error {
+	return autoConvert_config_MetricFilters_To_v1alpha1_MetricFilters(in, out, s)
+}
+
+func autoConvert_v1alpha1_MetricMatchProperties_To_config_MetricMatchProperties(in *MetricMatchProperties, out *config.MetricMatchProperties, s conversion.Scope) error {
+	out.MatchType = config.MatchType(in.MatchType)
+	out.Regexp = (*config.RegexpConfig)(unsafe.Pointer(in.Regexp))
+	out.MetricNames = *(*[]string)(unsafe.Pointer(&in.MetricNames))
+	out.Expressions = *(*[]string)(unsafe.Pointer(&in.Expressions))
+	out.ResourceAttributes = *(*[]config.FilterAttribute)(unsafe.Pointer(&in.ResourceAttributes))
+	return nil
+}
+
+// Convert_v1alpha1_MetricMatchProperties_To_config_MetricMatchProperties is an autogenerated conversion function.
+func Convert_v1alpha1_MetricMatchProperties_To_config_MetricMatchProperties(in *MetricMatchProperties, out *config.MetricMatchProperties, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MetricMatchProperties_To_config_MetricMatchProperties(in, out, s)
+}
+
+func autoConvert_config_MetricMatchProperties_To_v1alpha1_MetricMatchProperties(in *config.MetricMatchProperties, out *MetricMatchProperties, s conversion.Scope) error {
+	out.MatchType = FilterMatchType(in.MatchType)
+	out.Regexp = (*RegexpConfig)(unsafe.Pointer(in.Regexp))
+	out.MetricNames = *(*[]string)(unsafe.Pointer(&in.MetricNames))
+	out.Expressions = *(*[]string)(unsafe.Pointer(&in.Expressions))
+	out.ResourceAttributes = *(*[]FilterAttribute)(unsafe.Pointer(&in.ResourceAttributes))
+	return nil
+}
+
+// Convert_config_MetricMatchProperties_To_v1alpha1_MetricMatchProperties is an autogenerated conversion function.
+func Convert_config_MetricMatchProperties_To_v1alpha1_MetricMatchProperties(in *config.MetricMatchProperties, out *MetricMatchProperties, s conversion.Scope) error {
+	return autoConvert_config_MetricMatchProperties_To_v1alpha1_MetricMatchProperties(in, out, s)
 }
 
 func autoConvert_v1alpha1_OTLPGRPCExporterConfig_To_config_OTLPGRPCExporterConfig(in *OTLPGRPCExporterConfig, out *config.OTLPGRPCExporterConfig, s conversion.Scope) error {
@@ -394,6 +742,28 @@ func autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfi
 // Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig is an autogenerated conversion function.
 func Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in *config.OTLPHTTPExporterConfig, out *OTLPHTTPExporterConfig, s conversion.Scope) error {
 	return autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_RegexpConfig_To_config_RegexpConfig(in *RegexpConfig, out *config.RegexpConfig, s conversion.Scope) error {
+	out.CacheEnabled = (*bool)(unsafe.Pointer(in.CacheEnabled))
+	out.CacheMaxNumEntries = in.CacheMaxNumEntries
+	return nil
+}
+
+// Convert_v1alpha1_RegexpConfig_To_config_RegexpConfig is an autogenerated conversion function.
+func Convert_v1alpha1_RegexpConfig_To_config_RegexpConfig(in *RegexpConfig, out *config.RegexpConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RegexpConfig_To_config_RegexpConfig(in, out, s)
+}
+
+func autoConvert_config_RegexpConfig_To_v1alpha1_RegexpConfig(in *config.RegexpConfig, out *RegexpConfig, s conversion.Scope) error {
+	out.CacheEnabled = (*bool)(unsafe.Pointer(in.CacheEnabled))
+	out.CacheMaxNumEntries = in.CacheMaxNumEntries
+	return nil
+}
+
+// Convert_config_RegexpConfig_To_v1alpha1_RegexpConfig is an autogenerated conversion function.
+func Convert_config_RegexpConfig_To_v1alpha1_RegexpConfig(in *config.RegexpConfig, out *RegexpConfig, s conversion.Scope) error {
+	return autoConvert_config_RegexpConfig_To_v1alpha1_RegexpConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_ResourceReference_To_config_ResourceReference(in *ResourceReference, out *config.ResourceReference, s conversion.Scope) error {

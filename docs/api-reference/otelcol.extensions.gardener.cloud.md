@@ -29,6 +29,7 @@ _Appears in:_
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
 | `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled.<br />When a signal is omitted, its pipeline is not created. The corresponding<br />receiver is still defined, which the collector reports as an unused<br />component in its logs; this is expected and harmless. |  | Optional: \{\} <br /> |
+| `filter` _[FilterConfig](#filterconfig)_ | Filter specifies the filter processor settings used to drop unwanted signals. |  | Optional: \{\} <br /> |
 
 
 #### CollectorExportersConfig
@@ -111,6 +112,31 @@ _Appears in:_
 | `none` | CompressionNone specifies that no compression is used.<br /> |
 
 
+#### ContextConditions
+
+
+
+ContextConditions specifies a group of OTTL conditions for the filter
+processor's context-inferred condition style (metric_conditions /
+log_conditions).
+
+When Context and ErrorMode are both empty, the group is rendered as a flat
+list of condition strings (basic style) and the OTTL context is inferred
+from each expression. Otherwise it is rendered as an explicit group
+(advanced style).
+
+
+
+_Appears in:_
+- [FilterConfig](#filterconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `context` _string_ | Context specifies the OTTL context the conditions are evaluated against,<br />e.g. "resource", "metric", "datapoint", "log". If empty, the context is<br />inferred from each condition. |  | Optional: \{\} <br /> |
+| `conditions` _string array_ | Conditions is the list of OTTL conditions. If any condition resolves to<br />true, the matching telemetry is dropped. |  | Required: \{\} <br /> |
+| `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing this group of conditions. When set, it overrides the<br />top-level ErrorMode. Only honored when the group is rendered in the<br />advanced style. |  | Optional: \{\} <br /> |
+
+
 #### DebugExporterConfig
 
 
@@ -146,6 +172,93 @@ _Appears in:_
 | `detailed` | DebugExporterVerbosityDetailed specifies detailed level of verbosity.<br /> |
 
 
+#### FilterAttribute
+
+
+
+FilterAttribute specifies an attribute key/value pair that the filter
+processor match properties evaluate against.
+
+
+
+_Appears in:_
+- [LogMatchProperties](#logmatchproperties)
+- [MetricMatchProperties](#metricmatchproperties)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `key` _string_ | Key specifies the attribute key to match against. |  | Required: \{\} <br /> |
+| `value` _string_ | Value specifies the attribute value to match against. If empty, only the<br />presence of the key is checked. |  | Optional: \{\} <br /> |
+
+
+#### FilterConfig
+
+
+
+FilterConfig specifies the settings for the filter processor, which drops
+metrics and logs matching the given OTTL conditions or match properties.
+
+See [Filter Processor] for more details.
+
+[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing an OTTL condition. If empty, the processor default is used. |  | Optional: \{\} <br /> |
+| `metrics` _[MetricFilters](#metricfilters)_ | Metrics specifies the filter settings for the metrics signal. |  | Optional: \{\} <br /> |
+| `logs` _[LogFilters](#logfilters)_ | Logs specifies the filter settings for the logs signal. Because events<br />are collected as the logs signal, this also applies to the events<br />pipeline. |  | Optional: \{\} <br /> |
+| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. It is mutually exclusive with Metrics. |  | Optional: \{\} <br /> |
+| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. It is mutually exclusive with Logs. |  | Optional: \{\} <br /> |
+
+
+#### FilterErrorMode
+
+_Underlying type:_ _string_
+
+FilterErrorMode determines how the filter processor reacts to errors that
+occur while processing an OTTL condition.
+
+See the link below for more details.
+
+https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+
+
+
+_Appears in:_
+- [ContextConditions](#contextconditions)
+- [FilterConfig](#filterconfig)
+
+| Field | Description |
+| --- | --- |
+| `ignore` | FilterErrorModeIgnore means the processor ignores errors returned by<br />conditions, logs them, and continues on to the next condition.<br /> |
+| `silent` | FilterErrorModeSilent means the processor ignores errors returned by<br />conditions, does not log them, and continues on to the next condition.<br /> |
+| `propagate` | FilterErrorModePropagate means the processor returns the error up the<br />pipeline, which results in the payload being dropped from the collector.<br /> |
+
+
+#### FilterMatchType
+
+_Underlying type:_ _string_
+
+FilterMatchType specifies the type of string pattern matching used by the filter
+processor include/exclude match properties.
+
+
+
+_Appears in:_
+- [LogMatchProperties](#logmatchproperties)
+- [MetricMatchProperties](#metricmatchproperties)
+
+| Field | Description |
+| --- | --- |
+| `strict` | MatchTypeStrict matches values by exact string equality.<br /> |
+| `regexp` | MatchTypeRegexp matches values against regular expressions.<br /> |
+
+
 #### LogEncoding
 
 _Underlying type:_ _string_
@@ -165,6 +278,28 @@ _Appears in:_
 | --- | --- |
 | `console` | LogEncodingConsole sets the collector's internal logger with console<br />encoding.<br /> |
 | `json` | LogEncodingJSON sets the collector's internal logger with JSON<br />encoding.<br /> |
+
+
+#### LogFilters
+
+
+
+LogFilters specifies the filter processor settings for the logs signal.
+
+The OTTL condition lists (Resource, LogRecord) and the object-based match
+properties (Include, Exclude) are mutually exclusive.
+
+
+
+_Appears in:_
+- [FilterConfig](#filterconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `include` _[LogMatchProperties](#logmatchproperties)_ | Include specifies the logs that should be included in the collector<br />service pipeline; all other logs are dropped. If both Include and Exclude<br />are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
+| `exclude` _[LogMatchProperties](#logmatchproperties)_ | Exclude specifies the logs that should be excluded from the collector<br />service pipeline; all other logs are included. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
+| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. Supports `and`,<br />`or`, and `()`. |  | Optional: \{\} <br /> |
+| `log_record` _string array_ | LogRecord is a list of OTTL conditions for an ottllog context. If any<br />condition resolves to true, the log record is dropped. Supports `and`,<br />`or`, and `()`. |  | Optional: \{\} <br /> |
 
 
 #### LogLevel
@@ -190,6 +325,46 @@ _Appears in:_
 | `DEBUG` | LogLevelDebug sets the collector's internal logger to DEBUG level.<br /> |
 
 
+#### LogMatchProperties
+
+
+
+LogMatchProperties specifies the set of properties the filter processor
+matches logs against, and the type of string pattern matching to use.
+
+
+
+_Appears in:_
+- [LogFilters](#logfilters)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `match_type` _[FilterMatchType](#filtermatchtype)_ | MatchType specifies the type of matching desired. |  | Required: \{\} <br /> |
+| `resource_attributes` _[FilterAttribute](#filterattribute) array_ | ResourceAttributes specifies a list of resource attributes to match logs<br />against. A match occurs if any resource attribute matches all expressions<br />in this list. |  | Optional: \{\} <br /> |
+| `record_attributes` _[FilterAttribute](#filterattribute) array_ | RecordAttributes specifies a list of record attributes to match logs<br />against. A match occurs if any record attribute matches at least one<br />expression in this list. |  | Optional: \{\} <br /> |
+| `severity_texts` _string array_ | SeverityTexts specifies a list of strings that the log record's severity<br />text field must match against. |  | Optional: \{\} <br /> |
+| `severity_number` _[LogSeverityNumberMatchProperties](#logseveritynumbermatchproperties)_ | SeverityNumber specifies how to match against a log record's severity<br />number, if defined. |  | Optional: \{\} <br /> |
+| `bodies` _string array_ | Bodies specifies a list of strings that the log record's body field must<br />match against. |  | Optional: \{\} <br /> |
+
+
+#### LogSeverityNumberMatchProperties
+
+
+
+LogSeverityNumberMatchProperties specifies how the filter processor matches
+against a log record's severity number.
+
+
+
+_Appears in:_
+- [LogMatchProperties](#logmatchproperties)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `min` _string_ | Min specifies the minimum severity a log record must have to match. This<br />corresponds to the severity short names, e.g. "INFO", "WARN", "ERROR".<br />The value is case-insensitive. |  | Required: \{\} <br /> |
+| `match_undefined` _boolean_ | MatchUndefined specifies whether log records with an "unspecified"<br />severity match. |  | Optional: \{\} <br /> |
+
+
 #### MessageEncoding
 
 _Underlying type:_ _string_
@@ -205,6 +380,50 @@ _Appears in:_
 | --- | --- |
 | `proto` | MessageEncodingProto specifies that proto encoding is used for<br />messages.<br /> |
 | `json` | MessageEncodingJSON specifies that JSON is used for encoding<br />messages.<br /> |
+
+
+#### MetricFilters
+
+
+
+MetricFilters specifies the filter processor settings for the metrics signal.
+
+The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
+match properties (Include, Exclude) are mutually exclusive.
+
+
+
+_Appears in:_
+- [FilterConfig](#filterconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `include` _[MetricMatchProperties](#metricmatchproperties)_ | Include specifies the metrics that should be included in the collector<br />service pipeline; all other metrics are dropped. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
+| `exclude` _[MetricMatchProperties](#metricmatchproperties)_ | Exclude specifies the metrics that should be excluded from the collector<br />service pipeline; all other metrics are included. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
+| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. |  | Optional: \{\} <br /> |
+| `metric` _string array_ | Metric is a list of OTTL conditions for an ottlmetric context. If any<br />condition resolves to true, the metric is dropped. |  | Optional: \{\} <br /> |
+| `datapoint` _string array_ | DataPoint is a list of OTTL conditions for an ottldatapoint context. If<br />any condition resolves to true, the datapoint is dropped. |  | Optional: \{\} <br /> |
+
+
+#### MetricMatchProperties
+
+
+
+MetricMatchProperties specifies the set of properties the filter processor
+matches metrics against, and the type of string pattern matching to use.
+
+
+
+_Appears in:_
+- [MetricFilters](#metricfilters)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `match_type` _[FilterMatchType](#filtermatchtype)_ | MatchType specifies the type of matching desired. |  | Required: \{\} <br /> |
+| `regexp` _[RegexpConfig](#regexpconfig)_ | Regexp specifies the options for the regexp match type. |  | Optional: \{\} <br /> |
+| `metric_names` _string array_ | MetricNames specifies the list of string patterns to match metric names<br />against. A match occurs if the metric name matches at least one pattern<br />in this list. |  | Optional: \{\} <br /> |
+| `expressions` _string array_ | Expressions specifies the list of expr expressions to match metrics<br />against. A match occurs if any datapoint in a metric matches at least one<br />expression in this list. |  | Optional: \{\} <br /> |
+| `resource_attributes` _[FilterAttribute](#filterattribute) array_ | ResourceAttributes specifies a list of resource attributes to match<br />metrics against. A match occurs if any resource attribute matches all<br />expressions in this list. |  | Optional: \{\} <br /> |
 
 
 #### MetricsVerbosityLevel
@@ -290,6 +509,24 @@ _Appears in:_
 | `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. | <nil> | Optional: \{\} <br /> |
 | `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
 | `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
+
+
+#### RegexpConfig
+
+
+
+RegexpConfig specifies the options for the regexp match type used by the
+filter processor include/exclude match properties.
+
+
+
+_Appears in:_
+- [MetricMatchProperties](#metricmatchproperties)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `cacheenabled` _boolean_ | CacheEnabled specifies whether match results are cached. |  | Optional: \{\} <br /> |
+| `cachemaxnumentries` _integer_ | CacheMaxNumEntries specifies the maximum number of entries in the cache. |  | Optional: \{\} <br /> |
 
 
 #### ResourceReference

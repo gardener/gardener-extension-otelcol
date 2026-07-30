@@ -106,6 +106,37 @@ const (
 	CompressionNone Compression = "none"
 )
 
+// FilterErrorMode determines how the filter processor reacts to errors that
+// occur while processing an OTTL condition.
+//
+// See the link below for more details.
+//
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor#error-modes
+type FilterErrorMode string
+
+const (
+	// FilterErrorModeIgnore means the processor ignores errors returned by
+	// conditions, logs them, and continues on to the next condition.
+	FilterErrorModeIgnore FilterErrorMode = "ignore"
+	// FilterErrorModeSilent means the processor ignores errors returned by
+	// conditions, does not log them, and continues on to the next condition.
+	FilterErrorModeSilent FilterErrorMode = "silent"
+	// FilterErrorModePropagate means the processor returns the error up the
+	// pipeline, which results in the payload being dropped from the collector.
+	FilterErrorModePropagate FilterErrorMode = "propagate"
+)
+
+// MatchType specifies the type of string pattern matching used by the filter
+// processor include/exclude match properties.
+type MatchType string
+
+const (
+	// MatchTypeStrict matches values by exact string equality.
+	MatchTypeStrict MatchType = "strict"
+	// MatchTypeRegexp matches values against regular expressions.
+	MatchTypeRegexp MatchType = "regexp"
+)
+
 // RetryOnFailureConfig provides the retry policy for an exporter.
 type RetryOnFailureConfig struct {
 	// Enabled specifies whether retry on failure is enabled or not.
@@ -326,6 +357,176 @@ type CollectorMetricsConfig struct {
 	Level MetricsVerbosityLevel
 }
 
+// FilterAttribute specifies an attribute key/value pair that the filter
+// processor match properties evaluate against.
+type FilterAttribute struct {
+	// Key specifies the attribute key to match against.
+	Key string
+
+	// Value specifies the attribute value to match against. If empty, only the
+	// presence of the key is checked.
+	Value string
+}
+
+// RegexpConfig specifies the options for the regexp match type used by the
+// filter processor include/exclude match properties.
+type RegexpConfig struct {
+	// CacheEnabled specifies whether match results are cached.
+	CacheEnabled *bool
+
+	// CacheMaxNumEntries specifies the maximum number of entries in the cache.
+	CacheMaxNumEntries int
+}
+
+// LogSeverityNumberMatchProperties specifies how the filter processor matches
+// against a log record's severity number.
+type LogSeverityNumberMatchProperties struct {
+	// Min specifies the minimum severity a log record must have to match.
+	Min string
+
+	// MatchUndefined specifies whether log records with an "unspecified"
+	// severity match.
+	MatchUndefined *bool
+}
+
+// MetricMatchProperties specifies the set of properties the filter processor
+// matches metrics against, and the type of string pattern matching to use.
+type MetricMatchProperties struct {
+	// MatchType specifies the type of matching desired.
+	MatchType MatchType
+
+	// Regexp specifies the options for the regexp match type.
+	Regexp *RegexpConfig
+
+	// MetricNames specifies the list of string patterns to match metric names
+	// against.
+	MetricNames []string
+
+	// Expressions specifies the list of expr expressions to match metrics
+	// against.
+	Expressions []string
+
+	// ResourceAttributes specifies a list of resource attributes to match
+	// metrics against.
+	ResourceAttributes []FilterAttribute
+}
+
+// LogMatchProperties specifies the set of properties the filter processor
+// matches logs against, and the type of string pattern matching to use.
+type LogMatchProperties struct {
+	// MatchType specifies the type of matching desired.
+	MatchType MatchType
+
+	// ResourceAttributes specifies a list of resource attributes to match logs
+	// against.
+	ResourceAttributes []FilterAttribute
+
+	// RecordAttributes specifies a list of record attributes to match logs
+	// against.
+	RecordAttributes []FilterAttribute
+
+	// SeverityTexts specifies a list of strings that the log record's severity
+	// text field must match against.
+	SeverityTexts []string
+
+	// SeverityNumber specifies how to match against a log record's severity
+	// number, if defined.
+	SeverityNumber *LogSeverityNumberMatchProperties
+
+	// Bodies specifies a list of strings that the log record's body field must
+	// match against.
+	Bodies []string
+}
+
+// MetricFilters specifies the filter processor settings for the metrics signal.
+//
+// The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
+// match properties (Include, Exclude) are mutually exclusive.
+type MetricFilters struct {
+	// Include specifies the metrics that should be included in the collector
+	// service pipeline; all other metrics are dropped.
+	Include *MetricMatchProperties
+
+	// Exclude specifies the metrics that should be excluded from the collector
+	// service pipeline; all other metrics are included.
+	Exclude *MetricMatchProperties
+
+	// Resource is a list of OTTL conditions for an ottlresource context.
+	Resource []string
+
+	// Metric is a list of OTTL conditions for an ottlmetric context.
+	Metric []string
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context.
+	DataPoint []string
+}
+
+// LogFilters specifies the filter processor settings for the logs signal.
+//
+// The OTTL condition lists (Resource, LogRecord) and the object-based match
+// properties (Include, Exclude) are mutually exclusive.
+type LogFilters struct {
+	// Include specifies the logs that should be included in the collector
+	// service pipeline; all other logs are dropped.
+	Include *LogMatchProperties
+
+	// Exclude specifies the logs that should be excluded from the collector
+	// service pipeline; all other logs are included.
+	Exclude *LogMatchProperties
+
+	// Resource is a list of OTTL conditions for an ottlresource context.
+	Resource []string
+
+	// LogRecord is a list of OTTL conditions for an ottllog context.
+	LogRecord []string
+}
+
+// ContextConditions specifies a group of OTTL conditions for the filter
+// processor's context-inferred condition style (metric_conditions /
+// log_conditions).
+//
+// When Context and ErrorMode are both empty, the group is rendered as a flat
+// list of condition strings (basic style) and the OTTL context is inferred
+// from each expression. Otherwise it is rendered as an explicit group
+// (advanced style).
+type ContextConditions struct {
+	// Context specifies the OTTL context the conditions are evaluated against.
+	// If empty, the context is inferred from each condition.
+	Context string
+
+	// Conditions is the list of OTTL conditions.
+	Conditions []string
+
+	// ErrorMode overrides the top-level ErrorMode for this group of conditions.
+	ErrorMode FilterErrorMode
+}
+
+// FilterConfig specifies the settings for the filter processor, which drops
+// metrics and logs matching the given OTTL conditions or match properties.
+//
+// See [Filter Processor] for more details.
+//
+// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+type FilterConfig struct {
+	// ErrorMode determines how the processor reacts to errors that occur while
+	// processing an OTTL condition. If empty, the processor default is used.
+	ErrorMode FilterErrorMode
+
+	// Metrics specifies the filter settings for the metrics signal.
+	Metrics *MetricFilters
+
+	// Logs specifies the filter settings for the logs signal.
+	Logs *LogFilters
+
+	// MetricConditions specifies the metrics filter using the context-inferred
+	// condition style. It is mutually exclusive with Metrics.
+	MetricConditions []ContextConditions
+
+	// LogConditions specifies the logs filter using the context-inferred
+	// condition style. It is mutually exclusive with Logs.
+	LogConditions []ContextConditions
+}
+
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
 	// Exporters specifies the exporters configuration of the collector.
@@ -341,6 +542,10 @@ type CollectorConfigSpec struct {
 	// export. Valid values are "logs", "events" and "metrics". If empty, all
 	// signals are enabled.
 	Signals []SignalType
+
+	// Filter specifies the filter processor settings used to drop unwanted
+	// metrics and logs.
+	Filter *FilterConfig
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -165,6 +165,9 @@ const (
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
 
+	// filterProcessorName is the name of the OpenTelemetry Filter processor.
+	filterProcessorName = "filter"
+
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
 
@@ -202,6 +205,10 @@ const (
 	configKeyEnabled    = "enabled"
 	configKeyEndpoint   = "endpoint"
 	configKeyPrometheus = "prometheus"
+	configKeyKey        = "key"
+	configKeyValue      = "value"
+	configKeyAction     = "action"
+	configKeyMatchType  = "match_type"
 	// labelValuePrometheusShoot is the value used for the `prometheus` label on
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
@@ -214,9 +221,9 @@ var readVerbs = []string{"get", "list", "watch"}
 // adds (or overwrites) the given key/value on the resource.
 func upsertAttribute(key string, value any) map[string]any {
 	return map[string]any{
-		"key":    key,
-		"value":  value,
-		"action": "upsert",
+		configKeyKey:    key,
+		configKeyValue:  value,
+		configKeyAction: "upsert",
 	}
 }
 
@@ -940,6 +947,182 @@ func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[st
 	return exporter
 }
 
+// filterAttributes converts the given filter attributes into the OTel
+// filterprocessor `key`/`value` attribute maps.
+func filterAttributes(attrs []config.FilterAttribute) []any {
+	out := make([]any, 0, len(attrs))
+	for _, attr := range attrs {
+		entry := map[string]any{configKeyKey: attr.Key}
+		if attr.Value != "" {
+			entry[configKeyValue] = attr.Value
+		}
+		out = append(out, entry)
+	}
+
+	return out
+}
+
+// getMetricMatchProperties renders the OTel filterprocessor include/exclude
+// match properties for the metrics signal.
+func getMetricMatchProperties(props *config.MetricMatchProperties) map[string]any {
+	match := map[string]any{
+		configKeyMatchType: string(props.MatchType),
+	}
+
+	if len(props.MetricNames) > 0 {
+		match["metric_names"] = props.MetricNames
+	}
+	if len(props.Expressions) > 0 {
+		match["expressions"] = props.Expressions
+	}
+	if len(props.ResourceAttributes) > 0 {
+		match["resource_attributes"] = filterAttributes(props.ResourceAttributes)
+	}
+	if props.Regexp != nil {
+		regexpConfig := map[string]any{}
+		if props.Regexp.CacheEnabled != nil {
+			regexpConfig["cacheenabled"] = *props.Regexp.CacheEnabled
+		}
+		if props.Regexp.CacheMaxNumEntries != 0 {
+			regexpConfig["cachemaxnumentries"] = props.Regexp.CacheMaxNumEntries
+		}
+		match["regexp"] = regexpConfig
+	}
+
+	return match
+}
+
+// getLogMatchProperties renders the OTel filterprocessor include/exclude match
+// properties for the logs signal.
+func getLogMatchProperties(props *config.LogMatchProperties) map[string]any {
+	match := map[string]any{
+		configKeyMatchType: string(props.MatchType),
+	}
+
+	if len(props.ResourceAttributes) > 0 {
+		match["resource_attributes"] = filterAttributes(props.ResourceAttributes)
+	}
+	if len(props.RecordAttributes) > 0 {
+		match["record_attributes"] = filterAttributes(props.RecordAttributes)
+	}
+	if len(props.SeverityTexts) > 0 {
+		match["severity_texts"] = props.SeverityTexts
+	}
+	if len(props.Bodies) > 0 {
+		match["bodies"] = props.Bodies
+	}
+	if props.SeverityNumber != nil {
+		severityNumber := map[string]any{
+			"min": props.SeverityNumber.Min,
+		}
+		if props.SeverityNumber.MatchUndefined != nil {
+			severityNumber["match_undefined"] = *props.SeverityNumber.MatchUndefined
+		}
+		match["severity_number"] = severityNumber
+	}
+
+	return match
+}
+
+// renderContextConditions renders the filter processor context-inferred
+// condition groups (metric_conditions / log_conditions).
+//
+// A group with no explicit context and no per-group error_mode is rendered as
+// bare condition strings (basic style); the filter processor infers the OTTL
+// context from each expression. A group that sets either is rendered as an
+// explicit object (advanced style). The two styles must not be mixed within a
+// single list, which the validation enforces.
+func renderContextConditions(groups []config.ContextConditions) []any {
+	out := make([]any, 0, len(groups))
+	for _, group := range groups {
+		if group.Context == "" && group.ErrorMode == "" {
+			for _, cond := range group.Conditions {
+				out = append(out, cond)
+			}
+
+			continue
+		}
+
+		entry := map[string]any{
+			"conditions": group.Conditions,
+		}
+		if group.Context != "" {
+			entry["context"] = group.Context
+		}
+		if group.ErrorMode != "" {
+			entry["error_mode"] = string(group.ErrorMode)
+		}
+		out = append(out, entry)
+	}
+
+	return out
+}
+
+// getFilterProcessorConfig returns the OTel settings for the filter processor.
+//
+// See the link below for more details about each config setting of the filter
+// processor.
+//
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+func (a *Actuator) getFilterProcessorConfig(cfg config.FilterConfig) map[string]any {
+	processor := map[string]any{}
+
+	if cfg.ErrorMode != "" {
+		processor["error_mode"] = string(cfg.ErrorMode)
+	}
+
+	if m := cfg.Metrics; m != nil {
+		metrics := map[string]any{}
+		if len(m.Resource) > 0 {
+			metrics["resource"] = m.Resource
+		}
+		if len(m.Metric) > 0 {
+			metrics["metric"] = m.Metric
+		}
+		if len(m.DataPoint) > 0 {
+			metrics["datapoint"] = m.DataPoint
+		}
+		if m.Include != nil {
+			metrics["include"] = getMetricMatchProperties(m.Include)
+		}
+		if m.Exclude != nil {
+			metrics["exclude"] = getMetricMatchProperties(m.Exclude)
+		}
+		if len(metrics) > 0 {
+			processor["metrics"] = metrics
+		}
+	}
+
+	if l := cfg.Logs; l != nil {
+		logs := map[string]any{}
+		if len(l.Resource) > 0 {
+			logs["resource"] = l.Resource
+		}
+		if len(l.LogRecord) > 0 {
+			logs["log_record"] = l.LogRecord
+		}
+		if l.Include != nil {
+			logs["include"] = getLogMatchProperties(l.Include)
+		}
+		if l.Exclude != nil {
+			logs["exclude"] = getLogMatchProperties(l.Exclude)
+		}
+		if len(logs) > 0 {
+			processor["logs"] = logs
+		}
+	}
+
+	if len(cfg.MetricConditions) > 0 {
+		processor["metric_conditions"] = renderContextConditions(cfg.MetricConditions)
+	}
+
+	if len(cfg.LogConditions) > 0 {
+		processor["log_conditions"] = renderContextConditions(cfg.LogConditions)
+	}
+
+	return processor
+}
+
 // getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
 // exporter.
 func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) map[string]any {
@@ -1125,10 +1308,28 @@ func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[stri
 	}
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
+	// The filter processor is inserted after memory_limiter and before batch so
+	// that unwanted telemetry is dropped before batching. It is only wired in
+	// when the filter is configured, so the collector does not report an unused
+	// component.
+	filterEnabled := cfg.Spec.Filter != nil
+
+	logsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName}
+	eventsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName}
+	metricsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName}
+	if filterEnabled {
+		logsProcessors = append(logsProcessors, filterProcessorName)
+		eventsProcessors = append(eventsProcessors, filterProcessorName)
+		metricsProcessors = append(metricsProcessors, filterProcessorName)
+	}
+	logsProcessors = append(logsProcessors, batchProcessorName)
+	eventsProcessors = append(eventsProcessors, batchProcessorName)
+	metricsProcessors = append(metricsProcessors, batchProcessorName)
+
 	if slices.Contains(signals, config.SignalLogs) {
 		pipelines[logsPipelineName] = &otelv1beta1.Pipeline{
 			Receivers:  []string{otlpReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Processors: logsProcessors,
 			Exporters:  exporterNames,
 		}
 	}
@@ -1136,7 +1337,7 @@ func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[stri
 	if slices.Contains(signals, config.SignalEvents) {
 		pipelines[eventsPipelineName] = &otelv1beta1.Pipeline{
 			Receivers:  []string{eventsReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
+			Processors: eventsProcessors,
 			Exporters:  exporterNames,
 		}
 	}
@@ -1144,7 +1345,7 @@ func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[stri
 	if slices.Contains(signals, config.SignalMetrics) {
 		pipelines[metricsPipelineName] = &otelv1beta1.Pipeline{
 			Receivers:  []string{prometheusReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
+			Processors: metricsProcessors,
 			Exporters:  exporterNames,
 		}
 	}
@@ -1348,6 +1549,12 @@ func (a *Actuator) getOtelCollector(
 				},
 			},
 		},
+	}
+
+	// Register the filter processor only when it is configured, so the
+	// collector does not report an unused component.
+	if cfg.Spec.Filter != nil {
+		obj.Spec.Config.Processors.Object[filterProcessorName] = a.getFilterProcessorConfig(*cfg.Spec.Filter)
 	}
 
 	// OTLP HTTP exporter TLS settings
