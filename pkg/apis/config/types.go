@@ -515,7 +515,7 @@ type FilterConfig struct {
 	// Metrics specifies the filter settings for the metrics signal.
 	Metrics *MetricFilters
 
-	// Logs specifies the filter settings for the logs signal.
+	// Logs specifies the filter settings for the logs and events signal.
 	Logs *LogFilters
 
 	// MetricConditions specifies the metrics filter using the context-inferred

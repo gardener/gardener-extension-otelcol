@@ -642,7 +642,7 @@ type MetricFilters struct {
 	DataPoint []string `json:"datapoint,omitempty"`
 }
 
-// LogFilters specifies the filter processor settings for the logs signal.
+// LogFilters specifies the filter processor settings for the logs and events signal.
 //
 // The OTTL condition lists (Resource, LogRecord) and the object-based match
 // properties (Include, Exclude) are mutually exclusive.
