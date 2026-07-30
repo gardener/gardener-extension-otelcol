@@ -225,7 +225,7 @@ occur while processing an OTTL condition.
 
 See the link below for more details.
 
-https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor#error-modes
 
 
 
