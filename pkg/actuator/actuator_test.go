@@ -24,14 +24,7 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 )
 
-const (
-	localName           = "local"
-	testMetricCondition = `metric.name == "foo"`
-	testKeyMatchType    = "match_type"
-	testKeyKey          = "key"
-	testKeyValue        = "value"
-	testKeyResource     = "resource"
-)
+const localName = "local"
 
 var _ = Describe("Actuator", Ordered, func() {
 	var (
@@ -370,7 +363,7 @@ var _ = Describe("filter processor", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Filter: &config.FilterConfig{
-						Metrics: &config.MetricFilters{Metric: []string{testMetricCondition}},
+						Metrics: &config.MetricFilters{Metric: []string{`metric.name == "foo"`}},
 					},
 				},
 			}
@@ -403,15 +396,15 @@ var _ = Describe("filter processor", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				Metrics: &config.MetricFilters{
 					Resource:  []string{`resource.attributes["env"] == "dev"`},
-					Metric:    []string{testMetricCondition},
+					Metric:    []string{`metric.name == "foo"`},
 					DataPoint: []string{`datapoint.value_int == 0`},
 				},
 			})
 
 			Expect(out["metrics"]).To(Equal(map[string]any{
-				testKeyResource: []string{`resource.attributes["env"] == "dev"`},
-				"metric":        []string{testMetricCondition},
-				"datapoint":     []string{`datapoint.value_int == 0`},
+				"resource":  []string{`resource.attributes["env"] == "dev"`},
+				"metric":    []string{`metric.name == "foo"`},
+				"datapoint": []string{`datapoint.value_int == 0`},
 			}))
 		})
 
@@ -435,15 +428,15 @@ var _ = Describe("filter processor", func() {
 
 			Expect(out["metrics"]).To(Equal(map[string]any{
 				"include": map[string]any{
-					testKeyMatchType: "strict",
-					"metric_names":   []string{"metric.a", "metric.b"},
+					"match_type":   "strict",
+					"metric_names": []string{"metric.a", "metric.b"},
 					"regexp": map[string]any{
 						"cacheenabled":       true,
 						"cachemaxnumentries": 10,
 					},
 					"resource_attributes": []any{
-						map[string]any{testKeyKey: "service.name", testKeyValue: "my-service"},
-						map[string]any{testKeyKey: "present-only"},
+						map[string]any{"key": "service.name", "value": "my-service"},
+						map[string]any{"key": "present-only"},
 					},
 				},
 			}))
@@ -469,10 +462,10 @@ var _ = Describe("filter processor", func() {
 			Expect(out["logs"]).To(Equal(map[string]any{
 				"log_record": []string{`IsMatch(log.body, ".*password.*")`},
 				"include": map[string]any{
-					testKeyMatchType:    "strict",
+					"match_type":        "strict",
 					"severity_texts":    []string{"INFO", "DEBUG"},
 					"bodies":            []string{"exact body"},
-					"record_attributes": []any{map[string]any{testKeyKey: "foo", testKeyValue: "bar"}},
+					"record_attributes": []any{map[string]any{"key": "foo", "value": "bar"}},
 					"severity_number": map[string]any{
 						"min":             "WARN",
 						"match_undefined": false,
@@ -494,12 +487,12 @@ var _ = Describe("filter processor", func() {
 		It("renders basic context-inferred conditions as bare strings", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				MetricConditions: []config.ContextConditions{
-					{Conditions: []string{testMetricCondition, `metric.name == "bar"`}},
+					{Conditions: []string{`metric.name == "foo"`, `metric.name == "bar"`}},
 				},
 			})
 
 			Expect(out["metric_conditions"]).To(Equal([]any{
-				testMetricCondition,
+				`metric.name == "foo"`,
 				`metric.name == "bar"`,
 			}))
 		})
@@ -508,7 +501,7 @@ var _ = Describe("filter processor", func() {
 			out := a.getFilterProcessorConfig(config.FilterConfig{
 				LogConditions: []config.ContextConditions{
 					{
-						Context:    testKeyResource,
+						Context:    "resource",
 						Conditions: []string{`attributes["k"] == "v"`},
 						ErrorMode:  config.FilterErrorModeSilent,
 					},
@@ -517,7 +510,7 @@ var _ = Describe("filter processor", func() {
 
 			Expect(out["log_conditions"]).To(Equal([]any{
 				map[string]any{
-					"context":    testKeyResource,
+					"context":    "resource",
 					"conditions": []string{`attributes["k"] == "v"`},
 					"error_mode": "silent",
 				},
