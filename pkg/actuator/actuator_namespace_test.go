@@ -15,6 +15,7 @@ var _ = Describe("parseShootNamespaceAttributes", func() {
 	DescribeTable("should parse the namespace into OTel resource attributes",
 		func(namespace, wantCluster, wantProject, wantShoot string) {
 			cluster, project, shoot := parseShootNamespaceAttributes(namespace)
+
 			Expect(cluster).To(Equal(wantCluster))
 			Expect(project).To(Equal(wantProject))
 			Expect(shoot).To(Equal(wantShoot))
@@ -39,49 +40,80 @@ var _ = Describe("parseShootNamespaceAttributes", func() {
 })
 
 var _ = Describe("signal selection", func() {
-	configWithSignals := func(signals ...config.SignalType) config.CollectorConfig {
-		return config.CollectorConfig{
-			Spec: config.CollectorConfigSpec{
-				Signals: signals,
-			},
+	// configWithSignals builds a config with a single target serving the given
+	// signals.
+	configWithSignals := func(enabled ...config.SignalType) config.CollectorConfig {
+		if len(enabled) == 0 {
+			return config.CollectorConfig{}
 		}
+
+		return config.CollectorConfig{Spec: config.CollectorConfigSpec{
+			Targets: []config.Target{{Signals: enabled}},
+		}}
 	}
 
-	DescribeTable("buildPipelines includes exactly the pipelines for the enabled signals",
+	DescribeTable("buildPipelines includes exactly the pipelines for the served signals",
 		func(cfg config.CollectorConfig, wantPipelines []string) {
-			pipelines := buildPipelines(cfg, []string{debugExporterName})
+			pipelines := buildPipelines(cfg, nil)
 			Expect(pipelines).To(HaveLen(len(wantPipelines)))
 			for _, name := range wantPipelines {
 				Expect(pipelines).To(HaveKey(name))
 			}
 		},
-		Entry("empty selection enables all pipelines",
+		Entry("no target builds no pipelines",
 			configWithSignals(),
-			[]string{logsPipelineName, eventsPipelineName, metricsPipelineName},
+			[]string{},
 		),
 		Entry("metrics only",
 			configWithSignals(config.SignalMetrics),
-			[]string{metricsPipelineName},
+			[]string{"metrics/0"},
 		),
 		Entry("logs and events only",
 			configWithSignals(config.SignalLogs, config.SignalEvents),
-			[]string{logsPipelineName, eventsPipelineName},
+			[]string{"logs/0", "logs/events/0"},
 		),
-		Entry("events only",
-			configWithSignals(config.SignalEvents),
-			[]string{eventsPipelineName},
+		Entry("all signals",
+			configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents),
+			[]string{
+				"metrics/0",
+				"logs/0",
+				"logs/events/0",
+			},
+		),
+		Entry("a target with no signals set defaults to all signals",
+			config.CollectorConfig{Spec: config.CollectorConfigSpec{
+				Targets: []config.Target{{Signals: nil}},
+			}},
+			[]string{
+				"metrics/0",
+				"logs/0",
+				"logs/events/0",
+			},
 		),
 	)
 
-	It("wires the enabled receivers and exporters into each pipeline", func() {
-		pipelines := buildPipelines(configWithSignals(), []string{debugExporterName, "otlp_http"})
-
-		Expect(pipelines[logsPipelineName].Receivers).To(Equal([]string{otlpReceiverName}))
-		Expect(pipelines[eventsPipelineName].Receivers).To(Equal([]string{eventsReceiverName}))
-		Expect(pipelines[metricsPipelineName].Receivers).To(Equal([]string{prometheusReceiverName}))
-
-		for _, p := range pipelines {
-			Expect(p.Exporters).To(Equal([]string{debugExporterName, "otlp_http"}))
+	It("wires the served receivers and per-target exporters into each pipeline", func() {
+		cfg := configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents)
+		exporterNames := map[config.SignalType]map[int][]string{
+			config.SignalMetrics: {0: {signalExporterName(config.SignalMetrics, 0, transportHTTP)}},
+			config.SignalLogs:    {0: {signalExporterName(config.SignalLogs, 0, transportHTTP)}},
+			config.SignalEvents:  {0: {signalExporterName(config.SignalEvents, 0, transportHTTP)}},
 		}
+
+		pipelines := buildPipelines(cfg, exporterNames)
+
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).
+			To(Equal([]string{"otlp"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).
+			To(Equal([]string{"k8sobjects/events"}))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).
+			To(Equal([]string{"prometheus"}))
+
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).
+			To(Equal([]string{"otlphttp/metrics/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).
+			To(Equal([]string{"otlphttp/logs/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).
+			To(Equal([]string{"otlphttp/events/0"}))
 	})
 })

@@ -30,29 +30,43 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 	var (
 		ctx                = context.TODO()
 		providerConfigData []byte
-		decoder            = serializer.NewCodecFactory(scheme.Scheme, serializer.EnableStrict).UniversalDecoder()
-		shootValidator     extensionswebhook.Validator
-		shoot              *core.Shoot
-		projectNamespace   = &corev1.Namespace{
+		decoder            = serializer.NewCodecFactory(
+			scheme.Scheme,
+			serializer.EnableStrict,
+		).UniversalDecoder()
+
+		shootValidator   extensionswebhook.Validator
+		shoot            *core.Shoot
+		projectNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "garden-local",
 			},
 		}
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{
-					DebugExporter: config.DebugExporterConfig{
-						Enabled:   new(true),
-						Verbosity: config.DebugExporterVerbosityBasic,
+				Targets: []config.Target{
+					{
+						Signals: []config.SignalType{config.SignalLogs},
+						Exporter: config.CollectorExportersConfig{
+							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+								Endpoint: "https://example.com:4318",
+							},
+						},
+					},
+					{
+						Signals: []config.SignalType{config.SignalEvents},
+						Exporter: config.CollectorExportersConfig{
+							DebugExporter: &config.DebugExporterConfig{
+								Verbosity: config.DebugExporterVerbosityBasic,
+							},
+						},
 					},
 				},
 			},
 		}
 
-		providerConfigWithNoExporters = config.CollectorConfig{
-			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{},
-			},
+		providerConfigWithoutTargets = config.CollectorConfig{
+			Spec: config.CollectorConfigSpec{},
 		}
 	)
 
@@ -82,12 +96,14 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 	})
 
 	It("IgnoreNotFound should ignore ErrExtensionNotFound errors", func() {
-		Expect(validator.IgnoreExtensionNotFound(validator.ErrExtensionNotFound)).NotTo(HaveOccurred())
-		Expect(validator.IgnoreExtensionNotFound(errors.New("an error"))).To(MatchError(ContainSubstring("an error")))
+		Expect(validator.IgnoreExtensionNotFound(validator.ErrExtensionNotFound)).
+			NotTo(HaveOccurred())
+		Expect(validator.IgnoreExtensionNotFound(errors.New("an error"))).
+			To(MatchError(ContainSubstring("an error")))
 	})
 
 	It("should successfully validate provider config", func() {
-		// Ensure we have the extension enabled with proper provider config
+		// Ensure we have the extension enabled with proper provider configuration.
 		shoot.Spec.Extensions = []core.Extension{
 			{
 				Type: actuator.ExtensionType,
@@ -120,8 +136,8 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		Expect(err).To(MatchError(ContainSubstring("no provider config specified")))
 	})
 
-	It("should fail to validate when no exporters are defined", func() {
-		data, err := json.Marshal(providerConfigWithNoExporters)
+	It("should fail to validate when no target is defined", func() {
+		data, err := json.Marshal(providerConfigWithoutTargets)
 		Expect(err).NotTo(HaveOccurred())
 		shoot.Spec.Extensions = []core.Extension{
 			{
@@ -133,6 +149,6 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 
 		err = shootValidator.Validate(ctx, shoot, nil)
-		Expect(err).To(MatchError(ContainSubstring("no exporter enabled")))
+		Expect(err).To(MatchError(ContainSubstring("at least one target must be defined")))
 	})
 })

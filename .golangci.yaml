@@ -26,6 +26,15 @@ linters:
     - unused
     - modernize
 
+  exclusions:
+    rules:
+      # Tests intentionally compare against hardcoded literals rather than
+      # reusing production constants, so a renamed constant is caught by a
+      # failing test. Disable goconst for test files.
+      - path: _test\.go
+        linters:
+          - goconst
+
   settings:
     revive:
       enable-all-rules: true
