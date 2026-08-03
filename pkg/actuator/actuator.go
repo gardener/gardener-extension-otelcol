@@ -10,9 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -140,20 +138,14 @@ const (
 	// projected into the OTel Collector pod for the k8sobjects/events receiver.
 	volumeNameShootKubeconfig = "shoot-kubeconfig"
 
-	// bearertokenauthextension names used by the exporters.
-	baseBearerTokenAuthName         = "bearertokenauth"
-	httpExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-http"
-	grpcExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-grpc"
+	// bearertokenauthextension base name used to derive per-signal names.
+	baseBearerTokenAuthName = "bearertokenauth"
 
-	// TLS volume names for the exporters.
-	baseVolumeNameTLS         = "tls"
-	httpExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-http"
-	grpcExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-grpc"
+	// TLS volume base name used to derive per-signal volume names.
+	baseVolumeNameTLS = "tls"
 
-	// TLS volume mounts for the exporters.
-	baseVolumeMountPathTLS         = "/etc/ssl/tls"
-	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
-	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
+	// TLS volume mount base path used to derive per-signal mount paths.
+	baseVolumeMountPathTLS = "/etc/ssl/tls"
 
 	// batchProcessorName is the name of the OpenTelemetry Batch processor.
 	batchProcessorName = "batch"
@@ -165,10 +157,12 @@ const (
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
 
-	// filterProcessorName is the name of the OpenTelemetry Filter processor.
-	filterProcessorName = "filter"
+	// filterProcessorBaseName is the base name of the OpenTelemetry Filter
+	// processor, used to derive per-signal and global filter processor names.
+	filterProcessorBaseName = "filter"
 
-	// otlpReceiverName is the name of the OTLP receiver.
+	// otlpReceiverName is the name of the OTLP receiver. It feeds the logs,
+	// traces and profiles signals.
 	otlpReceiverName = "otlp"
 
 	// eventsReceiverName is the name of the k8sobjects receiver for events.
@@ -177,8 +171,9 @@ const (
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
 
-	// debugExporterName is the name of the debug exporter.
-	debugExporterName = "debug"
+	// debugExporterBaseName is the base name of the debug exporter, used to
+	// derive per-signal debug exporter names.
+	debugExporterBaseName = "debug"
 
 	// logsPipelineName is the name of the logs pipeline.
 	logsPipelineName = "logs"
@@ -188,6 +183,12 @@ const (
 
 	// metricsPipelineName is the name of the metrics pipeline.
 	metricsPipelineName = "metrics"
+
+	// tracesPipelineName is the name of the traces pipeline.
+	tracesPipelineName = "traces"
+
+	// profilesPipelineName is the name of the profiles pipeline.
+	profilesPipelineName = "profiles"
 
 	// telemetryMetricsKey is the telemetry config key for metrics settings.
 	telemetryMetricsKey = "metrics"
@@ -216,6 +217,104 @@ const (
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
 var readVerbs = []string{"get", "list", "watch"}
+
+// signalPipelineName returns the collector service pipeline name for the i-th
+// target of a signal, e.g. "metrics/0".
+func signalPipelineName(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s/%d", signalPipelineBaseName(sig), i)
+}
+
+// signalPipelineBaseName returns the base pipeline name for a signal. Because
+// the collector infers the pipeline signal type from this prefix, the events
+// signal (collected as logs) maps to the "logs" base.
+func signalPipelineBaseName(sig config.SignalType) string {
+	switch sig {
+	case config.SignalMetrics:
+		return metricsPipelineName
+	case config.SignalLogs:
+		return logsPipelineName
+	case config.SignalTraces:
+		return tracesPipelineName
+	case config.SignalProfiles:
+		return profilesPipelineName
+	case config.SignalEvents:
+		return eventsPipelineName
+	default:
+		return string(sig)
+	}
+}
+
+// signalReceiverName returns the receiver feeding a signal's pipeline.
+func signalReceiverName(sig config.SignalType) string {
+	switch sig {
+	case config.SignalMetrics:
+		return prometheusReceiverName
+	case config.SignalEvents:
+		return eventsReceiverName
+	default:
+		// Logs, traces and profiles are all received via OTLP.
+		return otlpReceiverName
+	}
+}
+
+// signalExporterName returns the exporter component name for the i-th target of
+// a signal and the chosen protocol, e.g. "otlphttp/metrics/0", "otlp/events/0"
+// or "debug/metrics/2".
+func signalExporterName(sig config.SignalType, i int, proto config.ExporterProtocol) string {
+	base := "otlphttp"
+	switch proto {
+	case config.ExporterProtocolGRPC:
+		base = "otlp"
+	case config.ExporterProtocolDebug:
+		base = debugExporterBaseName
+	default:
+		// HTTP is the default protocol; keep the otlphttp base.
+	}
+
+	return fmt.Sprintf("%s/%s/%d", base, sig, i)
+}
+
+// globalFilterName returns the filter processor component name for the i-th
+// global filter rule, e.g. "filter/global/0".
+func globalFilterName(i int) string {
+	return fmt.Sprintf("%s/global/%d", filterProcessorBaseName, i)
+}
+
+// signalFilterName returns the filter processor component name for the
+// ruleIdx-th filter rule of a signal's i-th target, e.g. "filter/metrics/0/1".
+func signalFilterName(sig config.SignalType, i, ruleIdx int) string {
+	return fmt.Sprintf("%s/%s/%d/%d", filterProcessorBaseName, sig, i, ruleIdx)
+}
+
+// signalBearerTokenAuthName returns the bearertokenauth extension name for the
+// i-th target of a signal, e.g. "bearertokenauth/metrics/0".
+func signalBearerTokenAuthName(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s/%s/%d", baseBearerTokenAuthName, sig, i)
+}
+
+// signalVolumeNameTLS returns the TLS volume name for the i-th target of a
+// signal, e.g. "tls-metrics-0".
+func signalVolumeNameTLS(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s-%s-%d", baseVolumeNameTLS, sig, i)
+}
+
+// signalVolumeMountPathTLS returns the TLS volume mount path for the i-th
+// target of a signal, e.g. "/etc/ssl/tls-metrics-0".
+func signalVolumeMountPathTLS(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s-%s-%d", baseVolumeMountPathTLS, sig, i)
+}
+
+// signalVolumeNameBearerToken returns the bearer token volume name for the i-th
+// target of a signal.
+func signalVolumeNameBearerToken(sig config.SignalType, i int) string {
+	return fmt.Sprintf("bearer-token-auth-%s-%d", sig, i)
+}
+
+// signalVolumeMountPathBearerToken returns the bearer token mount path for the
+// i-th target of a signal.
+func signalVolumeMountPathBearerToken(sig config.SignalType, i int) string {
+	return fmt.Sprintf("/etc/auth/bearer-%s-%d", sig, i)
+}
 
 // upsertAttribute returns an OTel resourceprocessor `attributes` entry that
 // adds (or overwrites) the given key/value on the resource.
@@ -934,8 +1033,9 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 	return obj
 }
 
-// getDebugExporterConfig returns the OTel settings for the debug exporter.
-func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[string]any {
+// getDebugExporterConfig returns the OTel settings for the debug exporter,
+// derived from a debug-protocol [config.ExporterConfig].
+func (a *Actuator) getDebugExporterConfig(cfg config.ExporterConfig) map[string]any {
 	// See the link below for more details about each config setting for the
 	// debug exporter.
 	//
@@ -1058,20 +1158,21 @@ func renderContextConditions(groups []config.ContextConditions) []any {
 	return out
 }
 
-// getFilterProcessorConfig returns the OTel settings for the filter processor.
+// getFilterProcessorConfig returns the OTel settings for a single filter
+// processor instance built from one [config.FilterRule].
 //
 // See the link below for more details about each config setting of the filter
 // processor.
 //
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-func (a *Actuator) getFilterProcessorConfig(cfg config.FilterConfig) map[string]any {
+func (a *Actuator) getFilterProcessorConfig(rule config.FilterRule) map[string]any {
 	processor := map[string]any{}
 
-	if cfg.ErrorMode != "" {
-		processor["error_mode"] = string(cfg.ErrorMode)
+	if rule.ErrorMode != "" {
+		processor["error_mode"] = string(rule.ErrorMode)
 	}
 
-	if m := cfg.Metrics; m != nil {
+	if m := rule.Metrics; m != nil {
 		metrics := map[string]any{}
 		if len(m.Resource) > 0 {
 			metrics["resource"] = m.Resource
@@ -1093,7 +1194,7 @@ func (a *Actuator) getFilterProcessorConfig(cfg config.FilterConfig) map[string]
 		}
 	}
 
-	if l := cfg.Logs; l != nil {
+	if l := rule.Logs; l != nil {
 		logs := map[string]any{}
 		if len(l.Resource) > 0 {
 			logs["resource"] = l.Resource
@@ -1112,20 +1213,24 @@ func (a *Actuator) getFilterProcessorConfig(cfg config.FilterConfig) map[string]
 		}
 	}
 
-	if len(cfg.MetricConditions) > 0 {
-		processor["metric_conditions"] = renderContextConditions(cfg.MetricConditions)
+	if len(rule.MetricConditions) > 0 {
+		processor["metric_conditions"] = renderContextConditions(rule.MetricConditions)
 	}
 
-	if len(cfg.LogConditions) > 0 {
-		processor["log_conditions"] = renderContextConditions(cfg.LogConditions)
+	if len(rule.LogConditions) > 0 {
+		processor["log_conditions"] = renderContextConditions(rule.LogConditions)
+	}
+
+	if len(rule.Conditions) > 0 {
+		processor["conditions"] = renderContextConditions(rule.Conditions)
 	}
 
 	return processor
 }
 
 // getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
-// exporter.
-func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) map[string]any {
+// exporter of the given signal's i-th target.
+func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.ExporterConfig, sig config.SignalType, i int) map[string]any {
 	exporter := map[string]any{}
 
 	// See the link below for more details about each config setting of the
@@ -1134,22 +1239,6 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
 	if cfg.Endpoint != "" {
 		exporter[configKeyEndpoint] = cfg.Endpoint
-	}
-
-	if cfg.TracesEndpoint != "" {
-		exporter["traces_endpoint"] = cfg.TracesEndpoint
-	}
-
-	if cfg.MetricsEndpoint != "" {
-		exporter["metrics_endpoint"] = cfg.MetricsEndpoint
-	}
-
-	if cfg.LogsEndpoint != "" {
-		exporter["logs_endpoint"] = cfg.LogsEndpoint
-	}
-
-	if cfg.ProfilesEndpoint != "" {
-		exporter["profiles_endpoint"] = cfg.ProfilesEndpoint
 	}
 
 	exporter["read_buffer_size"] = cfg.ReadBufferSize
@@ -1171,38 +1260,44 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 
 	// TLS settings
 	if tls := cfg.TLS; tls != nil {
-		tlsConfig := map[string]any{}
-		if tls.InsecureSkipVerify != nil {
-			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-		}
-		if tls.CA != nil {
-			tlsConfig["ca_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
-		}
-		if tls.Cert != nil {
-			tlsConfig["cert_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
-		}
-		if tls.Key != nil {
-			tlsConfig["key_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
-		}
-
-		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
-
-		exporter["tls"] = tlsConfig
+		exporter["tls"] = a.getExporterTLSConfig(tls, signalVolumeMountPathTLS(sig, i))
 	}
 
 	// Bearer Token Authentication settings
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
-			"authenticator": httpExporterBearerTokenAuthName,
+			"authenticator": signalBearerTokenAuthName(sig, i),
 		}
 	}
 
 	return exporter
 }
 
+// getExporterTLSConfig renders the TLS block for an exporter, resolving the
+// CA/cert/key file paths against the given per-signal mount path.
+func (a *Actuator) getExporterTLSConfig(tls *config.TLSConfig, mountPath string) map[string]any {
+	tlsConfig := map[string]any{}
+	if tls.InsecureSkipVerify != nil {
+		tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+	}
+	if tls.CA != nil {
+		tlsConfig["ca_file"] = filepath.Join(mountPath, tls.CA.ResourceRef.DataKey)
+	}
+	if tls.Cert != nil {
+		tlsConfig["cert_file"] = filepath.Join(mountPath, tls.Cert.ResourceRef.DataKey)
+	}
+	if tls.Key != nil {
+		tlsConfig["key_file"] = filepath.Join(mountPath, tls.Key.ResourceRef.DataKey)
+	}
+
+	tlsConfig["reload_interval"] = tls.ReloadInterval.String()
+
+	return tlsConfig
+}
+
 // getOTLPGRPCExporterConfig returns the OTel settings for the OTLP gRPC
-// exporter.
-func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) map[string]any {
+// exporter of the given signal's i-th target.
+func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.ExporterConfig, sig config.SignalType, i int) map[string]any {
 	// See the link below for more details about each config setting of the
 	// OTLP gRPC exporter.
 	//
@@ -1228,53 +1323,58 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 
 	// TLS settings
 	if tls := cfg.TLS; tls != nil {
-		tlsConfig := map[string]any{}
-		if tls.InsecureSkipVerify != nil {
-			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-		}
-		if tls.CA != nil {
-			tlsConfig["ca_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
-		}
-		if tls.Cert != nil {
-			tlsConfig["cert_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
-		}
-		if tls.Key != nil {
-			tlsConfig["key_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
-		}
-
-		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
-
-		exporter["tls"] = tlsConfig
+		exporter["tls"] = a.getExporterTLSConfig(tls, signalVolumeMountPathTLS(sig, i))
 	}
 
 	// Bearer Token Authentication settings
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
-			"authenticator": grpcExporterBearerTokenAuthName,
+			"authenticator": signalBearerTokenAuthName(sig, i),
 		}
 	}
 
 	return exporter
 }
 
+// getSignalExporterConfig renders the exporter config for a signal's i-th
+// target based on its effective (merged) protocol.
+func (a *Actuator) getSignalExporterConfig(cfg config.ExporterConfig, sig config.SignalType, i int) map[string]any {
+	switch cfg.Protocol {
+	case config.ExporterProtocolGRPC:
+		return a.getOTLPGRPCExporterConfig(cfg, sig, i)
+	case config.ExporterProtocolDebug:
+		return a.getDebugExporterConfig(cfg)
+	default:
+		return a.getOTLPHTTPExporterConfig(cfg, sig, i)
+	}
+}
+
 // getOtelExporters returns the OpenTelemetry exporters based on the given
-// [config.CollectorConfig] spec.
-func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
+// [config.CollectorConfig] spec, along with the exporter component names
+// grouped per signal so pipelines can reference them. For each signal the
+// returned slice is indexed by target, i.e. element i is the exporter name for
+// that signal's i-th target.
+func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) (map[string]any, map[config.SignalType][]string) {
 	exporters := make(map[string]any)
+	perSignalTarget := make(map[config.SignalType][]string)
 
-	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
-		exporters[debugExporterName] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
+	for _, sig := range config.AllSignals() {
+		signal := cfg.Spec.Signals.Signal(sig)
+		if !signal.IsEnabled() {
+			continue
+		}
+
+		names := make([]string, len(signal.Targets))
+		for i, target := range signal.Targets {
+			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
+			name := signalExporterName(sig, i, eff.Protocol)
+			exporters[name] = a.getSignalExporterConfig(eff, sig, i)
+			names[i] = name
+		}
+		perSignalTarget[sig] = names
 	}
 
-	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
-		exporters["otlp_http"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
-	}
-
-	if cfg.Spec.Exporters.OTLPGRPCExporter.IsEnabled() {
-		exporters["otlp_grpc"] = a.getOTLPGRPCExporterConfig(cfg.Spec.Exporters.OTLPGRPCExporter)
-	}
-
-	return exporters
+	return exporters, perSignalTarget
 }
 
 // parseShootNamespaceAttributes extracts OTel resource attributes from a shoot
@@ -1295,58 +1395,46 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 }
 
 // buildPipelines returns the collector service pipelines for the signals
-// enabled by cfg. Receivers are always defined (see [Actuator.getOtelCollector]);
-// only the pipelines are gated here.
-func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[string]*otelv1beta1.Pipeline {
-	signals := cfg.Spec.Signals
-	if len(signals) == 0 {
-		signals = []config.SignalType{
-			config.SignalLogs,
-			config.SignalEvents,
-			config.SignalMetrics,
-		}
-	}
+// enabled by cfg. Each enabled signal produces one pipeline per target, wired
+// to that target's own exporter and filter processor instances.
+//
+// The processor chain is: resource, memory_limiter, (transform/events for the
+// events signal), the global filter processors, the target's own filter
+// processors, and finally batch. The filter processors are inserted after
+// memory_limiter and before batch so unwanted telemetry is dropped before
+// batching.
+func buildPipelines(cfg config.CollectorConfig, perSignalTargetExporterNames map[config.SignalType][]string) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
-	// The filter processor is inserted after memory_limiter and before batch so
-	// that unwanted telemetry is dropped before batching. It is only wired in
-	// when the filter is configured, so the collector does not report an unused
-	// component.
-	filterEnabled := cfg.Spec.Filter != nil
-
-	logsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName}
-	eventsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName}
-	metricsProcessors := []string{resourceProcessorName, memoryLimiterProcessorName}
-	if filterEnabled {
-		logsProcessors = append(logsProcessors, filterProcessorName)
-		eventsProcessors = append(eventsProcessors, filterProcessorName)
-		metricsProcessors = append(metricsProcessors, filterProcessorName)
-	}
-	logsProcessors = append(logsProcessors, batchProcessorName)
-	eventsProcessors = append(eventsProcessors, batchProcessorName)
-	metricsProcessors = append(metricsProcessors, batchProcessorName)
-
-	if slices.Contains(signals, config.SignalLogs) {
-		pipelines[logsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{otlpReceiverName},
-			Processors: logsProcessors,
-			Exporters:  exporterNames,
+	for _, sig := range config.AllSignals() {
+		signal := cfg.Spec.Signals.Signal(sig)
+		if !signal.IsEnabled() {
+			continue
 		}
-	}
 
-	if slices.Contains(signals, config.SignalEvents) {
-		pipelines[eventsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{eventsReceiverName},
-			Processors: eventsProcessors,
-			Exporters:  exporterNames,
-		}
-	}
+		for i, target := range signal.Targets {
+			processors := []string{resourceProcessorName, memoryLimiterProcessorName}
+			if sig == config.SignalEvents {
+				processors = append(processors, transformEventsProcessorName)
+			}
+			for g := range cfg.Spec.GlobalFilters {
+				processors = append(processors, globalFilterName(g))
+			}
+			for ruleIdx := range target.Filters {
+				processors = append(processors, signalFilterName(sig, i, ruleIdx))
+			}
+			processors = append(processors, batchProcessorName)
 
-	if slices.Contains(signals, config.SignalMetrics) {
-		pipelines[metricsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{prometheusReceiverName},
-			Processors: metricsProcessors,
-			Exporters:  exporterNames,
+			var exporters []string
+			if names := perSignalTargetExporterNames[sig]; i < len(names) {
+				exporters = []string{names[i]}
+			}
+
+			pipelines[signalPipelineName(sig, i)] = &otelv1beta1.Pipeline{
+				Receivers:  []string{signalReceiverName(sig)},
+				Processors: processors,
+				Exporters:  exporters,
+			}
 		}
 	}
 
@@ -1370,18 +1458,9 @@ func (a *Actuator) getOtelCollector(
 
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
-
-		baseVolumeNameBearerToken         = "bearer-token-auth"                               // #nosec: G101
-		httpExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-http" // #nosec: G101
-		grpcExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-grpc" // #nosec: G101
-
-		baseVolumeMountPathBearerTokenFile         = "/etc/auth/bearer"                                         // #nosec: G101
-		httpExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-http" // #nosec: G101
-		grpcExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-grpc" // #nosec: G101
 	)
 
-	exporters := a.getOtelExporters(cfg)
-	exporterNames := slices.Sorted(maps.Keys(exporters))
+	exporters, perSignalExporterNames := a.getOtelExporters(cfg)
 	clusterName, projectName, shootName := parseShootNamespaceAttributes(namespace)
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
@@ -1545,59 +1624,63 @@ func (a *Actuator) getOtelCollector(
 							},
 						},
 					},
-					Pipelines: buildPipelines(cfg, exporterNames),
+					Pipelines: buildPipelines(cfg, perSignalExporterNames),
 				},
 			},
 		},
 	}
 
-	// Register the filter processor only when it is configured, so the
-	// collector does not report an unused component.
-	if cfg.Spec.Filter != nil {
-		obj.Spec.Config.Processors.Object[filterProcessorName] = a.getFilterProcessorConfig(*cfg.Spec.Filter)
+	// Register the global filter processors, prepended to every enabled
+	// signal's pipeline.
+	for i, rule := range cfg.Spec.GlobalFilters {
+		obj.Spec.Config.Processors.Object[globalFilterName(i)] = a.getFilterProcessorConfig(rule)
 	}
 
-	// OTLP HTTP exporter TLS settings
-	a.configureVolumeForTLS(
-		obj,
-		cfg.Spec.Exporters.OTLPHTTPExporter.TLS,
-		httpExporterVolumeNameTLS,
-		httpExporterVolumeMountPathTLS,
-		resources,
-	)
+	// Register the per-target filter processors and configure the per-target
+	// exporter TLS and bearer token authentication volumes. Only enabled
+	// signals are processed so the collector does not report unused components.
+	for _, sig := range config.AllSignals() {
+		signal := cfg.Spec.Signals.Signal(sig)
+		if !signal.IsEnabled() {
+			continue
+		}
 
-	// OTLP HTTP exporter Bearer Token Authentication settings
-	//
-	// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
-	a.configureVolumeForBearerTokenAuthExtension(
-		obj,
-		cfg.Spec.Exporters.OTLPHTTPExporter.Token,
-		httpExporterBearerTokenAuthName,
-		httpExporterVolumeMountPathBearerTokenFile,
-		httpExporterVolumeNameBearerToken,
-		httpExporterVolumeMountPathBearerTokenFile,
-		resources,
-	)
+		for i, target := range signal.Targets {
+			for ruleIdx, rule := range target.Filters {
+				obj.Spec.Config.Processors.Object[signalFilterName(sig, i, ruleIdx)] = a.getFilterProcessorConfig(rule)
+			}
 
-	// OTLP gRPC exporter TLS settings
-	a.configureVolumeForTLS(
-		obj,
-		cfg.Spec.Exporters.OTLPGRPCExporter.TLS,
-		grpcExporterVolumeNameTLS,
-		grpcExporterVolumeMountPathTLS,
-		resources,
-	)
+			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
 
-	// OTLP gRPC exporter Bearer Token Authentication settings
-	a.configureVolumeForBearerTokenAuthExtension(
-		obj,
-		cfg.Spec.Exporters.OTLPGRPCExporter.Token,
-		grpcExporterBearerTokenAuthName,
-		grpcExporterVolumeMountPathBearerTokenFile,
-		grpcExporterVolumeNameBearerToken,
-		grpcExporterVolumeMountPathBearerTokenFile,
-		resources,
-	)
+			// A debug target writes to the collector's own logs; it has no
+			// endpoint, TLS or token, so there are no volumes to configure.
+			if eff.Protocol == config.ExporterProtocolDebug {
+				continue
+			}
+
+			// Exporter TLS settings
+			a.configureVolumeForTLS(
+				obj,
+				eff.TLS,
+				signalVolumeNameTLS(sig, i),
+				signalVolumeMountPathTLS(sig, i),
+				resources,
+			)
+
+			// Exporter Bearer Token Authentication settings
+			//
+			// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
+			a.configureVolumeForBearerTokenAuthExtension(
+				obj,
+				eff.Token,
+				signalBearerTokenAuthName(sig, i),
+				signalVolumeMountPathBearerToken(sig, i),
+				signalVolumeNameBearerToken(sig, i),
+				signalVolumeMountPathBearerToken(sig, i),
+				resources,
+			)
+		}
+	}
 
 	return obj
 }

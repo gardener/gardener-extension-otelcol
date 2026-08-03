@@ -32,18 +32,18 @@ const (
 	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
 )
 
-// SignalType identifies a telemetry signal the collector can collect and
-// export.
-type SignalType string
+// ExporterProtocol selects the OTLP transport used by an exporter.
+type ExporterProtocol string
 
 const (
-	// SignalLogs is the signal for logs received via OTLP.
-	SignalLogs SignalType = "logs"
-	// SignalEvents is the signal for Kubernetes events collected from the
-	// shoot cluster.
-	SignalEvents SignalType = "events"
-	// SignalMetrics is the signal for metrics scraped via Prometheus.
-	SignalMetrics SignalType = "metrics"
+	// ExporterProtocolHTTP selects the OTLP HTTP exporter.
+	ExporterProtocolHTTP ExporterProtocol = "http"
+	// ExporterProtocolGRPC selects the OTLP gRPC exporter.
+	ExporterProtocolGRPC ExporterProtocol = "grpc"
+	// ExporterProtocolDebug selects the debug exporter, which writes telemetry
+	// to the collector's own logs. It only honors the Verbosity field; the
+	// endpoint, TLS, token and buffer settings are ignored.
+	ExporterProtocolDebug ExporterProtocol = "debug"
 )
 
 // LogLevel specifies the minimum enabled logging level for the collector.
@@ -158,84 +158,109 @@ type RetryOnFailureConfig struct {
 	Multiplier float64
 }
 
-// OTLPHTTPExporterConfig provides the OTLP HTTP Exporter configuration settings.
+// ExporterConfig provides a full exporter configuration.
 //
-// See [OTLP HTTP Exporter] for more details.
+// It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
+// selected by Protocol. It is used both as the top-level default exporter
+// (inherited by every signal target) and as a per-target override. Any
+// zero-valued field in a per-target override inherits the corresponding value
+// from the default exporter, see [ExporterConfig.MergeWith].
+//
+// When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
+// endpoint, TLS, token and buffer settings are ignored.
+//
+// See [OTLP HTTP Exporter], [OTLP gRPC Exporter] and [Debug Exporter] for more
+// details.
 //
 // [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
-type OTLPHTTPExporterConfig struct {
-	// Enabled specifies whether the OTLP HTTP exporter is enabled or not.
-	Enabled *bool
+// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+// [Debug Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
+type ExporterConfig struct {
+	// Protocol selects the transport used by the exporter.
+	Protocol ExporterProtocol
 
-	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
-	//
-	// To send each signal a corresponding path will be added to this base
-	// URL, i.e. for traces "/v1/traces" will appended, for metrics
-	// "/v1/metrics" will be appended, for logs "/v1/logs" will be appended.
+	// Endpoint specifies the target endpoint to send data to. For HTTP this is
+	// a base URL; for gRPC this is a gRPC endpoint. It is ignored when Protocol
+	// is [ExporterProtocolDebug].
 	Endpoint string
 
-	// TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// traces.
-	TracesEndpoint string
-
-	// MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// metrics.
-	MetricsEndpoint string
-
-	// LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// logs.
-	LogsEndpoint string
-
-	// ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.
-	//
-	// When this setting is present the endpoint setting is ignored for
-	// profile data.
-	ProfilesEndpoint string
-
-	// TLS specifies the TLS configuration settings for the exporter.
+	// TLS specifies the TLS configuration settings for the exporter. It is
+	// ignored when Protocol is [ExporterProtocolDebug].
 	TLS *TLSConfig
 
-	// Token references a bearer token for authentication.
+	// Token references a bearer token for authentication. It is ignored when
+	// Protocol is [ExporterProtocolDebug].
 	Token *ResourceReference
 
-	// Timeout specifies the HTTP request time limit.
+	// Timeout specifies the request time limit.
 	Timeout time.Duration
 
-	// ReadBufferSize specifies the ReadBufferSize for the HTTP
-	// client.
+	// ReadBufferSize specifies the ReadBufferSize for the client.
 	ReadBufferSize int
 
-	// WriteBufferSize specifies the WriteBufferSize for the HTTP
-	// client.
+	// WriteBufferSize specifies the WriteBufferSize for the client.
 	WriteBufferSize int
 
-	// Encoding specifies the encoding to use for the messages. Valid
-	// options are `proto' and `json'.
+	// Encoding specifies the encoding to use for the messages. It is only
+	// honored by the HTTP protocol.
 	Encoding MessageEncoding
 
 	// RetryOnFailure specifies the retry policy of the exporter.
 	RetryOnFailure RetryOnFailureConfig
 
 	// Compression specifies the compression to use.
-	//
-	// Possible options are gzip, zstd, snappy and none.
 	Compression Compression
+
+	// Verbosity specifies the verbosity level of the debug exporter. It is only
+	// honored when Protocol is [ExporterProtocolDebug].
+	Verbosity DebugExporterVerbosity
 }
 
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg OTLPHTTPExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
+// MergeWith returns a copy of the receiver with every non-zero field of
+// override applied on top. It implements the inheritance of the top-level
+// default exporter by a per-target override. Pointer fields (TLS, Token) are
+// replaced wholesale when the override sets them. A nil override yields a copy
+// of the receiver.
+func (def ExporterConfig) MergeWith(override *ExporterConfig) ExporterConfig {
+	out := def
+	if override == nil {
+		return out
+	}
+	if override.Protocol != "" {
+		out.Protocol = override.Protocol
+	}
+	if override.Endpoint != "" {
+		out.Endpoint = override.Endpoint
+	}
+	if override.TLS != nil {
+		out.TLS = override.TLS
+	}
+	if override.Token != nil {
+		out.Token = override.Token
+	}
+	if override.Timeout != 0 {
+		out.Timeout = override.Timeout
+	}
+	if override.ReadBufferSize != 0 {
+		out.ReadBufferSize = override.ReadBufferSize
+	}
+	if override.WriteBufferSize != 0 {
+		out.WriteBufferSize = override.WriteBufferSize
+	}
+	if override.Encoding != "" {
+		out.Encoding = override.Encoding
+	}
+	if override.Compression != "" {
+		out.Compression = override.Compression
+	}
+	if override.RetryOnFailure.Enabled != nil {
+		out.RetryOnFailure = override.RetryOnFailure
+	}
+	if override.Verbosity != "" {
+		out.Verbosity = override.Verbosity
 	}
 
-	return false
+	return out
 }
 
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
@@ -249,89 +274,6 @@ const (
 	// DebugExporterVerbosityDetailed specifies detailed level of verbosity.
 	DebugExporterVerbosityDetailed DebugExporterVerbosity = "detailed"
 )
-
-// DebugExporterConfig provides the settings for the debug exporter
-type DebugExporterConfig struct {
-	// Enabled specifies whether the debug exporter is enabled or not.
-	Enabled *bool
-
-	// Verbosity specifies the verbosity level for the debug exporter.
-	Verbosity DebugExporterVerbosity
-}
-
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg DebugExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
-	}
-
-	return false
-}
-
-// OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
-//
-// See [OTLP gRPC Exporter] for more details.
-//
-// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-type OTLPGRPCExporterConfig struct {
-	// Enabled specifies whether the OTLP gRPC exporter is enabled or not.
-	Enabled *bool
-
-	// Endpoint specifies the gRPC endpoint to which signals will be exported.
-	//
-	// Check the link below for more details about the format of this field.
-	//
-	// https://github.com/grpc/grpc/blob/master/doc/naming.md
-	Endpoint string
-
-	// TLS specifies the TLS configuration settings for the exporter.
-	TLS *TLSConfig
-
-	// Token references a bearer token for authentication.
-	Token *ResourceReference
-
-	// Timeout specifies the time to wait per individual attempt to send
-	// data to the backend.
-	Timeout time.Duration
-
-	// ReadBufferSize specifies the ReadBufferSize for the gRPC
-	// client. Default value is [DefaultGRPCExporterClientReadBufferSize].
-	ReadBufferSize int
-
-	// WriteBufferSize specifies the WriteBufferSize for the gRPC
-	// client. Default value is [DefaultGRPCExporterClientWriteBufferSize].
-	WriteBufferSize int
-
-	// RetryOnFailure specifies the retry policy of the exporter.
-	RetryOnFailure RetryOnFailureConfig
-
-	// Compression specifies the compression to use. The default value is
-	// [CompressionGzip].
-	Compression Compression
-}
-
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg OTLPGRPCExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
-	}
-
-	return false
-}
-
-// CollectorExportersConfig provides the OTLP exporter settings.
-type CollectorExportersConfig struct {
-	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
-	OTLPGRPCExporter OTLPGRPCExporterConfig
-
-	// HTTPExporter provides the OTLP HTTP Exporter settings.
-	OTLPHTTPExporter OTLPHTTPExporterConfig
-
-	// DebugExporter provides the settings for the debug exporter.
-	DebugExporter DebugExporterConfig
-}
 
 // CollectorLogsConfig provides the settings for the collector internal logs.
 //
@@ -501,13 +443,13 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode
 }
 
-// FilterConfig specifies the settings for the filter processor, which drops
-// metrics and logs matching the given OTTL conditions or match properties.
+// FilterRule specifies a single filter processor instance, which drops metrics
+// and logs matching the given OTTL conditions or match properties.
 //
 // See [Filter Processor] for more details.
 //
 // [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-type FilterConfig struct {
+type FilterRule struct {
 	// ErrorMode determines how the processor reacts to errors that occur while
 	// processing an OTTL condition. If empty, the processor default is used.
 	ErrorMode FilterErrorMode
@@ -525,27 +467,129 @@ type FilterConfig struct {
 	// LogConditions specifies the logs filter using the context-inferred
 	// condition style. It is mutually exclusive with Logs.
 	LogConditions []ContextConditions
+
+	// Conditions specifies a signal-agnostic filter using the context-inferred
+	// condition style.
+	Conditions []ContextConditions
 }
+
+// SignalTarget pairs an exporter with its own ordered list of filter rules.
+// Each target produces one collector service pipeline for the signal, so a
+// signal can fan out to multiple destinations, each with its own filtering.
+type SignalTarget struct {
+	// Exporter overrides fields of the top-level default exporter for this
+	// target. Zero-valued fields inherit from the default exporter.
+	Exporter ExporterConfig
+
+	// Filters is an ordered list of filter rules applied to this target's
+	// pipeline, after the top-level GlobalFilters.
+	Filters []FilterRule
+}
+
+// EffectiveExporter merges this target's Exporter override onto the given
+// default exporter and returns the resulting exporter.
+func (t SignalTarget) EffectiveExporter(def ExporterConfig) ExporterConfig {
+	return def.MergeWith(&t.Exporter)
+}
+
+// SignalConfig configures a single telemetry signal end to end.
+type SignalConfig struct {
+	// Enabled turns the signal's pipelines on or off.
+	Enabled *bool
+
+	// Targets is the list of exporter/filters pairs for this signal. Each
+	// target becomes its own collector service pipeline.
+	Targets []SignalTarget
+}
+
+// IsEnabled is a predicate which returns whether the signal's pipelines should
+// be created.
+func (s SignalConfig) IsEnabled() bool {
+	if s.Enabled != nil {
+		return *s.Enabled
+	}
+
+	return false
+}
+
+// SignalsConfig groups the per-signal configuration sections.
+type SignalsConfig struct {
+	// Metrics configures the metrics signal, which is scraped via Prometheus.
+	Metrics SignalConfig
+
+	// Logs configures the logs signal, which is received via OTLP.
+	Logs SignalConfig
+
+	// Traces configures the traces signal, which is received via OTLP.
+	Traces SignalConfig
+
+	// Profiles configures the profiles signal, which is received via OTLP.
+	Profiles SignalConfig
+
+	// Events configures the Kubernetes events signal, which is collected from
+	// the shoot cluster.
+	Events SignalConfig
+}
+
+// SignalType identifies a telemetry signal. It is used internally to iterate
+// the per-signal configuration sections in a stable order; it is not part of
+// the serialized configuration.
+type SignalType string
+
+const (
+	// SignalMetrics is the metrics signal, scraped via Prometheus.
+	SignalMetrics SignalType = "metrics"
+	// SignalLogs is the logs signal, received via OTLP.
+	SignalLogs SignalType = "logs"
+	// SignalTraces is the traces signal, received via OTLP.
+	SignalTraces SignalType = "traces"
+	// SignalProfiles is the profiles signal, received via OTLP.
+	SignalProfiles SignalType = "profiles"
+	// SignalEvents is the Kubernetes events signal, collected from the shoot.
+	SignalEvents SignalType = "events"
+)
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Exporters specifies the exporters configuration of the collector.
-	Exporters CollectorExportersConfig
+	// DefaultExporter specifies the default OTLP exporter inherited by every
+	// enabled signal.
+	DefaultExporter ExporterConfig
 
-	// Logs specifies the settings for the collector logs.
+	// GlobalFilters is an ordered list of signal-agnostic filter rules
+	// prepended to every enabled signal's filter chain.
+	GlobalFilters []FilterRule
+
+	// Signals groups the per-signal configuration sections.
+	Signals SignalsConfig
+
+	// Logs specifies the settings for the collector's internal logs.
 	Logs CollectorLogsConfig
 
 	// Metrics specifies the settings for the internal collector metrics.
 	Metrics CollectorMetricsConfig
+}
 
-	// Signals lists the telemetry signals the collector should collect and
-	// export. Valid values are "logs", "events" and "metrics". If empty, all
-	// signals are enabled.
-	Signals []SignalType
+// Signal returns the [SignalConfig] for the given signal type.
+func (s SignalsConfig) Signal(sig SignalType) SignalConfig {
+	switch sig {
+	case SignalMetrics:
+		return s.Metrics
+	case SignalLogs:
+		return s.Logs
+	case SignalTraces:
+		return s.Traces
+	case SignalProfiles:
+		return s.Profiles
+	case SignalEvents:
+		return s.Events
+	default:
+		return SignalConfig{}
+	}
+}
 
-	// Filter specifies the filter processor settings used to drop unwanted
-	// metrics and logs.
-	Filter *FilterConfig
+// AllSignals lists the signal types in a stable iteration order.
+func AllSignals() []SignalType {
+	return []SignalType{SignalMetrics, SignalLogs, SignalTraces, SignalProfiles, SignalEvents}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

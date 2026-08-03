@@ -13,72 +13,124 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          # Signals to collect and export. Valid values: logs, events, metrics.
-          # If omitted (or empty), all signals are enabled.
-          # signals:
-          #   - logs
-          #   - events
-          #   - metrics
+          # Default exporter inherited by every enabled signal. Each signal
+          # section may override any of these fields (see signals below).
+          defaultExporter:
+            protocol: http  # http or grpc
+            endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+            compression: gzip  # gzip, zstd, snappy or none
+            encoding: proto  # proto or json (http only)
+            token:
+              resourceRef:
+                name: otelcol-bearer-token
+                dataKey: token
+            tls:
+              ca:
+                resourceRef:
+                  name: otelcol-tls
+                  dataKey: ca.crt
+              cert:
+                resourceRef:
+                  name: otelcol-tls
+                  dataKey: client.crt
+              key:
+                resourceRef:
+                  name: otelcol-tls
+                  dataKey: client.key
 
-          # Collector log settings
+          # Signal-agnostic filter rules prepended to every enabled signal's
+          # filter chain. Only the context-inferred conditions form is allowed
+          # here, so a rule applies to any signal.
+          # globalFilters:
+          #   - conditions:
+          #       - resource.attributes["k8s.namespace.name"] == "kube-system"
+
+          # Per-signal configuration. Each signal has its own enabled flag and
+          # a list of targets. Each target pairs an exporter (merged onto
+          # defaultExporter) with its own ordered list of filter rules, and
+          # becomes one collector pipeline. A signal can therefore fan out to
+          # several destinations, each with independent filtering. An enabled
+          # signal must define at least one target. Each filter rule becomes a
+          # filter processor, mirroring the filterprocessor; see the link below.
+          # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+          signals:
+            metrics:
+              enabled: true
+              targets:
+                # A target with an empty exporter inherits defaultExporter fully.
+                - exporter: {}
+                  # filters:
+                  #   - error_mode: ignore  # ignore, silent or propagate
+                  #     metrics:
+                  #       # OTTL condition style (mutually exclusive with include/exclude)
+                  #       resource:
+                  #         - resource.attributes["env"] == "dev"
+                  #       metric:
+                  #         - metric.name == "some.unwanted.metric"
+                  #       datapoint:
+                  #         - datapoint.value_int == 0
+                  #       # Object/match style (mutually exclusive with the lists above)
+                  #       # include:
+                  #       #   match_type: strict  # strict or regexp
+                  #       #   metric_names: ["metric.a", "metric.b"]
+                  #       #   regexp:
+                  #       #     cacheenabled: true
+                  #       #     cachemaxnumentries: 10
+                  #       #   resource_attributes:
+                  #       #     - key: service.name
+                  #       #       value: my-service
+                  #   # Alternatively, the context-inferred condition style:
+                  #   # - metric_conditions:
+                  #   #     - context: datapoint    # optional; inferred when omitted
+                  #   #       error_mode: ignore    # optional
+                  #   #       conditions:
+                  #   #         - metric.name == "some.unwanted.metric"
+
+            logs:
+              enabled: true
+              targets:
+                # First destination: override just the endpoint, inherit the rest.
+                - exporter:
+                    endpoint: "https://logs-receiver.default.svc.cluster.local:4318"
+                  # filters:
+                  #   - logs:
+                  #       log_record:
+                  #         - IsMatch(log.body, ".*password.*")
+                  #       # include:
+                  #       #   match_type: strict
+                  #       #   severity_texts: ["INFO", "DEBUG"]
+                  #       #   severity_number:
+                  #       #     min: WARN
+                  #       #     match_undefined: false
+                # Second destination: a debug exporter writing to the collector
+                # logs. protocol: debug ignores endpoint/tls/token; only
+                # verbosity is honored.
+                - exporter:
+                    protocol: debug
+                    verbosity: basic  # basic, normal or detailed
+
+            events:
+              enabled: true
+              targets:
+                # Ship events over gRPC while other signals use the default http.
+                - exporter:
+                    protocol: grpc
+                    endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+
+            traces:
+              enabled: false
+
+            profiles:
+              enabled: false  # profiles support is under development in the collector
+
+          # Collector's own internal log settings (not a signal).
           logs:
             level: INFO  # INFO, WARN, ERROR or DEBUG
             encoding: console  # console or json
 
-          # Internal collector metrics settings
+          # Collector's own internal metrics settings (not a signal).
           metrics:
             level: normal  # none, basic, normal or detailed
-
-          # Exporters settings
-          exporters:
-            # OTLP debug exporter
-            debug:
-              enabled: true
-              verbosity: basic  # basic, normal or detailed
-
-            # OTLP HTTP exporter settings
-            otlp_http:
-              enabled: true
-              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-              token:
-                resourceRef:
-                  name: otelcol-bearer-token
-                  dataKey: token
-              tls:
-                ca:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: ca.crt
-                cert:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.crt
-                key:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.key
-
-            # OTLP gRPC exporter settings
-            otlp_grpc:
-              enabled: true
-              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
-              token:
-                resourceRef:
-                  name: otelcol-bearer-token
-                  dataKey: token
-              tls:
-                ca:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: ca.crt
-                cert:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.crt
-                key:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.key
   resources:
   - name: otelcol-bearer-token
     resourceRef:

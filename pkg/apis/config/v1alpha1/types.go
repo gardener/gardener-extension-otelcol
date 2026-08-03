@@ -34,20 +34,20 @@ const (
 	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
 )
 
-// SignalType identifies a telemetry signal the collector can collect and
-// export.
+// ExporterProtocol selects the OTLP transport used by an exporter.
 //
 // +k8s:enum
-type SignalType string
+type ExporterProtocol string
 
 const (
-	// SignalLogs is the signal for logs received via OTLP.
-	SignalLogs SignalType = "logs"
-	// SignalEvents is the signal for Kubernetes events collected from the
-	// shoot cluster.
-	SignalEvents SignalType = "events"
-	// SignalMetrics is the signal for metrics scraped via Prometheus.
-	SignalMetrics SignalType = "metrics"
+	// ExporterProtocolHTTP selects the OTLP HTTP exporter.
+	ExporterProtocolHTTP ExporterProtocol = "http"
+	// ExporterProtocolGRPC selects the OTLP gRPC exporter.
+	ExporterProtocolGRPC ExporterProtocol = "grpc"
+	// ExporterProtocolDebug selects the debug exporter, which writes telemetry
+	// to the collector's own logs. It only honors the Verbosity field; the
+	// endpoint, TLS, token and buffer settings are ignored.
+	ExporterProtocolDebug ExporterProtocol = "debug"
 )
 
 // LogLevel specifies the minimum enabled logging level for the collector.
@@ -235,58 +235,43 @@ type RetryOnFailureConfig struct {
 	Multiplier float64 `json:"multiplier,omitzero"`
 }
 
-// OTLPHTTPExporterConfig provides the OTLP HTTP Exporter configuration settings.
+// ExporterConfig provides a full exporter configuration.
 //
-// See [OTLP HTTP Exporter] for more details.
+// It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
+// selected by Protocol. It is used both as the top-level default exporter
+// (inherited by every signal target) and as a per-target override. Any
+// zero-valued field in a per-target override inherits the corresponding value
+// from the default exporter (the merge is implemented by MergeWith in the
+// internal API).
+//
+// When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
+// endpoint, TLS, token and buffer settings are ignored.
+//
+// See [OTLP HTTP Exporter], [OTLP gRPC Exporter] and [Debug Exporter] for more
+// details.
 //
 // [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
-type OTLPHTTPExporterConfig struct {
-	// Enabled specifies whether the OTLP HTTP exporter is enabled or not.
+// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+// [Debug Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
+type ExporterConfig struct {
+	// Protocol selects the transport used by the exporter. The default value is
+	// [ExporterProtocolHTTP]. Set it to [ExporterProtocolDebug] to write
+	// telemetry to the collector's own logs instead of sending it to a remote
+	// endpoint.
 	//
 	// +k8s:optional
-	// +default=false
-	Enabled *bool `json:"enabled,omitzero"`
+	// +default=ref(ExporterProtocolHTTP)
+	Protocol ExporterProtocol `json:"protocol,omitzero"`
 
-	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
+	// Endpoint specifies the target endpoint to send data to.
 	//
-	// To send each signal a corresponding path will be added to this base
-	// URL, i.e. for traces "/v1/traces" will appended, for metrics
-	// "/v1/metrics" will be appended, for logs "/v1/logs" will be appended.
+	// For the HTTP protocol this is a base URL, e.g. https://example.com:4318;
+	// the collector appends the per-signal path (e.g. "/v1/metrics"). For the
+	// gRPC protocol this is a gRPC endpoint, see
+	// https://github.com/grpc/grpc/blob/master/doc/naming.md.
 	//
 	// +k8s:optional
 	Endpoint string `json:"endpoint,omitzero"`
-
-	// TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// traces.
-	//
-	// +k8s:optional
-	TracesEndpoint string `json:"traces_endpoint,omitzero"`
-
-	// MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// metrics.
-	//
-	// +k8s:optional
-	MetricsEndpoint string `json:"metrics_endpoint,omitzero"`
-
-	// LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// logs.
-	//
-	// +k8s:optional
-	LogsEndpoint string `json:"logs_endpoint,omitzero"`
-
-	// ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.
-	//
-	// When this setting is present the endpoint setting is ignored for
-	// profile data.
-	//
-	// +k8s:optional
-	ProfilesEndpoint string `json:"profiles_endpoint,omitzero"`
 
 	// TLS specifies the TLS configuration settings for the exporter.
 	//
@@ -296,31 +281,31 @@ type OTLPHTTPExporterConfig struct {
 	// Token references a bearer token for authentication.
 	//
 	// +k8s:optional
-	Token *ResourceReference `json:"token,omitempty"`
+	Token *ResourceReference `json:"token,omitzero"`
 
-	// Timeout specifies the HTTP request time limit. Default value is
+	// Timeout specifies the request time limit. Default value is
 	// [DefaultHTTPExporterClientTimeout].
 	//
 	// +k8s:optional
 	// +default=ref(DefaultHTTPExporterClientTimeout)
 	Timeout time.Duration `json:"timeout,omitzero"`
 
-	// ReadBufferSize specifies the ReadBufferSize for the HTTP
-	// client. Default value is [DefaultHTTPExporterClientReadBufferSize].
+	// ReadBufferSize specifies the ReadBufferSize for the client. Default value
+	// is [DefaultHTTPExporterClientReadBufferSize].
 	//
 	// +k8s:optional
 	// +default=ref(DefaultHTTPExporterClientReadBufferSize)
 	ReadBufferSize int `json:"read_buffer_size,omitzero"`
 
-	// WriteBufferSize specifies the WriteBufferSize for the HTTP
-	// client. Default value is [DefaultHTTPExporterClientWriteBufferSize].
+	// WriteBufferSize specifies the WriteBufferSize for the client. Default
+	// value is [DefaultHTTPExporterClientWriteBufferSize].
 	//
 	// +k8s:optional
 	// +default=ref(DefaultHTTPExporterClientWriteBufferSize)
 	WriteBufferSize int `json:"write_buffer_size,omitzero"`
 
-	// Encoding specifies the encoding to use for the messages. The default
-	// value is [MessageEncodingProto].
+	// Encoding specifies the encoding to use for the messages. It is only
+	// honored by the HTTP protocol. The default value is [MessageEncodingProto].
 	//
 	// +k8s:optional
 	// +default=ref(MessageEncodingProto)
@@ -337,6 +322,14 @@ type OTLPHTTPExporterConfig struct {
 	// +k8s:optional
 	// +default=ref(CompressionGzip)
 	Compression Compression `json:"compression,omitzero"`
+
+	// Verbosity specifies the verbosity level of the debug exporter. It is only
+	// honored when Protocol is [ExporterProtocolDebug]. The default value is
+	// [DebugExporterVerbosityBasic].
+	//
+	// +k8s:optional
+	// +default=ref(DebugExporterVerbosityBasic)
+	Verbosity DebugExporterVerbosity `json:"verbosity,omitzero"`
 }
 
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
@@ -352,102 +345,6 @@ const (
 	// DebugExporterVerbosityDetailed specifies detailed level of verbosity.
 	DebugExporterVerbosityDetailed DebugExporterVerbosity = "detailed"
 )
-
-// DebugExporterConfig provides the settings for the debug exporter
-type DebugExporterConfig struct {
-	// Enabled specifies whether the debug exporter is enabled or not.
-	//
-	// +k8s:optional
-	// +default=false
-	Enabled *bool `json:"enabled,omitzero"`
-
-	// Verbosity specifies the verbosity level for the debug exporter.
-	//
-	// +k8s:optional
-	// +default=ref(DebugExporterVerbosityBasic)
-	Verbosity DebugExporterVerbosity `json:"verbosity,omitzero"`
-}
-
-// OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
-//
-// See [OTLP gRPC Exporter] for more details.
-//
-// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-type OTLPGRPCExporterConfig struct {
-	// Enabled specifies whether the OTLP gRPC exporter is enabled or not.
-	//
-	// +k8s:optional
-	// +default=false
-	Enabled *bool `json:"enabled,omitzero"`
-
-	// Endpoint specifies the gRPC endpoint to which signals will be exported.
-	//
-	// Check the link below for more details about the format of this field.
-	//
-	// https://github.com/grpc/grpc/blob/master/doc/naming.md
-	//
-	// +k8s:required
-	Endpoint string `json:"endpoint,omitzero"`
-
-	// TLS specifies the TLS configuration settings for the exporter.
-	//
-	// +k8s:optional
-	TLS *TLSConfig `json:"tls,omitzero"`
-
-	// Token references a bearer token for authentication.
-	Token *ResourceReference `json:"token,omitzero"`
-
-	// Timeout specifies the time to wait per individual attempt to send
-	// data to the backend.
-	//
-	// +k8s:optional
-	// +default=ref(DefaultGRPCExporterClientTimeout)
-	Timeout time.Duration `json:"timeout,omitzero"`
-
-	// ReadBufferSize specifies the ReadBufferSize for the gRPC
-	// client. Default value is [DefaultGRPCExporterClientReadBufferSize].
-	//
-	// +k8s:optional
-	// +default=ref(DefaultGRPCExporterClientReadBufferSize)
-	ReadBufferSize int `json:"read_buffer_size,omitzero"`
-
-	// WriteBufferSize specifies the WriteBufferSize for the gRPC
-	// client. Default value is [DefaultGRPCExporterClientWriteBufferSize].
-	//
-	// +k8s:optional
-	// +default=ref(DefaultGRPCExporterClientWriteBufferSize)
-	WriteBufferSize int `json:"write_buffer_size,omitzero"`
-
-	// RetryOnFailure specifies the retry policy of the exporter.
-	//
-	// +k8s:optional
-	RetryOnFailure RetryOnFailureConfig `json:"retry_on_failure,omitzero"`
-
-	// Compression specifies the compression to use. The default value is
-	// [CompressionGzip].
-	//
-	// +k8s:optional
-	// +default=ref(CompressionGzip)
-	Compression Compression `json:"compression,omitzero"`
-}
-
-// CollectorExportersConfig provides the OTLP exporter settings.
-type CollectorExportersConfig struct {
-	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
-	//
-	// +k8s:optional
-	OTLPGRPCExporter OTLPGRPCExporterConfig `json:"otlp_grpc,omitzero"`
-
-	// HTTPExporter provides the OTLP HTTP Exporter settings.
-	//
-	// +k8s:optional
-	OTLPHTTPExporter OTLPHTTPExporterConfig `json:"otlp_http,omitzero"`
-
-	// DebugExporter provides the settings for the debug exporter.
-	//
-	// +k8s:optional
-	DebugExporter DebugExporterConfig `json:"debug,omitzero"`
-}
 
 // CollectorLogsConfig provides the settings for the collector internal logs.
 //
@@ -707,27 +604,29 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 }
 
-// FilterConfig specifies the settings for the filter processor, which drops
-// metrics and logs matching the given OTTL conditions or match properties.
+// FilterRule specifies a single filter processor instance, which drops metrics
+// and logs matching the given OTTL conditions or match properties. A signal's
+// Filters list produces one filter processor per rule, applied in order.
 //
 // See [Filter Processor] for more details.
 //
 // [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-type FilterConfig struct {
+type FilterRule struct {
 	// ErrorMode determines how the processor reacts to errors that occur while
 	// processing an OTTL condition. If empty, the processor default is used.
 	//
 	// +k8s:optional
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 
-	// Metrics specifies the filter settings for the metrics signal.
+	// Metrics specifies the filter settings for the metrics signal. It is only
+	// valid on the metrics signal.
 	//
 	// +k8s:optional
 	Metrics *MetricFilters `json:"metrics,omitzero"`
 
 	// Logs specifies the filter settings for the logs signal. Because events
-	// are collected as the logs signal, this also applies to the events
-	// pipeline.
+	// are collected as the logs signal, it is valid on both the logs and events
+	// signals.
 	//
 	// +k8s:optional
 	Logs *LogFilters `json:"logs,omitzero"`
@@ -743,16 +642,106 @@ type FilterConfig struct {
 	//
 	// +k8s:optional
 	LogConditions []ContextConditions `json:"log_conditions,omitempty"`
+
+	// Conditions specifies a signal-agnostic filter using the context-inferred
+	// condition style. It is the only form allowed for the traces and profiles
+	// signals and for the top-level GlobalFilters.
+	//
+	// +k8s:optional
+	Conditions []ContextConditions `json:"conditions,omitempty"`
+}
+
+// SignalTarget pairs an exporter with its own ordered list of filter rules.
+// Each target produces one collector service pipeline for the signal, so a
+// signal can fan out to multiple destinations, each with its own filtering.
+type SignalTarget struct {
+	// Exporter overrides fields of the top-level default exporter for this
+	// target. Zero-valued fields inherit from the default exporter. Set its
+	// Protocol to [ExporterProtocolDebug] to make this target a debug
+	// destination.
+	//
+	// +k8s:optional
+	Exporter ExporterConfig `json:"exporter,omitzero"`
+
+	// Filters is an ordered list of filter rules applied to this target's
+	// pipeline, after the top-level GlobalFilters. Each rule becomes a filter
+	// processor instance in the target's pipeline.
+	//
+	// +k8s:optional
+	Filters []FilterRule `json:"filters,omitempty"`
+}
+
+// SignalConfig configures a single telemetry signal: whether it is enabled and
+// the list of targets (exporter/filters pairs) it fans out to.
+type SignalConfig struct {
+	// Enabled turns the signal's pipelines on or off. Default is false.
+	//
+	// +k8s:optional
+	// +default=false
+	Enabled *bool `json:"enabled,omitzero"`
+
+	// Targets is the list of exporter/filters pairs for this signal. Each
+	// target becomes its own collector service pipeline, allowing a signal to
+	// fan out to multiple destinations with independent filtering. An enabled
+	// signal must define at least one target.
+	//
+	// +k8s:optional
+	Targets []SignalTarget `json:"targets,omitempty"`
+}
+
+// SignalsConfig groups the per-signal configuration sections.
+type SignalsConfig struct {
+	// Metrics configures the metrics signal, which is scraped via Prometheus.
+	//
+	// +k8s:optional
+	Metrics SignalConfig `json:"metrics,omitzero"`
+
+	// Logs configures the logs signal, which is received via OTLP.
+	//
+	// +k8s:optional
+	Logs SignalConfig `json:"logs,omitzero"`
+
+	// Traces configures the traces signal, which is received via OTLP.
+	//
+	// +k8s:optional
+	Traces SignalConfig `json:"traces,omitzero"`
+
+	// Profiles configures the profiles signal, which is received via OTLP.
+	// Profiles support is under development in the collector and disabled by
+	// default.
+	//
+	// +k8s:optional
+	Profiles SignalConfig `json:"profiles,omitzero"`
+
+	// Events configures the Kubernetes events signal, which is collected from
+	// the shoot cluster.
+	//
+	// +k8s:optional
+	Events SignalConfig `json:"events,omitzero"`
 }
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Exporters specifies the exporters configuration of the collector.
+	// DefaultExporter specifies the default OTLP exporter inherited by every
+	// enabled signal. Per-signal exporter overrides are merged on top of it.
 	//
 	// +k8s:required
-	Exporters CollectorExportersConfig `json:"exporters,omitzero"`
+	DefaultExporter ExporterConfig `json:"defaultExporter,omitzero"`
 
-	// Logs specifies the settings for the collector logs.
+	// GlobalFilters is an ordered list of signal-agnostic filter rules that are
+	// prepended to every enabled signal's filter chain, before that signal's
+	// own Filters. Each rule may only use the Conditions form.
+	//
+	// +k8s:optional
+	GlobalFilters []FilterRule `json:"globalFilters,omitempty"`
+
+	// Signals groups the per-signal configuration sections (metrics, logs,
+	// traces, profiles, events).
+	//
+	// +k8s:optional
+	Signals SignalsConfig `json:"signals,omitzero"`
+
+	// Logs specifies the settings for the collector's internal logs.
 	//
 	// +k8s:optional
 	Logs CollectorLogsConfig `json:"logs,omitzero"`
@@ -761,22 +750,6 @@ type CollectorConfigSpec struct {
 	//
 	// +k8s:optional
 	Metrics CollectorMetricsConfig `json:"metrics,omitzero"`
-
-	// Signals lists the telemetry signals the collector should collect and
-	// export. Valid values are "logs", "events" and "metrics". If empty, all
-	// signals are enabled.
-	//
-	// When a signal is omitted, its pipeline is not created. The corresponding
-	// receiver is still defined, which the collector reports as an unused
-	// component in its logs; this is expected and harmless.
-	//
-	// +k8s:optional
-	Signals []SignalType `json:"signals,omitempty"`
-
-	// Filter specifies the filter processor settings used to drop unwanted signals.
-	//
-	// +k8s:optional
-	Filter *FilterConfig `json:"filter,omitzero"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

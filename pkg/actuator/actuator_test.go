@@ -40,10 +40,20 @@ var _ = Describe("Actuator", Ordered, func() {
 		actuatorOpts   []actuator.Option
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{
-					DebugExporter: config.DebugExporterConfig{
-						Enabled:   new(true),
-						Verbosity: config.DebugExporterVerbosityNormal,
+				DefaultExporter: config.ExporterConfig{
+					Protocol: config.ExporterProtocolHTTP,
+					Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
+				},
+				Signals: config.SignalsConfig{
+					Logs: config.SignalConfig{
+						Enabled: new(true),
+						Targets: []config.SignalTarget{
+							{},
+							{Exporter: config.ExporterConfig{
+								Protocol:  config.ExporterProtocolDebug,
+								Verbosity: config.DebugExporterVerbosityNormal,
+							}},
+						},
 					},
 				},
 			},
@@ -191,11 +201,9 @@ var _ = Describe("Actuator", Ordered, func() {
 		Expect(err).To(MatchError(ContainSubstring("no provider config specified")))
 	})
 
-	It("should fail to reconcile with no exporters configured", func() {
+	It("should fail to reconcile with no signal enabled", func() {
 		emptyProviderConfig := config.CollectorConfig{
-			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{},
-			},
+			Spec: config.CollectorConfigSpec{},
 		}
 
 		data, err := json.Marshal(emptyProviderConfig)
@@ -210,7 +218,7 @@ var _ = Describe("Actuator", Ordered, func() {
 
 		err = act.Reconcile(ctx, logger, extResource)
 		Expect(err).Should(HaveOccurred())
-		Expect(err).To(MatchError(ContainSubstring("no exporter enabled")))
+		Expect(err).To(MatchError(ContainSubstring("no signal enabled")))
 	})
 
 	It("should succeed on Reconcile", func() {

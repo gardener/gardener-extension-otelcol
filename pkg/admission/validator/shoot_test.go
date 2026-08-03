@@ -40,19 +40,27 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{
-					DebugExporter: config.DebugExporterConfig{
-						Enabled:   new(true),
-						Verbosity: config.DebugExporterVerbosityBasic,
+				DefaultExporter: config.ExporterConfig{
+					Protocol: config.ExporterProtocolHTTP,
+					Endpoint: "https://example.com:4318",
+				},
+				Signals: config.SignalsConfig{
+					Logs: config.SignalConfig{
+						Enabled: new(true),
+						Targets: []config.SignalTarget{
+							{},
+							{Exporter: config.ExporterConfig{
+								Protocol:  config.ExporterProtocolDebug,
+								Verbosity: config.DebugExporterVerbosityBasic,
+							}},
+						},
 					},
 				},
 			},
 		}
 
-		providerConfigWithNoExporters = config.CollectorConfig{
-			Spec: config.CollectorConfigSpec{
-				Exporters: config.CollectorExportersConfig{},
-			},
+		providerConfigWithNoSignals = config.CollectorConfig{
+			Spec: config.CollectorConfigSpec{},
 		}
 	)
 
@@ -120,8 +128,8 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		Expect(err).To(MatchError(ContainSubstring("no provider config specified")))
 	})
 
-	It("should fail to validate when no exporters are defined", func() {
-		data, err := json.Marshal(providerConfigWithNoExporters)
+	It("should fail to validate when no signal is enabled", func() {
+		data, err := json.Marshal(providerConfigWithNoSignals)
 		Expect(err).NotTo(HaveOccurred())
 		shoot.Spec.Extensions = []core.Extension{
 			{
@@ -133,6 +141,6 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 
 		err = shootValidator.Validate(ctx, shoot, nil)
-		Expect(err).To(MatchError(ContainSubstring("no exporter enabled")))
+		Expect(err).To(MatchError(ContainSubstring("no signal enabled")))
 	})
 })

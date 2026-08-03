@@ -25,29 +25,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
-| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
+| `defaultExporter` _[ExporterConfig](#exporterconfig)_ | DefaultExporter specifies the default OTLP exporter inherited by every<br />enabled signal. Per-signal exporter overrides are merged on top of it. |  | Required: \{\} <br /> |
+| `globalFilters` _[FilterRule](#filterrule) array_ | GlobalFilters is an ordered list of signal-agnostic filter rules that are<br />prepended to every enabled signal's filter chain, before that signal's<br />own Filters. Each rule may only use the Conditions form. |  | Optional: \{\} <br /> |
+| `signals` _[SignalsConfig](#signalsconfig)_ | Signals groups the per-signal configuration sections (metrics, logs,<br />traces, profiles, events). |  | Optional: \{\} <br /> |
+| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector's internal logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
-| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled.<br />When a signal is omitted, its pipeline is not created. The corresponding<br />receiver is still defined, which the collector reports as an unused<br />component in its logs; this is expected and harmless. |  | Optional: \{\} <br /> |
-| `filter` _[FilterConfig](#filterconfig)_ | Filter specifies the filter processor settings used to drop unwanted signals. |  | Optional: \{\} <br /> |
-
-
-#### CollectorExportersConfig
-
-
-
-CollectorExportersConfig provides the OTLP exporter settings.
-
-
-
-_Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  | Optional: \{\} <br /> |
-| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  | Optional: \{\} <br /> |
-| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  | Optional: \{\} <br /> |
 
 
 #### CollectorLogsConfig
@@ -101,8 +83,7 @@ Compression specifies the compression used by the collector.
 
 
 _Appears in:_
-- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
-- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [ExporterConfig](#exporterconfig)
 
 | Field | Description |
 | --- | --- |
@@ -128,30 +109,13 @@ from each expression. Otherwise it is rendered as an explicit group
 
 
 _Appears in:_
-- [FilterConfig](#filterconfig)
+- [FilterRule](#filterrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `context` _string_ | Context specifies the OTTL context the conditions are evaluated against,<br />e.g. "resource", "metric", "datapoint", "log". If empty, the context is<br />inferred from each condition. |  | Optional: \{\} <br /> |
 | `conditions` _string array_ | Conditions is the list of OTTL conditions. If any condition resolves to<br />true, the matching telemetry is dropped. |  | Required: \{\} <br /> |
 | `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing this group of conditions. When set, it overrides the<br />top-level ErrorMode. Only honored when the group is rendered in the<br />advanced style. |  | Optional: \{\} <br /> |
-
-
-#### DebugExporterConfig
-
-
-
-DebugExporterConfig provides the settings for the debug exporter
-
-
-
-_Appears in:_
-- [CollectorExportersConfig](#collectorexportersconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the debug exporter is enabled or not. | false | Optional: \{\} <br /> |
-| `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level for the debug exporter. | <nil> | Optional: \{\} <br /> |
 
 
 #### DebugExporterVerbosity
@@ -163,13 +127,75 @@ DebugExporterVerbosity specifies the verbosity level for the debug exporter.
 
 
 _Appears in:_
-- [DebugExporterConfig](#debugexporterconfig)
+- [ExporterConfig](#exporterconfig)
 
 | Field | Description |
 | --- | --- |
 | `basic` | DebugExporterVerbosityBasic specifies basic level of verbosity.<br /> |
 | `normal` | DebugExporterVerbosityNormal specifies normal level of verbosity.<br /> |
 | `detailed` | DebugExporterVerbosityDetailed specifies detailed level of verbosity.<br /> |
+
+
+#### ExporterConfig
+
+
+
+ExporterConfig provides a full exporter configuration.
+
+It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
+selected by Protocol. It is used both as the top-level default exporter
+(inherited by every signal target) and as a per-target override. Any
+zero-valued field in a per-target override inherits the corresponding value
+from the default exporter (the merge is implemented by MergeWith in the
+internal API).
+
+When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
+endpoint, TLS, token and buffer settings are ignored.
+
+See [OTLP HTTP Exporter], [OTLP gRPC Exporter] and [Debug Exporter] for more
+details.
+
+[OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+[OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+[Debug Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+- [SignalTarget](#signaltarget)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `protocol` _[ExporterProtocol](#exporterprotocol)_ | Protocol selects the transport used by the exporter. The default value is<br />[ExporterProtocolHTTP]. Set it to [ExporterProtocolDebug] to write<br />telemetry to the collector's own logs instead of sending it to a remote<br />endpoint. | <nil> | Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint specifies the target endpoint to send data to.<br />For the HTTP protocol this is a base URL, e.g. https://example.com:4318;<br />the collector appends the per-signal path (e.g. "/v1/metrics"). For the<br />gRPC protocol this is a gRPC endpoint, see<br />https://github.com/grpc/grpc/blob/master/doc/naming.md. |  | Optional: \{\} <br /> |
+| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
+| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  | Optional: \{\} <br /> |
+| `timeout` _[Duration](#duration)_ | Timeout specifies the request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. | <nil> | Optional: \{\} <br /> |
+| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the client. Default value<br />is [DefaultHTTPExporterClientReadBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the client. Default<br />value is [DefaultHTTPExporterClientWriteBufferSize]. | <nil> | Optional: \{\} <br /> |
+| `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. It is only<br />honored by the HTTP protocol. The default value is [MessageEncodingProto]. | <nil> | Optional: \{\} <br /> |
+| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
+| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
+| `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level of the debug exporter. It is only<br />honored when Protocol is [ExporterProtocolDebug]. The default value is<br />[DebugExporterVerbosityBasic]. | <nil> | Optional: \{\} <br /> |
+
+
+#### ExporterProtocol
+
+_Underlying type:_ _string_
+
+ExporterProtocol selects the OTLP transport used by an exporter.
+
+
+
+_Appears in:_
+- [ExporterConfig](#exporterconfig)
+
+| Field | Description |
+| --- | --- |
+| `http` | ExporterProtocolHTTP selects the OTLP HTTP exporter.<br /> |
+| `grpc` | ExporterProtocolGRPC selects the OTLP gRPC exporter.<br /> |
+| `debug` | ExporterProtocolDebug selects the debug exporter, which writes telemetry<br />to the collector's own logs. It only honors the Verbosity field; the<br />endpoint, TLS, token and buffer settings are ignored.<br /> |
 
 
 #### FilterAttribute
@@ -191,31 +217,6 @@ _Appears in:_
 | `value` _string_ | Value specifies the attribute value to match against. If empty, only the<br />presence of the key is checked. |  | Optional: \{\} <br /> |
 
 
-#### FilterConfig
-
-
-
-FilterConfig specifies the settings for the filter processor, which drops
-metrics and logs matching the given OTTL conditions or match properties.
-
-See [Filter Processor] for more details.
-
-[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-
-
-
-_Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing an OTTL condition. If empty, the processor default is used. |  | Optional: \{\} <br /> |
-| `metrics` _[MetricFilters](#metricfilters)_ | Metrics specifies the filter settings for the metrics signal. |  | Optional: \{\} <br /> |
-| `logs` _[LogFilters](#logfilters)_ | Logs specifies the filter settings for the logs signal. Because events<br />are collected as the logs signal, this also applies to the events<br />pipeline. |  | Optional: \{\} <br /> |
-| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. It is mutually exclusive with Metrics. |  | Optional: \{\} <br /> |
-| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. It is mutually exclusive with Logs. |  | Optional: \{\} <br /> |
-
-
 #### FilterErrorMode
 
 _Underlying type:_ _string_
@@ -231,7 +232,7 @@ https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/proc
 
 _Appears in:_
 - [ContextConditions](#contextconditions)
-- [FilterConfig](#filterconfig)
+- [FilterRule](#filterrule)
 
 | Field | Description |
 | --- | --- |
@@ -257,6 +258,34 @@ _Appears in:_
 | --- | --- |
 | `strict` | MatchTypeStrict matches values by exact string equality.<br /> |
 | `regexp` | MatchTypeRegexp matches values against regular expressions.<br /> |
+
+
+#### FilterRule
+
+
+
+FilterRule specifies a single filter processor instance, which drops metrics
+and logs matching the given OTTL conditions or match properties. A signal's
+Filters list produces one filter processor per rule, applied in order.
+
+See [Filter Processor] for more details.
+
+[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+- [SignalTarget](#signaltarget)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing an OTTL condition. If empty, the processor default is used. |  | Optional: \{\} <br /> |
+| `metrics` _[MetricFilters](#metricfilters)_ | Metrics specifies the filter settings for the metrics signal. It is only<br />valid on the metrics signal. |  | Optional: \{\} <br /> |
+| `logs` _[LogFilters](#logfilters)_ | Logs specifies the filter settings for the logs signal. Because events<br />are collected as the logs signal, it is valid on both the logs and events<br />signals. |  | Optional: \{\} <br /> |
+| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. It is mutually exclusive with Metrics. |  | Optional: \{\} <br /> |
+| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. It is mutually exclusive with Logs. |  | Optional: \{\} <br /> |
+| `conditions` _[ContextConditions](#contextconditions) array_ | Conditions specifies a signal-agnostic filter using the context-inferred<br />condition style. It is the only form allowed for the traces and profiles<br />signals and for the top-level GlobalFilters. |  | Optional: \{\} <br /> |
 
 
 #### LogEncoding
@@ -292,7 +321,7 @@ properties (Include, Exclude) are mutually exclusive.
 
 
 _Appears in:_
-- [FilterConfig](#filterconfig)
+- [FilterRule](#filterrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -374,7 +403,7 @@ MessageEncoding specifies the encoding used by the collector exporters.
 
 
 _Appears in:_
-- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [ExporterConfig](#exporterconfig)
 
 | Field | Description |
 | --- | --- |
@@ -394,7 +423,7 @@ match properties (Include, Exclude) are mutually exclusive.
 
 
 _Appears in:_
-- [FilterConfig](#filterconfig)
+- [FilterRule](#filterrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -450,67 +479,6 @@ _Appears in:_
 | `detailed` | MetricsVerbosityLevelDetailed configures the collector with the most<br />verbose level, which includes dimensions and views.<br /> |
 
 
-#### OTLPGRPCExporterConfig
-
-
-
-OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
-
-See [OTLP gRPC Exporter] for more details.
-
-[OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-
-
-
-_Appears in:_
-- [CollectorExportersConfig](#collectorexportersconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP gRPC exporter is enabled or not. | false | Optional: \{\} <br /> |
-| `endpoint` _string_ | Endpoint specifies the gRPC endpoint to which signals will be exported.<br />Check the link below for more details about the format of this field.<br />https://github.com/grpc/grpc/blob/master/doc/naming.md |  | Required: \{\} <br /> |
-| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
-| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
-| `timeout` _[Duration](#duration)_ | Timeout specifies the time to wait per individual attempt to send<br />data to the backend. | <nil> | Optional: \{\} <br /> |
-| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientReadBufferSize]. | <nil> | Optional: \{\} <br /> |
-| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the gRPC<br />client. Default value is [DefaultGRPCExporterClientWriteBufferSize]. | <nil> | Optional: \{\} <br /> |
-| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
-| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
-
-
-#### OTLPHTTPExporterConfig
-
-
-
-OTLPHTTPExporterConfig provides the OTLP HTTP Exporter configuration settings.
-
-See [OTLP HTTP Exporter] for more details.
-
-[OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
-
-
-
-_Appears in:_
-- [CollectorExportersConfig](#collectorexportersconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. | false | Optional: \{\} <br /> |
-| `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  | Optional: \{\} <br /> |
-| `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  | Optional: \{\} <br /> |
-| `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  | Optional: \{\} <br /> |
-| `logs_endpoint` _string_ | LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs<br />When this setting is present the base endpoint setting is ignored for<br />logs. |  | Optional: \{\} <br /> |
-| `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  | Optional: \{\} <br /> |
-| `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
-| `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  | Optional: \{\} <br /> |
-| `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. | <nil> | Optional: \{\} <br /> |
-| `read_buffer_size` _integer_ | ReadBufferSize specifies the ReadBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientReadBufferSize]. | <nil> | Optional: \{\} <br /> |
-| `write_buffer_size` _integer_ | WriteBufferSize specifies the WriteBufferSize for the HTTP<br />client. Default value is [DefaultHTTPExporterClientWriteBufferSize]. | <nil> | Optional: \{\} <br /> |
-| `encoding` _[MessageEncoding](#messageencoding)_ | Encoding specifies the encoding to use for the messages. The default<br />value is [MessageEncodingProto]. | <nil> | Optional: \{\} <br /> |
-| `retry_on_failure` _[RetryOnFailureConfig](#retryonfailureconfig)_ | RetryOnFailure specifies the retry policy of the exporter. |  | Optional: \{\} <br /> |
-| `compression` _[Compression](#compression)_ | Compression specifies the compression to use. The default value is<br />[CompressionGzip]. | <nil> | Optional: \{\} <br /> |
-
-
 #### RegexpConfig
 
 
@@ -538,8 +506,7 @@ ResourceReference references data from a Secret.
 
 
 _Appears in:_
-- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
-- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [ExporterConfig](#exporterconfig)
 - [TLSConfig](#tlsconfig)
 
 | Field | Description | Default | Validation |
@@ -573,8 +540,7 @@ RetryOnFailureConfig provides the retry policy for an exporter.
 
 
 _Appears in:_
-- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
-- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [ExporterConfig](#exporterconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -585,23 +551,61 @@ _Appears in:_
 | `multiplier` _float_ | Multiplier specifies the factor by which the retry interval is<br />multiplied on each attempt. The default value is<br />[DefaultRetryMultiplier]. | <nil> | Optional: \{\} <br /> |
 
 
-#### SignalType
+#### SignalConfig
 
-_Underlying type:_ _string_
 
-SignalType identifies a telemetry signal the collector can collect and
-export.
+
+SignalConfig configures a single telemetry signal: whether it is enabled and
+the list of targets (exporter/filters pairs) it fans out to.
+
+
+
+_Appears in:_
+- [SignalsConfig](#signalsconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled turns the signal's pipelines on or off. Default is false. | false | Optional: \{\} <br /> |
+| `targets` _[SignalTarget](#signaltarget) array_ | Targets is the list of exporter/filters pairs for this signal. Each<br />target becomes its own collector service pipeline, allowing a signal to<br />fan out to multiple destinations with independent filtering. An enabled<br />signal must define at least one target. |  | Optional: \{\} <br /> |
+
+
+#### SignalTarget
+
+
+
+SignalTarget pairs an exporter with its own ordered list of filter rules.
+Each target produces one collector service pipeline for the signal, so a
+signal can fan out to multiple destinations, each with its own filtering.
+
+
+
+_Appears in:_
+- [SignalConfig](#signalconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `exporter` _[ExporterConfig](#exporterconfig)_ | Exporter overrides fields of the top-level default exporter for this<br />target. Zero-valued fields inherit from the default exporter. Set its<br />Protocol to [ExporterProtocolDebug] to make this target a debug<br />destination. |  | Optional: \{\} <br /> |
+| `filters` _[FilterRule](#filterrule) array_ | Filters is an ordered list of filter rules applied to this target's<br />pipeline, after the top-level GlobalFilters. Each rule becomes a filter<br />processor instance in the target's pipeline. |  | Optional: \{\} <br /> |
+
+
+#### SignalsConfig
+
+
+
+SignalsConfig groups the per-signal configuration sections.
 
 
 
 _Appears in:_
 - [CollectorConfigSpec](#collectorconfigspec)
 
-| Field | Description |
-| --- | --- |
-| `logs` | SignalLogs is the signal for logs received via OTLP.<br /> |
-| `events` | SignalEvents is the signal for Kubernetes events collected from the<br />shoot cluster.<br /> |
-| `metrics` | SignalMetrics is the signal for metrics scraped via Prometheus.<br /> |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metrics` _[SignalConfig](#signalconfig)_ | Metrics configures the metrics signal, which is scraped via Prometheus. |  | Optional: \{\} <br /> |
+| `logs` _[SignalConfig](#signalconfig)_ | Logs configures the logs signal, which is received via OTLP. |  | Optional: \{\} <br /> |
+| `traces` _[SignalConfig](#signalconfig)_ | Traces configures the traces signal, which is received via OTLP. |  | Optional: \{\} <br /> |
+| `profiles` _[SignalConfig](#signalconfig)_ | Profiles configures the profiles signal, which is received via OTLP.<br />Profiles support is under development in the collector and disabled by<br />default. |  | Optional: \{\} <br /> |
+| `events` _[SignalConfig](#signalconfig)_ | Events configures the Kubernetes events signal, which is collected from<br />the shoot cluster. |  | Optional: \{\} <br /> |
 
 
 #### TLSConfig
@@ -613,8 +617,7 @@ TLSConfig provides the TLS settings used by exporters.
 
 
 _Appears in:_
-- [OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)
-- [OTLPHTTPExporterConfig](#otlphttpexporterconfig)
+- [ExporterConfig](#exporterconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |

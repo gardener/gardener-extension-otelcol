@@ -5,7 +5,7 @@
 package validation
 
 import (
-	"cmp"
+	"fmt"
 	"net/url"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -17,213 +17,117 @@ import (
 func Validate(cfg config.CollectorConfig) error {
 	allErrs := make(field.ErrorList, 0)
 
-	// We require at least one exporter to be enabled
-	anyExporterEnabled := []bool{
-		cfg.Spec.Exporters.DebugExporter.IsEnabled(),
-		cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled(),
-		cfg.Spec.Exporters.OTLPGRPCExporter.IsEnabled(),
-	}
+	specPath := field.NewPath("spec")
 
-	if !cmp.Or(anyExporterEnabled...) {
-		allErrs = append(
-			allErrs,
-			field.Required(field.NewPath("spec.exporters"), "no exporter enabled"),
-		)
-	}
+	// Validate the default exporter and each signal.
+	allErrs = append(allErrs, validateExporter(cfg.Spec.DefaultExporter, specPath.Child("defaultExporter"))...)
 
-	// Validate URL fields
-	urlFields := []struct {
-		path  string
-		value string
-	}{
-		{
-			path:  "spec.exporters.otlp_http.endpoint",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.Endpoint,
-		},
-		{
-			path:  "spec.exporters.otlp_http.traces_endpoint",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.TracesEndpoint,
-		},
-		{
-			path:  "spec.exporters.otlp_http.metrics_endpoint",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.MetricsEndpoint,
-		},
-		{
-			path:  "spec.exporters.otlp_http.logs_endpoint",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.LogsEndpoint,
-		},
-		{
-			path:  "spec.exporters.otlp_http.profiles_endpoint",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.ProfilesEndpoint,
-		},
-	}
-
-	for _, f := range urlFields {
-		if f.value != "" {
-			if _, err := url.Parse(f.value); err != nil {
-				allErrs = append(
-					allErrs,
-					field.Invalid(field.NewPath(f.path), f.value, "invalid URL specified"),
-				)
-			}
+	// At least one signal must be enabled.
+	anyEnabled := false
+	for _, sig := range config.AllSignals() {
+		signal := cfg.Spec.Signals.Signal(sig)
+		if !signal.IsEnabled() {
+			continue
 		}
-	}
+		anyEnabled = true
 
-	// Make sure that the HTTP client read/write buffers are good
-	type nonNegativeField struct {
-		path  string
-		value int
-	}
+		signalPath := specPath.Child("signals", string(sig))
 
-	nonNegativeFields := []nonNegativeField{
-		{
-			path:  "spec.exporters.otlp_http.read_buffer_size",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize,
-		},
-		{
-			path:  "spec.exporters.otlp_http.write_buffer_size",
-			value: cfg.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize,
-		},
-		{
-			path:  "spec.exporters.otlp_grpc.read_buffer_size",
-			value: cfg.Spec.Exporters.OTLPGRPCExporter.ReadBufferSize,
-		},
-		{
-			path:  "spec.exporters.otlp_grpc.write_buffer_size",
-			value: cfg.Spec.Exporters.OTLPGRPCExporter.WriteBufferSize,
-		},
-	}
-
-	for _, f := range nonNegativeFields {
-		if f.value < 0 {
+		// An enabled signal must define at least one target.
+		if len(signal.Targets) == 0 {
 			allErrs = append(
 				allErrs,
-				field.Invalid(field.NewPath(f.path), f.value, "value cannot be negative"),
-			)
-		}
-	}
-
-	// Validate resource references
-	type resourceRef struct {
-		path string
-		ref  *config.ResourceReference
-	}
-
-	resourceRefs := []resourceRef{
-		{
-			path: "spec.exporters.otlp_http.token",
-			ref:  cfg.Spec.Exporters.OTLPHTTPExporter.Token,
-		},
-		{
-			path: "spec.exporters.otlp_grpc.token",
-			ref:  cfg.Spec.Exporters.OTLPGRPCExporter.Token,
-		},
-	}
-
-	// Referenced resources from the OTLP HTTP exporter
-	if cfg.Spec.Exporters.OTLPHTTPExporter.TLS != nil {
-		resourceRefs = append(
-			resourceRefs,
-			resourceRef{
-				path: "spec.exporters.otlp_http.tls.ca",
-				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.CA,
-			},
-			resourceRef{
-				path: "spec.exporters.otlp_http.tls.cert",
-				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Cert,
-			},
-			resourceRef{
-				path: "spec.exporters.otlp_http.tls.key",
-				ref:  cfg.Spec.Exporters.OTLPHTTPExporter.TLS.Key,
-			},
-		)
-	}
-
-	// Referenced resources from the OTLP gRPC exporter
-	if cfg.Spec.Exporters.OTLPGRPCExporter.TLS != nil {
-		resourceRefs = append(
-			resourceRefs,
-			resourceRef{
-				path: "spec.exporters.otlp_grpc.tls.ca",
-				ref:  cfg.Spec.Exporters.OTLPGRPCExporter.TLS.CA,
-			},
-			resourceRef{
-				path: "spec.exporters.otlp_grpc.tls.cert",
-				ref:  cfg.Spec.Exporters.OTLPGRPCExporter.TLS.Cert,
-			},
-			resourceRef{
-				path: "spec.exporters.otlp_grpc.tls.key",
-				ref:  cfg.Spec.Exporters.OTLPGRPCExporter.TLS.Key,
-			},
-		)
-	}
-
-	for _, f := range resourceRefs {
-		if f.ref != nil {
-			if f.ref.ResourceRef.Name == "" || f.ref.ResourceRef.DataKey == "" {
-				allErrs = append(
-					allErrs,
-					field.Invalid(field.NewPath(f.path), f.path, "name or dataKey is empty"),
-				)
-			}
-		}
-	}
-
-	// Validate expected string values are not empty
-	type nonEmptyString struct {
-		path  string
-		value string
-	}
-
-	nonEmptyStrings := make([]nonEmptyString, 0)
-	if cfg.Spec.Exporters.OTLPGRPCExporter.IsEnabled() {
-		nonEmptyStrings = append(
-			nonEmptyStrings,
-			nonEmptyString{
-				path:  "spec.exporters.otlp_grpc.endpoint",
-				value: cfg.Spec.Exporters.OTLPGRPCExporter.Endpoint,
-			},
-		)
-	}
-
-	for _, f := range nonEmptyStrings {
-		if f.value == "" {
-			allErrs = append(
-				allErrs,
-				field.Invalid(field.NewPath(f.path), f.path, "empty value specified"),
-			)
-		}
-	}
-
-	// Validate the selected signals: each must be a known signal type and must
-	// not be duplicated. An empty selection is allowed (all signals enabled).
-	// The map does double duty: an entry only exists for known signals, and its
-	// value counts how many times we have already seen that signal.
-	seenSignals := map[config.SignalType]int{
-		config.SignalLogs:    0,
-		config.SignalEvents:  0,
-		config.SignalMetrics: 0,
-	}
-	signalsPath := field.NewPath("spec.signals")
-	for i, s := range cfg.Spec.Signals {
-		cnt, ok := seenSignals[s]
-		if !ok {
-			allErrs = append(
-				allErrs,
-				field.NotSupported(signalsPath.Index(i), string(s), []string{
-					string(config.SignalLogs),
-					string(config.SignalEvents),
-					string(config.SignalMetrics),
-				}),
+				field.Required(signalPath.Child("targets"), "an enabled signal must define at least one target"),
 			)
 
 			continue
 		}
-		if cnt >= 1 {
-			allErrs = append(allErrs, field.Duplicate(signalsPath.Index(i), string(s)))
+
+		for i, target := range signal.Targets {
+			targetPath := signalPath.Child("targets").Index(i)
+
+			// The effective exporter is the default merged with this target's
+			// override.
+			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
+
+			// A debug target writes to the collector's own logs; it does not
+			// use an endpoint, TLS or a token, so those checks are skipped.
+			if eff.Protocol == config.ExporterProtocolDebug {
+				continue
+			}
+
+			allErrs = append(allErrs, validateExporter(target.Exporter, targetPath.Child("exporter"))...)
+
+			// The effective exporter (default merged with the override) must
+			// have an endpoint.
+			if eff.Endpoint == "" {
+				allErrs = append(
+					allErrs,
+					field.Required(
+						targetPath.Child("exporter", "endpoint"),
+						"no endpoint specified for the target or the default exporter",
+					),
+				)
+			}
 		}
-		seenSignals[s]++
+	}
+
+	if !anyEnabled {
+		allErrs = append(allErrs, field.Required(specPath.Child("signals"), "no signal enabled"))
+	}
+
+	// Global filters must only use the signal-agnostic Conditions form.
+	for i, rule := range cfg.Spec.GlobalFilters {
+		rulePath := specPath.Child("globalFilters").Index(i)
+		if rule.Metrics != nil || rule.Logs != nil || len(rule.MetricConditions) > 0 || len(rule.LogConditions) > 0 {
+			allErrs = append(
+				allErrs,
+				field.Invalid(rulePath, "", "global filters may only use the signal-agnostic conditions form"),
+			)
+		}
 	}
 
 	return allErrs.ToAggregate()
+}
+
+// validateExporter validates the fields of a single exporter configuration.
+func validateExporter(exp config.ExporterConfig, path *field.Path) field.ErrorList {
+	allErrs := make(field.ErrorList, 0)
+
+	if exp.Endpoint != "" {
+		if _, err := url.Parse(exp.Endpoint); err != nil {
+			allErrs = append(allErrs, field.Invalid(path.Child("endpoint"), exp.Endpoint, "invalid URL specified"))
+		}
+	}
+
+	if exp.ReadBufferSize < 0 {
+		allErrs = append(allErrs, field.Invalid(path.Child("read_buffer_size"), exp.ReadBufferSize, "value cannot be negative"))
+	}
+	if exp.WriteBufferSize < 0 {
+		allErrs = append(allErrs, field.Invalid(path.Child("write_buffer_size"), exp.WriteBufferSize, "value cannot be negative"))
+	}
+
+	allErrs = append(allErrs, validateResourceReference(exp.Token, path.Child("token"))...)
+	if exp.TLS != nil {
+		allErrs = append(allErrs, validateResourceReference(exp.TLS.CA, path.Child("tls", "ca"))...)
+		allErrs = append(allErrs, validateResourceReference(exp.TLS.Cert, path.Child("tls", "cert"))...)
+		allErrs = append(allErrs, validateResourceReference(exp.TLS.Key, path.Child("tls", "key"))...)
+	}
+
+	return allErrs
+}
+
+// validateResourceReference ensures a resource reference has a non-empty name
+// and data key. A nil reference is valid (the field is optional).
+func validateResourceReference(ref *config.ResourceReference, path *field.Path) field.ErrorList {
+	if ref == nil {
+		return nil
+	}
+	if ref.ResourceRef.Name == "" || ref.ResourceRef.DataKey == "" {
+		return field.ErrorList{
+			field.Invalid(path, fmt.Sprintf("%+v", ref.ResourceRef), "name or dataKey is empty"),
+		}
+	}
+
+	return nil
 }
