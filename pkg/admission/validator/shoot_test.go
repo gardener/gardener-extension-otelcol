@@ -40,15 +40,14 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				DefaultExporter: config.ExporterConfig{
-					Protocol: config.ExporterProtocolHTTP,
-					Endpoint: "https://example.com:4318",
-				},
 				Signals: config.SignalsConfig{
 					Logs: config.SignalConfig{
 						Enabled: new(true),
 						Targets: []config.SignalTarget{
-							{},
+							{Exporter: config.ExporterConfig{
+								Protocol: config.ExporterProtocolHTTP,
+								Endpoint: "https://example.com:4318",
+							}},
 							{Exporter: config.ExporterConfig{
 								Protocol:  config.ExporterProtocolDebug,
 								Verbosity: config.DebugExporterVerbosityBasic,

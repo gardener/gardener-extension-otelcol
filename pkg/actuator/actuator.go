@@ -274,12 +274,6 @@ func signalExporterName(sig config.SignalType, i int, proto config.ExporterProto
 	return fmt.Sprintf("%s/%s/%d", base, sig, i)
 }
 
-// globalFilterName returns the filter processor component name for the i-th
-// global filter rule, e.g. "filter/global/0".
-func globalFilterName(i int) string {
-	return fmt.Sprintf("%s/global/%d", filterProcessorBaseName, i)
-}
-
 // signalFilterName returns the filter processor component name for the
 // ruleIdx-th filter rule of a signal's i-th target, e.g. "filter/metrics/0/1".
 func signalFilterName(sig config.SignalType, i, ruleIdx int) string {
@@ -1366,9 +1360,8 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) (map[string]any,
 
 		names := make([]string, len(signal.Targets))
 		for i, target := range signal.Targets {
-			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
-			name := signalExporterName(sig, i, eff.Protocol)
-			exporters[name] = a.getSignalExporterConfig(eff, sig, i)
+			name := signalExporterName(sig, i, target.Exporter.Protocol)
+			exporters[name] = a.getSignalExporterConfig(target.Exporter, sig, i)
 			names[i] = name
 		}
 		perSignalTarget[sig] = names
@@ -1399,10 +1392,9 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 // to that target's own exporter and filter processor instances.
 //
 // The processor chain is: resource, memory_limiter, (transform/events for the
-// events signal), the global filter processors, the target's own filter
-// processors, and finally batch. The filter processors are inserted after
-// memory_limiter and before batch so unwanted telemetry is dropped before
-// batching.
+// events signal), the target's own filter processors, and finally batch. The
+// filter processors are inserted after memory_limiter and before batch so
+// unwanted telemetry is dropped before batching.
 func buildPipelines(cfg config.CollectorConfig, perSignalTargetExporterNames map[config.SignalType][]string) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
@@ -1416,9 +1408,6 @@ func buildPipelines(cfg config.CollectorConfig, perSignalTargetExporterNames map
 			processors := []string{resourceProcessorName, memoryLimiterProcessorName}
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
-			}
-			for g := range cfg.Spec.GlobalFilters {
-				processors = append(processors, globalFilterName(g))
 			}
 			for ruleIdx := range target.Filters {
 				processors = append(processors, signalFilterName(sig, i, ruleIdx))
@@ -1630,12 +1619,6 @@ func (a *Actuator) getOtelCollector(
 		},
 	}
 
-	// Register the global filter processors, prepended to every enabled
-	// signal's pipeline.
-	for i, rule := range cfg.Spec.GlobalFilters {
-		obj.Spec.Config.Processors.Object[globalFilterName(i)] = a.getFilterProcessorConfig(rule)
-	}
-
 	// Register the per-target filter processors and configure the per-target
 	// exporter TLS and bearer token authentication volumes. Only enabled
 	// signals are processed so the collector does not report unused components.
@@ -1650,18 +1633,16 @@ func (a *Actuator) getOtelCollector(
 				obj.Spec.Config.Processors.Object[signalFilterName(sig, i, ruleIdx)] = a.getFilterProcessorConfig(rule)
 			}
 
-			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
-
 			// A debug target writes to the collector's own logs; it has no
 			// endpoint, TLS or token, so there are no volumes to configure.
-			if eff.Protocol == config.ExporterProtocolDebug {
+			if target.Exporter.Protocol == config.ExporterProtocolDebug {
 				continue
 			}
 
 			// Exporter TLS settings
 			a.configureVolumeForTLS(
 				obj,
-				eff.TLS,
+				target.Exporter.TLS,
 				signalVolumeNameTLS(sig, i),
 				signalVolumeMountPathTLS(sig, i),
 				resources,
@@ -1672,7 +1653,7 @@ func (a *Actuator) getOtelCollector(
 			// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
 			a.configureVolumeForBearerTokenAuthExtension(
 				obj,
-				eff.Token,
+				target.Exporter.Token,
 				signalBearerTokenAuthName(sig, i),
 				signalVolumeMountPathBearerToken(sig, i),
 				signalVolumeNameBearerToken(sig, i),

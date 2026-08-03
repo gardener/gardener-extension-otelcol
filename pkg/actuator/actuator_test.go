@@ -40,15 +40,14 @@ var _ = Describe("Actuator", Ordered, func() {
 		actuatorOpts   []actuator.Option
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				DefaultExporter: config.ExporterConfig{
-					Protocol: config.ExporterProtocolHTTP,
-					Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
-				},
 				Signals: config.SignalsConfig{
 					Logs: config.SignalConfig{
 						Enabled: new(true),
 						Targets: []config.SignalTarget{
-							{},
+							{Exporter: config.ExporterConfig{
+								Protocol: config.ExporterProtocolHTTP,
+								Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
+							}},
 							{Exporter: config.ExporterConfig{
 								Protocol:  config.ExporterProtocolDebug,
 								Verbosity: config.DebugExporterVerbosityNormal,

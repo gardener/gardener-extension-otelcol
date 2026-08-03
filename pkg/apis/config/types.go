@@ -161,10 +161,7 @@ type RetryOnFailureConfig struct {
 // ExporterConfig provides a full exporter configuration.
 //
 // It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
-// selected by Protocol. It is used both as the top-level default exporter
-// (inherited by every signal target) and as a per-target override. Any
-// zero-valued field in a per-target override inherits the corresponding value
-// from the default exporter, see [ExporterConfig.MergeWith].
+// selected by Protocol. Each signal target carries its own ExporterConfig.
 //
 // When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
 // endpoint, TLS, token and buffer settings are ignored.
@@ -214,53 +211,6 @@ type ExporterConfig struct {
 	// Verbosity specifies the verbosity level of the debug exporter. It is only
 	// honored when Protocol is [ExporterProtocolDebug].
 	Verbosity DebugExporterVerbosity
-}
-
-// MergeWith returns a copy of the receiver with every non-zero field of
-// override applied on top. It implements the inheritance of the top-level
-// default exporter by a per-target override. Pointer fields (TLS, Token) are
-// replaced wholesale when the override sets them. A nil override yields a copy
-// of the receiver.
-func (def ExporterConfig) MergeWith(override *ExporterConfig) ExporterConfig {
-	out := def
-	if override == nil {
-		return out
-	}
-	if override.Protocol != "" {
-		out.Protocol = override.Protocol
-	}
-	if override.Endpoint != "" {
-		out.Endpoint = override.Endpoint
-	}
-	if override.TLS != nil {
-		out.TLS = override.TLS
-	}
-	if override.Token != nil {
-		out.Token = override.Token
-	}
-	if override.Timeout != 0 {
-		out.Timeout = override.Timeout
-	}
-	if override.ReadBufferSize != 0 {
-		out.ReadBufferSize = override.ReadBufferSize
-	}
-	if override.WriteBufferSize != 0 {
-		out.WriteBufferSize = override.WriteBufferSize
-	}
-	if override.Encoding != "" {
-		out.Encoding = override.Encoding
-	}
-	if override.Compression != "" {
-		out.Compression = override.Compression
-	}
-	if override.RetryOnFailure.Enabled != nil {
-		out.RetryOnFailure = override.RetryOnFailure
-	}
-	if override.Verbosity != "" {
-		out.Verbosity = override.Verbosity
-	}
-
-	return out
 }
 
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
@@ -477,19 +427,12 @@ type FilterRule struct {
 // Each target produces one collector service pipeline for the signal, so a
 // signal can fan out to multiple destinations, each with its own filtering.
 type SignalTarget struct {
-	// Exporter overrides fields of the top-level default exporter for this
-	// target. Zero-valued fields inherit from the default exporter.
+	// Exporter is the exporter this target sends to.
 	Exporter ExporterConfig
 
 	// Filters is an ordered list of filter rules applied to this target's
-	// pipeline, after the top-level GlobalFilters.
+	// pipeline.
 	Filters []FilterRule
-}
-
-// EffectiveExporter merges this target's Exporter override onto the given
-// default exporter and returns the resulting exporter.
-func (t SignalTarget) EffectiveExporter(def ExporterConfig) ExporterConfig {
-	return def.MergeWith(&t.Exporter)
 }
 
 // SignalConfig configures a single telemetry signal end to end.
@@ -551,14 +494,6 @@ const (
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// DefaultExporter specifies the default OTLP exporter inherited by every
-	// enabled signal.
-	DefaultExporter ExporterConfig
-
-	// GlobalFilters is an ordered list of signal-agnostic filter rules
-	// prepended to every enabled signal's filter chain.
-	GlobalFilters []FilterRule
-
 	// Signals groups the per-signal configuration sections.
 	Signals SignalsConfig
 

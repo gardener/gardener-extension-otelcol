@@ -25,8 +25,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `defaultExporter` _[ExporterConfig](#exporterconfig)_ | DefaultExporter specifies the default OTLP exporter inherited by every<br />enabled signal. Per-signal exporter overrides are merged on top of it. |  | Required: \{\} <br /> |
-| `globalFilters` _[FilterRule](#filterrule) array_ | GlobalFilters is an ordered list of signal-agnostic filter rules that are<br />prepended to every enabled signal's filter chain, before that signal's<br />own Filters. Each rule may only use the Conditions form. |  | Optional: \{\} <br /> |
 | `signals` _[SignalsConfig](#signalsconfig)_ | Signals groups the per-signal configuration sections (metrics, logs,<br />traces, profiles, events). |  | Optional: \{\} <br /> |
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector's internal logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
@@ -143,11 +141,7 @@ _Appears in:_
 ExporterConfig provides a full exporter configuration.
 
 It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
-selected by Protocol. It is used both as the top-level default exporter
-(inherited by every signal target) and as a per-target override. Any
-zero-valued field in a per-target override inherits the corresponding value
-from the default exporter (the merge is implemented by MergeWith in the
-internal API).
+selected by Protocol. Each signal target carries its own ExporterConfig.
 
 When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
 endpoint, TLS, token and buffer settings are ignored.
@@ -162,13 +156,12 @@ details.
 
 
 _Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
 - [SignalTarget](#signaltarget)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `protocol` _[ExporterProtocol](#exporterprotocol)_ | Protocol selects the transport used by the exporter. The default value is<br />[ExporterProtocolHTTP]. Set it to [ExporterProtocolDebug] to write<br />telemetry to the collector's own logs instead of sending it to a remote<br />endpoint. | <nil> | Optional: \{\} <br /> |
-| `endpoint` _string_ | Endpoint specifies the target endpoint to send data to.<br />For the HTTP protocol this is a base URL, e.g. https://example.com:4318;<br />the collector appends the per-signal path (e.g. "/v1/metrics"). For the<br />gRPC protocol this is a gRPC endpoint, see<br />https://github.com/grpc/grpc/blob/master/doc/naming.md. |  | Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint specifies the target endpoint to send data to. It is required<br />unless Protocol is [ExporterProtocolDebug].<br />For the HTTP protocol this is a base URL, e.g. https://example.com:4318;<br />the collector appends the per-signal path (e.g. "/v1/metrics"). For the<br />gRPC protocol this is a gRPC endpoint, see<br />https://github.com/grpc/grpc/blob/master/doc/naming.md. |  | Optional: \{\} <br /> |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
 | `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  | Optional: \{\} <br /> |
 | `timeout` _[Duration](#duration)_ | Timeout specifies the request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. | <nil> | Optional: \{\} <br /> |
@@ -275,7 +268,6 @@ See [Filter Processor] for more details.
 
 
 _Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
 - [SignalTarget](#signaltarget)
 
 | Field | Description | Default | Validation |
@@ -285,7 +277,7 @@ _Appears in:_
 | `logs` _[LogFilters](#logfilters)_ | Logs specifies the filter settings for the logs signal. Because events<br />are collected as the logs signal, it is valid on both the logs and events<br />signals. |  | Optional: \{\} <br /> |
 | `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. It is mutually exclusive with Metrics. |  | Optional: \{\} <br /> |
 | `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. It is mutually exclusive with Logs. |  | Optional: \{\} <br /> |
-| `conditions` _[ContextConditions](#contextconditions) array_ | Conditions specifies a signal-agnostic filter using the context-inferred<br />condition style. It is the only form allowed for the traces and profiles<br />signals and for the top-level GlobalFilters. |  | Optional: \{\} <br /> |
+| `conditions` _[ContextConditions](#contextconditions) array_ | Conditions specifies a signal-agnostic filter using the context-inferred<br />condition style. It is the only form allowed for the traces and profiles<br />signals. |  | Optional: \{\} <br /> |
 
 
 #### LogEncoding
@@ -584,8 +576,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporter` _[ExporterConfig](#exporterconfig)_ | Exporter overrides fields of the top-level default exporter for this<br />target. Zero-valued fields inherit from the default exporter. Set its<br />Protocol to [ExporterProtocolDebug] to make this target a debug<br />destination. |  | Optional: \{\} <br /> |
-| `filters` _[FilterRule](#filterrule) array_ | Filters is an ordered list of filter rules applied to this target's<br />pipeline, after the top-level GlobalFilters. Each rule becomes a filter<br />processor instance in the target's pipeline. |  | Optional: \{\} <br /> |
+| `exporter` _[ExporterConfig](#exporterconfig)_ | Exporter is the exporter this target sends to. Set its Protocol to<br />[ExporterProtocolDebug] to make this target a debug destination. |  | Optional: \{\} <br /> |
+| `filters` _[FilterRule](#filterrule) array_ | Filters is an ordered list of filter rules applied to this target's<br />pipeline. Each rule becomes a filter processor instance in the target's<br />pipeline. |  | Optional: \{\} <br /> |
 
 
 #### SignalsConfig

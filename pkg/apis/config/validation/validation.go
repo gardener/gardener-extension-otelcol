@@ -19,9 +19,6 @@ func Validate(cfg config.CollectorConfig) error {
 
 	specPath := field.NewPath("spec")
 
-	// Validate the default exporter and each signal.
-	allErrs = append(allErrs, validateExporter(cfg.Spec.DefaultExporter, specPath.Child("defaultExporter"))...)
-
 	// At least one signal must be enabled.
 	anyEnabled := false
 	for _, sig := range config.AllSignals() {
@@ -46,27 +43,19 @@ func Validate(cfg config.CollectorConfig) error {
 		for i, target := range signal.Targets {
 			targetPath := signalPath.Child("targets").Index(i)
 
-			// The effective exporter is the default merged with this target's
-			// override.
-			eff := target.EffectiveExporter(cfg.Spec.DefaultExporter)
-
 			// A debug target writes to the collector's own logs; it does not
 			// use an endpoint, TLS or a token, so those checks are skipped.
-			if eff.Protocol == config.ExporterProtocolDebug {
+			if target.Exporter.Protocol == config.ExporterProtocolDebug {
 				continue
 			}
 
 			allErrs = append(allErrs, validateExporter(target.Exporter, targetPath.Child("exporter"))...)
 
-			// The effective exporter (default merged with the override) must
-			// have an endpoint.
-			if eff.Endpoint == "" {
+			// A non-debug target must specify an endpoint.
+			if target.Exporter.Endpoint == "" {
 				allErrs = append(
 					allErrs,
-					field.Required(
-						targetPath.Child("exporter", "endpoint"),
-						"no endpoint specified for the target or the default exporter",
-					),
+					field.Required(targetPath.Child("exporter", "endpoint"), "no endpoint specified for the target"),
 				)
 			}
 		}
@@ -74,17 +63,6 @@ func Validate(cfg config.CollectorConfig) error {
 
 	if !anyEnabled {
 		allErrs = append(allErrs, field.Required(specPath.Child("signals"), "no signal enabled"))
-	}
-
-	// Global filters must only use the signal-agnostic Conditions form.
-	for i, rule := range cfg.Spec.GlobalFilters {
-		rulePath := specPath.Child("globalFilters").Index(i)
-		if rule.Metrics != nil || rule.Logs != nil || len(rule.MetricConditions) > 0 || len(rule.LogConditions) > 0 {
-			allErrs = append(
-				allErrs,
-				field.Invalid(rulePath, "", "global filters may only use the signal-agnostic conditions form"),
-			)
-		}
 	}
 
 	return allErrs.ToAggregate()

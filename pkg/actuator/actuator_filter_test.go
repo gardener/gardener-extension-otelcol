@@ -117,12 +117,9 @@ var _ = Describe("filter processor", func() {
 				[]string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName}))
 		})
 
-		It("wires per-target and global filters after memory_limiter and before batch", func() {
+		It("wires per-target filters after memory_limiter and before batch", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
-					GlobalFilters: []config.FilterRule{
-						{Conditions: []config.ContextConditions{{Conditions: []string{`true`}}}},
-					},
 					Signals: config.SignalsConfig{
 						Metrics: enabledSignal(config.FilterRule{
 							Metrics: &config.MetricFilters{Metric: []string{metricNameFooCondition}},
@@ -141,11 +138,11 @@ var _ = Describe("filter processor", func() {
 
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).To(Equal([]string{
 				resourceProcessorName, memoryLimiterProcessorName,
-				globalFilterName(0), signalFilterName(config.SignalMetrics, 0, 0), batchProcessorName,
+				signalFilterName(config.SignalMetrics, 0, 0), batchProcessorName,
 			}))
 			Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Processors).To(Equal([]string{
 				resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName,
-				globalFilterName(0), signalFilterName(config.SignalEvents, 0, 0), batchProcessorName,
+				signalFilterName(config.SignalEvents, 0, 0), batchProcessorName,
 			}))
 		})
 	})

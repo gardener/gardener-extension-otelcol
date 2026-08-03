@@ -13,52 +13,41 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          # Default exporter inherited by every enabled signal. Each signal
-          # section may override any of these fields (see signals below).
-          defaultExporter:
-            protocol: http  # http or grpc
-            endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-            compression: gzip  # gzip, zstd, snappy or none
-            encoding: proto  # proto or json (http only)
-            token:
-              resourceRef:
-                name: otelcol-bearer-token
-                dataKey: token
-            tls:
-              ca:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: ca.crt
-              cert:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.crt
-              key:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.key
-
-          # Signal-agnostic filter rules prepended to every enabled signal's
-          # filter chain. Only the context-inferred conditions form is allowed
-          # here, so a rule applies to any signal.
-          # globalFilters:
-          #   - conditions:
-          #       - resource.attributes["k8s.namespace.name"] == "kube-system"
-
           # Per-signal configuration. Each signal has its own enabled flag and
-          # a list of targets. Each target pairs an exporter (merged onto
-          # defaultExporter) with its own ordered list of filter rules, and
-          # becomes one collector pipeline. A signal can therefore fan out to
-          # several destinations, each with independent filtering. An enabled
-          # signal must define at least one target. Each filter rule becomes a
-          # filter processor, mirroring the filterprocessor; see the link below.
+          # a list of targets. Each target pairs a self-contained exporter with
+          # its own ordered list of filter rules, and becomes one collector
+          # pipeline. A signal can therefore fan out to several destinations,
+          # each with independent filtering. An enabled signal must define at
+          # least one target, and every non-debug target must set an endpoint.
+          # Each filter rule becomes a filter processor, mirroring the
+          # filterprocessor; see the link below.
           # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
           signals:
             metrics:
               enabled: true
               targets:
-                # A target with an empty exporter inherits defaultExporter fully.
-                - exporter: {}
+                - exporter:
+                    protocol: http  # http or grpc
+                    endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+                    compression: gzip  # gzip, zstd, snappy or none
+                    encoding: proto  # proto or json (http only)
+                    token:
+                      resourceRef:
+                        name: otelcol-bearer-token
+                        dataKey: token
+                    tls:
+                      ca:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: ca.crt
+                      cert:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.crt
+                      key:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.key
                   # filters:
                   #   - error_mode: ignore  # ignore, silent or propagate
                   #     metrics:
@@ -89,7 +78,7 @@ spec:
             logs:
               enabled: true
               targets:
-                # First destination: override just the endpoint, inherit the rest.
+                # First destination: a remote collector over HTTP.
                 - exporter:
                     endpoint: "https://logs-receiver.default.svc.cluster.local:4318"
                   # filters:
@@ -112,7 +101,7 @@ spec:
             events:
               enabled: true
               targets:
-                # Ship events over gRPC while other signals use the default http.
+                # Ship events over gRPC.
                 - exporter:
                     protocol: grpc
                     endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"

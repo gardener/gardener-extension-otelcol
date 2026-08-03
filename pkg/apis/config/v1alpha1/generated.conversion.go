@@ -259,10 +259,6 @@ func Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in *config.Colle
 }
 
 func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *CollectorConfigSpec, out *config.CollectorConfigSpec, s conversion.Scope) error {
-	if err := Convert_v1alpha1_ExporterConfig_To_config_ExporterConfig(&in.DefaultExporter, &out.DefaultExporter, s); err != nil {
-		return err
-	}
-	out.GlobalFilters = *(*[]config.FilterRule)(unsafe.Pointer(&in.GlobalFilters))
 	if err := Convert_v1alpha1_SignalsConfig_To_config_SignalsConfig(&in.Signals, &out.Signals, s); err != nil {
 		return err
 	}
@@ -281,10 +277,6 @@ func Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *Coll
 }
 
 func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *config.CollectorConfigSpec, out *CollectorConfigSpec, s conversion.Scope) error {
-	if err := Convert_config_ExporterConfig_To_v1alpha1_ExporterConfig(&in.DefaultExporter, &out.DefaultExporter, s); err != nil {
-		return err
-	}
-	out.GlobalFilters = *(*[]FilterRule)(unsafe.Pointer(&in.GlobalFilters))
 	if err := Convert_config_SignalsConfig_To_v1alpha1_SignalsConfig(&in.Signals, &out.Signals, s); err != nil {
 		return err
 	}

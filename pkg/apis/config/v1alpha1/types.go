@@ -238,11 +238,7 @@ type RetryOnFailureConfig struct {
 // ExporterConfig provides a full exporter configuration.
 //
 // It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
-// selected by Protocol. It is used both as the top-level default exporter
-// (inherited by every signal target) and as a per-target override. Any
-// zero-valued field in a per-target override inherits the corresponding value
-// from the default exporter (the merge is implemented by MergeWith in the
-// internal API).
+// selected by Protocol. Each signal target carries its own ExporterConfig.
 //
 // When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
 // endpoint, TLS, token and buffer settings are ignored.
@@ -263,7 +259,8 @@ type ExporterConfig struct {
 	// +default=ref(ExporterProtocolHTTP)
 	Protocol ExporterProtocol `json:"protocol,omitzero"`
 
-	// Endpoint specifies the target endpoint to send data to.
+	// Endpoint specifies the target endpoint to send data to. It is required
+	// unless Protocol is [ExporterProtocolDebug].
 	//
 	// For the HTTP protocol this is a base URL, e.g. https://example.com:4318;
 	// the collector appends the per-signal path (e.g. "/v1/metrics"). For the
@@ -645,7 +642,7 @@ type FilterRule struct {
 
 	// Conditions specifies a signal-agnostic filter using the context-inferred
 	// condition style. It is the only form allowed for the traces and profiles
-	// signals and for the top-level GlobalFilters.
+	// signals.
 	//
 	// +k8s:optional
 	Conditions []ContextConditions `json:"conditions,omitempty"`
@@ -655,17 +652,15 @@ type FilterRule struct {
 // Each target produces one collector service pipeline for the signal, so a
 // signal can fan out to multiple destinations, each with its own filtering.
 type SignalTarget struct {
-	// Exporter overrides fields of the top-level default exporter for this
-	// target. Zero-valued fields inherit from the default exporter. Set its
-	// Protocol to [ExporterProtocolDebug] to make this target a debug
-	// destination.
+	// Exporter is the exporter this target sends to. Set its Protocol to
+	// [ExporterProtocolDebug] to make this target a debug destination.
 	//
 	// +k8s:optional
 	Exporter ExporterConfig `json:"exporter,omitzero"`
 
 	// Filters is an ordered list of filter rules applied to this target's
-	// pipeline, after the top-level GlobalFilters. Each rule becomes a filter
-	// processor instance in the target's pipeline.
+	// pipeline. Each rule becomes a filter processor instance in the target's
+	// pipeline.
 	//
 	// +k8s:optional
 	Filters []FilterRule `json:"filters,omitempty"`
@@ -722,19 +717,6 @@ type SignalsConfig struct {
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// DefaultExporter specifies the default OTLP exporter inherited by every
-	// enabled signal. Per-signal exporter overrides are merged on top of it.
-	//
-	// +k8s:required
-	DefaultExporter ExporterConfig `json:"defaultExporter,omitzero"`
-
-	// GlobalFilters is an ordered list of signal-agnostic filter rules that are
-	// prepended to every enabled signal's filter chain, before that signal's
-	// own Filters. Each rule may only use the Conditions form.
-	//
-	// +k8s:optional
-	GlobalFilters []FilterRule `json:"globalFilters,omitempty"`
-
 	// Signals groups the per-signal configuration sections (metrics, logs,
 	// traces, profiles, events).
 	//

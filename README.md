@@ -79,8 +79,8 @@ issue with the collector, because signals are not actually forwarded to a remote
 
 The following configuration snippet enables the extension for a shoot and
 configures it to forward the signals of the control-plane components to a remote
-collector. The top-level `spec.defaultExporter` is a full OTLP exporter that
-every enabled signal inherits; here it uses the
+collector. Each signal declares one or more `targets`; each target carries its
+own self-contained exporter. Here every target uses the
 [OTLP HTTP exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter)
 (`protocol: http`, the default).
 
@@ -94,29 +94,29 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            protocol: http  # http or grpc
-            endpoint: "https://opentelemetry-receiver.example.org"
           signals:
             metrics:
               enabled: true
               targets:
-                - exporter: {}  # inherits defaultExporter fully
+                - exporter:
+                    protocol: http  # http or grpc
+                    endpoint: "https://opentelemetry-receiver.example.org"
             logs:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
             events:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
 ```
 
 The following example snippet expands on the previous one by adding
 [TLS configuration settings](https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md) and
 [Bearer token authentication](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension) with the remote collector.
-These settings live on the exporter, so placing them on `defaultExporter` makes
-them apply to every enabled signal.
+These settings live on the target's exporter.
 
 ``` yaml
 ...
@@ -128,31 +128,30 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            protocol: http
-            endpoint: "https://opentelemetry-receiver.example.org"
-            token:
-              resourceRef:
-                name: otelcol-bearer-token
-                dataKey: token
-            tls:
-              ca:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: ca.crt
-              cert:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.crt
-              key:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.key
           signals:
             metrics:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    protocol: http
+                    endpoint: "https://opentelemetry-receiver.example.org"
+                    token:
+                      resourceRef:
+                        name: otelcol-bearer-token
+                        dataKey: token
+                    tls:
+                      ca:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: ca.crt
+                      cert:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.crt
+                      key:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.key
   resources:
   - name: otelcol-bearer-token
     resourceRef:
@@ -171,11 +170,10 @@ the example above to the extension, you should first create the respective
 secrets in the shoot project namespace, which can then be referenced via
 [Gardener Referenced Resources](https://gardener.cloud/docs/gardener/extensions/referenced-resources/#referenced-resources).
 
-Each target may override any field of `defaultExporter` via its own `exporter`
-section; unset fields are inherited. This example keeps the default HTTP
-exporter for most signals but forwards the events signal over the
-[OTLP gRPC exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter)
-by overriding just the protocol and endpoint on its target.
+Each target carries its own exporter, so different signals can ship to
+different backends over different protocols. This example forwards metrics over
+HTTP and the events signal over the
+[OTLP gRPC exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter).
 
 ``` yaml
   extensions:
@@ -184,35 +182,32 @@ by overriding just the protocol and endpoint on its target.
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            protocol: http
-            endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-            token:
-              resourceRef:
-                name: otelcol-bearer-token
-                dataKey: token
-            tls:
-              ca:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: ca.crt
-              cert:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.crt
-              key:
-                resourceRef:
-                  name: otelcol-tls
-                  dataKey: client.key
           signals:
             metrics:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+                    token:
+                      resourceRef:
+                        name: otelcol-bearer-token
+                        dataKey: token
+                    tls:
+                      ca:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: ca.crt
+                      cert:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.crt
+                      key:
+                        resourceRef:
+                          name: otelcol-tls
+                          dataKey: client.key
             events:
               enabled: true
               targets:
-                # Inherits token/tls from defaultExporter; overrides protocol and endpoint.
                 - exporter:
                     protocol: grpc
                     endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
@@ -237,14 +232,13 @@ them to a debug exporter.
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            endpoint: "https://opentelemetry-receiver.example.org"
           signals:
             metrics:
               enabled: true
               targets:
-                # Primary: inherits the default HTTP exporter.
-                - exporter: {}
+                # Primary: a remote collector over HTTP.
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
                 # Secondary: a different collector over gRPC.
                 - exporter:
                     protocol: grpc
@@ -278,14 +272,13 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            endpoint: "https://opentelemetry-receiver.example.org"
           signals:
             # Only collect and export metrics; the other pipelines are not created.
             metrics:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
 ```
 
 ### Drop individual records with the filter processor
@@ -294,18 +287,14 @@ Each target's `filters` field is an ordered list of filter rules. Each rule
 becomes a filterprocessor instance in that target's pipeline, dropping metrics,
 logs and events matching the given [OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry/)
 conditions or match properties. Because filters live on the target, different
-targets of the same signal can filter independently. In addition,
-`spec.globalFilters` holds signal-agnostic rules (the context-inferred
-`conditions` form only) that are prepended to every target's filter chain. The
-extension mirrors the filterprocessor filtration, so for more information you
-can check the
+targets of the same signal can filter independently. The extension mirrors the
+filterprocessor filtration, so for more information you can check the
 [filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
 
 #### Examples
 
-- The following example drops noisy metrics and logs using OTTL conditions, and
-uses `globalFilters` to drop everything from the `kube-system` namespace across
-all signals.
+- The following example drops noisy metrics and logs using OTTL conditions on
+each target.
 
 ``` yaml
 spec:
@@ -315,18 +304,12 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            endpoint: "https://opentelemetry-receiver.example.org"
-          globalFilters:
-            # Signal-agnostic: drop the whole resource when it originates from
-            # the kube-system namespace. Applied to every enabled signal.
-            - conditions:
-                - 'resource.attributes["k8s.namespace.name"] == "kube-system"'
           signals:
             metrics:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
                     - error_mode: ignore  # ignore, silent or propagate
                       metrics:
@@ -339,7 +322,8 @@ spec:
             logs:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
                     - logs:
                         # Drop log records whose body matches a pattern.
@@ -359,13 +343,12 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          defaultExporter:
-            endpoint: "https://opentelemetry-receiver.example.org"
           signals:
             metrics:
               enabled: true
               targets:
-                - exporter: {}
+                - exporter:
+                    endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
                     - metrics:
                         include:

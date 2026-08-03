@@ -20,52 +20,6 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
-	if in.Spec.DefaultExporter.Protocol == "" {
-		in.Spec.DefaultExporter.Protocol = ExporterProtocol(ExporterProtocolHTTP)
-	}
-	if in.Spec.DefaultExporter.TLS != nil {
-		if in.Spec.DefaultExporter.TLS.InsecureSkipVerify == nil {
-			var ptrVar1 bool = false
-			in.Spec.DefaultExporter.TLS.InsecureSkipVerify = &ptrVar1
-		}
-		if in.Spec.DefaultExporter.TLS.ReloadInterval == 0 {
-			in.Spec.DefaultExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
-		}
-	}
-	if in.Spec.DefaultExporter.Timeout == 0 {
-		in.Spec.DefaultExporter.Timeout = time.Duration(DefaultHTTPExporterClientTimeout)
-	}
-	if in.Spec.DefaultExporter.ReadBufferSize == 0 {
-		in.Spec.DefaultExporter.ReadBufferSize = int(DefaultHTTPExporterClientReadBufferSize)
-	}
-	if in.Spec.DefaultExporter.WriteBufferSize == 0 {
-		in.Spec.DefaultExporter.WriteBufferSize = int(DefaultHTTPExporterClientWriteBufferSize)
-	}
-	if in.Spec.DefaultExporter.Encoding == "" {
-		in.Spec.DefaultExporter.Encoding = MessageEncoding(MessageEncodingProto)
-	}
-	if in.Spec.DefaultExporter.RetryOnFailure.Enabled == nil {
-		var ptrVar1 bool = true
-		in.Spec.DefaultExporter.RetryOnFailure.Enabled = &ptrVar1
-	}
-	if in.Spec.DefaultExporter.RetryOnFailure.InitialInterval == 0 {
-		in.Spec.DefaultExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
-	}
-	if in.Spec.DefaultExporter.RetryOnFailure.MaxInterval == 0 {
-		in.Spec.DefaultExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
-	}
-	if in.Spec.DefaultExporter.RetryOnFailure.MaxElapsedTime == 0 {
-		in.Spec.DefaultExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
-	}
-	if in.Spec.DefaultExporter.RetryOnFailure.Multiplier == 0 {
-		in.Spec.DefaultExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
-	}
-	if in.Spec.DefaultExporter.Compression == "" {
-		in.Spec.DefaultExporter.Compression = Compression(CompressionGzip)
-	}
-	if in.Spec.DefaultExporter.Verbosity == "" {
-		in.Spec.DefaultExporter.Verbosity = DebugExporterVerbosity(DebugExporterVerbosityBasic)
-	}
 	if in.Spec.Signals.Metrics.Enabled == nil {
 		var ptrVar1 bool = false
 		in.Spec.Signals.Metrics.Enabled = &ptrVar1
