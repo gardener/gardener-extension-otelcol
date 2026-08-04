@@ -330,49 +330,6 @@ type LogMatchProperties struct {
 	Bodies []string
 }
 
-// MetricFilters specifies the filter processor settings for the metrics signal.
-//
-// The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
-// match properties (Include, Exclude) are mutually exclusive.
-type MetricFilters struct {
-	// Include specifies the metrics that should be included in the collector
-	// service pipeline; all other metrics are dropped.
-	Include *MetricMatchProperties
-
-	// Exclude specifies the metrics that should be excluded from the collector
-	// service pipeline; all other metrics are included.
-	Exclude *MetricMatchProperties
-
-	// Resource is a list of OTTL conditions for an ottlresource context.
-	Resource []string
-
-	// Metric is a list of OTTL conditions for an ottlmetric context.
-	Metric []string
-
-	// DataPoint is a list of OTTL conditions for an ottldatapoint context.
-	DataPoint []string
-}
-
-// LogFilters specifies the filter processor settings for the logs signal.
-//
-// The OTTL condition lists (Resource, LogRecord) and the object-based match
-// properties (Include, Exclude) are mutually exclusive.
-type LogFilters struct {
-	// Include specifies the logs that should be included in the collector
-	// service pipeline; all other logs are dropped.
-	Include *LogMatchProperties
-
-	// Exclude specifies the logs that should be excluded from the collector
-	// service pipeline; all other logs are included.
-	Exclude *LogMatchProperties
-
-	// Resource is a list of OTTL conditions for an ottlresource context.
-	Resource []string
-
-	// LogRecord is a list of OTTL conditions for an ottllog context.
-	LogRecord []string
-}
-
 // ContextConditions specifies a group of OTTL conditions for the filter
 // processor's context-inferred condition style (metric_conditions /
 // log_conditions).
@@ -393,8 +350,11 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode
 }
 
-// FilterRule specifies a single filter processor instance, which drops metrics
-// and logs matching the given OTTL conditions or match properties.
+// FilterRule specifies a single filter processor instance, which drops
+// telemetry matching the given OTTL conditions or match properties. The fields
+// are flattened per signal: the metrics-only fields are valid on the metrics
+// signal, the logs-only fields on the logs and events signals, and traces and
+// profiles accept only Conditions.
 //
 // See [Filter Processor] for more details.
 //
@@ -404,22 +364,49 @@ type FilterRule struct {
 	// processing an OTTL condition. If empty, the processor default is used.
 	ErrorMode FilterErrorMode
 
-	// Metrics specifies the filter settings for the metrics signal.
-	Metrics *MetricFilters
+	// Resource is a list of OTTL conditions for an ottlresource context. Valid
+	// on the metrics, logs and events signals.
+	Resource []string
 
-	// Logs specifies the filter settings for the logs and events signal.
-	Logs *LogFilters
+	// Metric is a list of OTTL conditions for an ottlmetric context. Valid only
+	// on the metrics signal.
+	Metric []string
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context. Valid
+	// only on the metrics signal.
+	DataPoint []string
+
+	// LogRecord is a list of OTTL conditions for an ottllog context. Valid on
+	// the logs and events signals.
+	LogRecord []string
+
+	// MetricInclude specifies the metrics to keep; all others are dropped. Valid
+	// only on the metrics signal.
+	MetricInclude *MetricMatchProperties
+
+	// MetricExclude specifies the metrics to drop; all others are kept. Valid
+	// only on the metrics signal.
+	MetricExclude *MetricMatchProperties
+
+	// LogInclude specifies the logs to keep; all others are dropped. Valid on
+	// the logs and events signals.
+	LogInclude *LogMatchProperties
+
+	// LogExclude specifies the logs to drop; all others are kept. Valid on the
+	// logs and events signals.
+	LogExclude *LogMatchProperties
 
 	// MetricConditions specifies the metrics filter using the context-inferred
-	// condition style. It is mutually exclusive with Metrics.
+	// condition style. Valid only on the metrics signal.
 	MetricConditions []ContextConditions
 
 	// LogConditions specifies the logs filter using the context-inferred
-	// condition style. It is mutually exclusive with Logs.
+	// condition style. Valid on the logs and events signals.
 	LogConditions []ContextConditions
 
 	// Conditions specifies a signal-agnostic filter using the context-inferred
-	// condition style.
+	// condition style. It is the only form allowed for the traces and profiles
+	// signals.
 	Conditions []ContextConditions
 }
 

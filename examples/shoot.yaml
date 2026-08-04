@@ -48,26 +48,27 @@ spec:
                         resourceRef:
                           name: otelcol-tls
                           dataKey: client.key
+                  # Filters for the metrics signal. The fields are the
+                  # metrics-only filter options (no signal wrapper).
                   # filters:
                   #   - error_mode: ignore  # ignore, silent or propagate
-                  #     metrics:
-                  #       # OTTL condition style (mutually exclusive with include/exclude)
-                  #       resource:
-                  #         - resource.attributes["env"] == "dev"
-                  #       metric:
-                  #         - metric.name == "some.unwanted.metric"
-                  #       datapoint:
-                  #         - datapoint.value_int == 0
-                  #       # Object/match style (mutually exclusive with the lists above)
-                  #       # include:
-                  #       #   match_type: strict  # strict or regexp
-                  #       #   metric_names: ["metric.a", "metric.b"]
-                  #       #   regexp:
-                  #       #     cacheenabled: true
-                  #       #     cachemaxnumentries: 10
-                  #       #   resource_attributes:
-                  #       #     - key: service.name
-                  #       #       value: my-service
+                  #     # OTTL condition style (mutually exclusive with include/exclude)
+                  #     resource:
+                  #       - resource.attributes["env"] == "dev"
+                  #     metric:
+                  #       - metric.name == "some.unwanted.metric"
+                  #     datapoint:
+                  #       - datapoint.value_int == 0
+                  #     # Object/match style (mutually exclusive with the lists above)
+                  #     # include:
+                  #     #   match_type: strict  # strict or regexp
+                  #     #   metric_names: ["metric.a", "metric.b"]
+                  #     #   regexp:
+                  #     #     cacheenabled: true
+                  #     #     cachemaxnumentries: 10
+                  #     #   resource_attributes:
+                  #     #     - key: service.name
+                  #     #       value: my-service
                   #   # Alternatively, the context-inferred condition style:
                   #   # - metric_conditions:
                   #   #     - context: datapoint    # optional; inferred when omitted
@@ -81,16 +82,16 @@ spec:
                 # First destination: a remote collector over HTTP.
                 - exporter:
                     endpoint: "https://logs-receiver.default.svc.cluster.local:4318"
+                  # Filters for the logs signal (logs-only filter options).
                   # filters:
-                  #   - logs:
-                  #       log_record:
-                  #         - IsMatch(log.body, ".*password.*")
-                  #       # include:
-                  #       #   match_type: strict
-                  #       #   severity_texts: ["INFO", "DEBUG"]
-                  #       #   severity_number:
-                  #       #     min: WARN
-                  #       #     match_undefined: false
+                  #   - log_record:
+                  #       - IsMatch(log.body, ".*password.*")
+                  #     # include:
+                  #     #   match_type: strict
+                  #     #   severity_texts: ["INFO", "DEBUG"]
+                  #     #   severity_number:
+                  #     #     min: WARN
+                  #     #     match_undefined: false
                 # Second destination: a debug exporter writing to the collector
                 # logs. protocol: debug ignores endpoint/tls/token; only
                 # verbosity is honored.

@@ -287,8 +287,16 @@ Each target's `filters` field is an ordered list of filter rules. Each rule
 becomes a filterprocessor instance in that target's pipeline, dropping metrics,
 logs and events matching the given [OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry/)
 conditions or match properties. Because filters live on the target, different
-targets of the same signal can filter independently. The extension mirrors the
-filterprocessor filtration, so for more information you can check the
+targets of the same signal can filter independently.
+
+The filter fields are specific to the signal being configured, so there is no
+signal wrapper: under `metrics` you use `metric`, `datapoint`, `resource`,
+`include`/`exclude` (metric match properties) and `metric_conditions`; under
+`logs` (and `events`) you use `log_record`, `resource`, `logInclude`/`logExclude`
+(log match properties) and `log_conditions`; and `traces`/`profiles` accept only
+the signal-agnostic `conditions` form. Using a field that does not belong to the
+signal is rejected by validation. The extension mirrors the filterprocessor
+filtration, so for more information you can check the
 [filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
 
 #### Examples
@@ -312,23 +320,21 @@ spec:
                     endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
                     - error_mode: ignore  # ignore, silent or propagate
-                      metrics:
-                        # Drop individual metrics by name.
-                        metric:
-                          - 'name == "apiserver_request_total"'
-                        # Drop datapoints by value.
-                        datapoint:
-                          - 'value_int == 0'
+                      # Drop individual metrics by name.
+                      metric:
+                        - 'name == "apiserver_request_total"'
+                      # Drop datapoints by value.
+                      datapoint:
+                        - 'value_int == 0'
             logs:
               enabled: true
               targets:
                 - exporter:
                     endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
-                    - logs:
-                        # Drop log records whose body matches a pattern.
-                        log_record:
-                          - 'IsMatch(body, ".*password.*")'
+                    # Drop log records whose body matches a pattern.
+                    - log_record:
+                        - 'IsMatch(body, ".*password.*")'
 ```
 
 - The next example uses the declarative include/exclude match properties instead
@@ -350,12 +356,11 @@ spec:
                 - exporter:
                     endpoint: "https://opentelemetry-receiver.example.org"
                   filters:
-                    - metrics:
-                        include:
-                          match_type: regexp  # strict or regexp
-                          metric_names:
-                            - "apiserver_.*"
-                            - "etcd_.*"
+                    - include:
+                        match_type: regexp  # strict or regexp
+                        metric_names:
+                          - "apiserver_.*"
+                          - "etcd_.*"
 ```
 
 # Development

@@ -1153,54 +1153,60 @@ func renderContextConditions(groups []config.ContextConditions) []any {
 }
 
 // getFilterProcessorConfig returns the OTel settings for a single filter
-// processor instance built from one [config.FilterRule].
+// processor instance built from one [config.FilterRule] for the given signal.
+//
+// The flattened rule fields are grouped back into the OTel filterprocessor's
+// per-signal blocks: on the metrics signal the metric-only fields render into a
+// "metrics" block; on the logs and events signals the log-only fields render
+// into a "logs" block. The context-inferred condition forms and the
+// signal-agnostic conditions are rendered as-is.
 //
 // See the link below for more details about each config setting of the filter
 // processor.
 //
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-func (a *Actuator) getFilterProcessorConfig(rule config.FilterRule) map[string]any {
+func (a *Actuator) getFilterProcessorConfig(rule config.FilterRule, sig config.SignalType) map[string]any {
 	processor := map[string]any{}
 
 	if rule.ErrorMode != "" {
 		processor["error_mode"] = string(rule.ErrorMode)
 	}
 
-	if m := rule.Metrics; m != nil {
+	if sig == config.SignalMetrics {
 		metrics := map[string]any{}
-		if len(m.Resource) > 0 {
-			metrics["resource"] = m.Resource
+		if len(rule.Resource) > 0 {
+			metrics["resource"] = rule.Resource
 		}
-		if len(m.Metric) > 0 {
-			metrics["metric"] = m.Metric
+		if len(rule.Metric) > 0 {
+			metrics["metric"] = rule.Metric
 		}
-		if len(m.DataPoint) > 0 {
-			metrics["datapoint"] = m.DataPoint
+		if len(rule.DataPoint) > 0 {
+			metrics["datapoint"] = rule.DataPoint
 		}
-		if m.Include != nil {
-			metrics["include"] = getMetricMatchProperties(m.Include)
+		if rule.MetricInclude != nil {
+			metrics["include"] = getMetricMatchProperties(rule.MetricInclude)
 		}
-		if m.Exclude != nil {
-			metrics["exclude"] = getMetricMatchProperties(m.Exclude)
+		if rule.MetricExclude != nil {
+			metrics["exclude"] = getMetricMatchProperties(rule.MetricExclude)
 		}
 		if len(metrics) > 0 {
 			processor["metrics"] = metrics
 		}
 	}
 
-	if l := rule.Logs; l != nil {
+	if sig == config.SignalLogs || sig == config.SignalEvents {
 		logs := map[string]any{}
-		if len(l.Resource) > 0 {
-			logs["resource"] = l.Resource
+		if len(rule.Resource) > 0 {
+			logs["resource"] = rule.Resource
 		}
-		if len(l.LogRecord) > 0 {
-			logs["log_record"] = l.LogRecord
+		if len(rule.LogRecord) > 0 {
+			logs["log_record"] = rule.LogRecord
 		}
-		if l.Include != nil {
-			logs["include"] = getLogMatchProperties(l.Include)
+		if rule.LogInclude != nil {
+			logs["include"] = getLogMatchProperties(rule.LogInclude)
 		}
-		if l.Exclude != nil {
-			logs["exclude"] = getLogMatchProperties(l.Exclude)
+		if rule.LogExclude != nil {
+			logs["exclude"] = getLogMatchProperties(rule.LogExclude)
 		}
 		if len(logs) > 0 {
 			processor["logs"] = logs
@@ -1630,7 +1636,7 @@ func (a *Actuator) getOtelCollector(
 
 		for i, target := range signal.Targets {
 			for ruleIdx, rule := range target.Filters {
-				obj.Spec.Config.Processors.Object[signalFilterName(sig, i, ruleIdx)] = a.getFilterProcessorConfig(rule)
+				obj.Spec.Config.Processors.Object[signalFilterName(sig, i, ruleIdx)] = a.getFilterProcessorConfig(rule, sig)
 			}
 
 			// A debug target writes to the collector's own logs; it has no

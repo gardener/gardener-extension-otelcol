@@ -43,6 +43,11 @@ func Validate(cfg config.CollectorConfig) error {
 		for i, target := range signal.Targets {
 			targetPath := signalPath.Child("targets").Index(i)
 
+			// Each filter rule may only use the fields valid for this signal.
+			for j, rule := range target.Filters {
+				allErrs = append(allErrs, validateFilterRule(rule, sig, targetPath.Child("filters").Index(j))...)
+			}
+
 			// A debug target writes to the collector's own logs; it does not
 			// use an endpoint, TLS or a token, so those checks are skipped.
 			if target.Exporter.Protocol == config.ExporterProtocolDebug {
@@ -108,4 +113,43 @@ func validateResourceReference(ref *config.ResourceReference, path *field.Path) 
 	}
 
 	return nil
+}
+
+// validateFilterRule ensures a filter rule only uses fields valid for the given
+// signal. The metrics-only fields are valid on the metrics signal, the
+// logs-only fields on the logs and events signals, and the traces and profiles
+// signals accept only the signal-agnostic Conditions form. The Resource field
+// is valid on metrics, logs and events. ErrorMode is valid everywhere.
+func validateFilterRule(rule config.FilterRule, sig config.SignalType, path *field.Path) field.ErrorList {
+	allErrs := make(field.ErrorList, 0)
+
+	metricUsed := len(rule.Metric) > 0 || len(rule.DataPoint) > 0 ||
+		rule.MetricInclude != nil || rule.MetricExclude != nil || len(rule.MetricConditions) > 0
+	logUsed := len(rule.LogRecord) > 0 ||
+		rule.LogInclude != nil || rule.LogExclude != nil || len(rule.LogConditions) > 0
+	resourceUsed := len(rule.Resource) > 0
+	conditionsUsed := len(rule.Conditions) > 0
+
+	reject := func(used bool, child, detail string) {
+		if used {
+			allErrs = append(allErrs, field.Invalid(path.Child(child), "", detail))
+		}
+	}
+
+	switch sig {
+	case config.SignalMetrics:
+		reject(logUsed, "log_record", "log filter fields are not valid on the metrics signal")
+		reject(conditionsUsed, "conditions", "the signal-agnostic conditions form is not valid on the metrics signal; use metric/datapoint/metric_conditions")
+	case config.SignalLogs, config.SignalEvents:
+		reject(metricUsed, "metric", "metric filter fields are not valid on the logs signal")
+		reject(conditionsUsed, "conditions", "the signal-agnostic conditions form is not valid on the logs signal; use log_record/log_conditions")
+	case config.SignalTraces, config.SignalProfiles:
+		reject(metricUsed, "metric", "metric filter fields are not valid on this signal; use conditions")
+		reject(logUsed, "log_record", "log filter fields are not valid on this signal; use conditions")
+		reject(resourceUsed, "resource", "the resource field is not valid on this signal; use conditions")
+	default:
+		// Unknown signal; no per-signal field restrictions to apply.
+	}
+
+	return allErrs
 }

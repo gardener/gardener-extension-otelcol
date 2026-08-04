@@ -12,6 +12,11 @@ import (
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config/validation"
 )
 
+const (
+	testEndpoint    = "https://example.com:4318"
+	metricCondition = `name == "foo"`
+)
+
 var _ = Describe("Validate", func() {
 	// baseConfig returns a config with the logs signal enabled and a single
 	// target with an endpoint, so it passes validation.
@@ -24,7 +29,7 @@ var _ = Describe("Validate", func() {
 						Targets: []config.SignalTarget{{
 							Exporter: config.ExporterConfig{
 								Protocol: config.ExporterProtocolHTTP,
-								Endpoint: "https://example.com:4318",
+								Endpoint: testEndpoint,
 							},
 						}},
 					},
@@ -105,5 +110,85 @@ var _ = Describe("Validate", func() {
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("spec.signals.logs.targets[0].exporter.token"))
+	})
+
+	It("accepts metric filter fields on the metrics signal", func() {
+		cfg := baseConfig()
+		cfg.Spec.Signals.Metrics = config.SignalConfig{
+			Enabled: new(true),
+			Targets: []config.SignalTarget{{
+				Exporter: config.ExporterConfig{Endpoint: testEndpoint},
+				Filters: []config.FilterRule{{
+					Metric:    []string{metricCondition},
+					DataPoint: []string{`value_int == 0`},
+				}},
+			}},
+		}
+
+		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
+	})
+
+	It("rejects log filter fields on the metrics signal", func() {
+		cfg := baseConfig()
+		cfg.Spec.Signals.Metrics = config.SignalConfig{
+			Enabled: new(true),
+			Targets: []config.SignalTarget{{
+				Exporter: config.ExporterConfig{Endpoint: testEndpoint},
+				Filters:  []config.FilterRule{{LogRecord: []string{`true`}}},
+			}},
+		}
+
+		err := validation.Validate(cfg)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.signals.metrics.targets[0].filters[0].log_record"))
+	})
+
+	It("rejects metric filter fields on the logs signal", func() {
+		cfg := baseConfig()
+		cfg.Spec.Signals.Logs.Targets[0].Filters = []config.FilterRule{{
+			Metric: []string{metricCondition},
+		}}
+
+		err := validation.Validate(cfg)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.signals.logs.targets[0].filters[0].metric"))
+	})
+
+	It("rejects the signal-agnostic conditions form on the metrics signal", func() {
+		cfg := baseConfig()
+		cfg.Spec.Signals.Metrics = config.SignalConfig{
+			Enabled: new(true),
+			Targets: []config.SignalTarget{{
+				Exporter: config.ExporterConfig{Endpoint: testEndpoint},
+				Filters: []config.FilterRule{{
+					Conditions: []config.ContextConditions{{Conditions: []string{`true`}}},
+				}},
+			}},
+		}
+
+		err := validation.Validate(cfg)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.signals.metrics.targets[0].filters[0].conditions"))
+	})
+
+	It("accepts the conditions form on the traces signal and rejects metric fields", func() {
+		cfg := baseConfig()
+		cfg.Spec.Signals.Traces = config.SignalConfig{
+			Enabled: new(true),
+			Targets: []config.SignalTarget{{
+				Exporter: config.ExporterConfig{Endpoint: testEndpoint},
+				Filters: []config.FilterRule{{
+					Conditions: []config.ContextConditions{{Conditions: []string{`name == "ping"`}}},
+				}},
+			}},
+		}
+		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
+
+		cfg.Spec.Signals.Traces.Targets[0].Filters = []config.FilterRule{{
+			Metric: []string{metricCondition},
+		}}
+		err := validation.Validate(cfg)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.signals.traces.targets[0].filters[0].metric"))
 	})
 })

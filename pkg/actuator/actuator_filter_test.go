@@ -13,6 +13,9 @@ import (
 
 const metricNameFooCondition = `metric.name == "foo"`
 
+// trueCondition is a trivially-true OTTL condition used across filter specs.
+const trueCondition = `true`
+
 // enabledSignal returns a SignalConfig that is enabled with a single target
 // whose exporter inherits the default, optionally carrying the given filters.
 func enabledSignal(filters ...config.FilterRule) config.SignalConfig {
@@ -122,10 +125,10 @@ var _ = Describe("filter processor", func() {
 				Spec: config.CollectorConfigSpec{
 					Signals: config.SignalsConfig{
 						Metrics: enabledSignal(config.FilterRule{
-							Metrics: &config.MetricFilters{Metric: []string{metricNameFooCondition}},
+							Metric: []string{metricNameFooCondition},
 						}),
 						Events: enabledSignal(config.FilterRule{
-							Logs: &config.LogFilters{LogRecord: []string{`true`}},
+							LogRecord: []string{trueCondition},
 						}),
 					},
 				},
@@ -155,19 +158,17 @@ var _ = Describe("filter processor", func() {
 		})
 
 		It("renders the error_mode only when set", func() {
-			Expect(a.getFilterProcessorConfig(config.FilterRule{})).NotTo(HaveKey("error_mode"))
-			Expect(a.getFilterProcessorConfig(config.FilterRule{ErrorMode: config.FilterErrorModeIgnore})).
+			Expect(a.getFilterProcessorConfig(config.FilterRule{}, config.SignalMetrics)).NotTo(HaveKey("error_mode"))
+			Expect(a.getFilterProcessorConfig(config.FilterRule{ErrorMode: config.FilterErrorModeIgnore}, config.SignalMetrics)).
 				To(HaveKeyWithValue("error_mode", "ignore"))
 		})
 
 		It("renders the metrics OTTL condition lists", func() {
 			out := a.getFilterProcessorConfig(config.FilterRule{
-				Metrics: &config.MetricFilters{
-					Resource:  []string{`resource.attributes["env"] == "dev"`},
-					Metric:    []string{metricNameFooCondition},
-					DataPoint: []string{`datapoint.value_int == 0`},
-				},
-			})
+				Resource:  []string{`resource.attributes["env"] == "dev"`},
+				Metric:    []string{metricNameFooCondition},
+				DataPoint: []string{`datapoint.value_int == 0`},
+			}, config.SignalMetrics)
 
 			Expect(out["metrics"]).To(Equal(map[string]any{
 				resourceProcessorName: []string{`resource.attributes["env"] == "dev"`},
@@ -178,21 +179,19 @@ var _ = Describe("filter processor", func() {
 
 		It("renders the metrics include/exclude match properties", func() {
 			out := a.getFilterProcessorConfig(config.FilterRule{
-				Metrics: &config.MetricFilters{
-					Include: &config.MetricMatchProperties{
-						MatchType:   config.MatchTypeStrict,
-						MetricNames: []string{"metric.a", "metric.b"},
-						Regexp: &config.RegexpConfig{
-							CacheEnabled:       new(true),
-							CacheMaxNumEntries: 10,
-						},
-						ResourceAttributes: []config.FilterAttribute{
-							{Key: "service.name", Value: "my-service"},
-							{Key: "present-only"},
-						},
+				MetricInclude: &config.MetricMatchProperties{
+					MatchType:   config.MatchTypeStrict,
+					MetricNames: []string{"metric.a", "metric.b"},
+					Regexp: &config.RegexpConfig{
+						CacheEnabled:       new(true),
+						CacheMaxNumEntries: 10,
+					},
+					ResourceAttributes: []config.FilterAttribute{
+						{Key: "service.name", Value: "my-service"},
+						{Key: "present-only"},
 					},
 				},
-			})
+			}, config.SignalMetrics)
 
 			Expect(out["metrics"]).To(Equal(map[string]any{
 				"include": map[string]any{
@@ -212,20 +211,18 @@ var _ = Describe("filter processor", func() {
 
 		It("renders the logs OTTL conditions and include match properties", func() {
 			out := a.getFilterProcessorConfig(config.FilterRule{
-				Logs: &config.LogFilters{
-					LogRecord: []string{`IsMatch(log.body, ".*password.*")`},
-					Include: &config.LogMatchProperties{
-						MatchType:     config.MatchTypeStrict,
-						SeverityTexts: []string{"INFO", "DEBUG"},
-						Bodies:        []string{"exact body"},
-						SeverityNumber: &config.LogSeverityNumberMatchProperties{
-							Min:            "WARN",
-							MatchUndefined: new(false),
-						},
-						RecordAttributes: []config.FilterAttribute{{Key: "foo", Value: "bar"}},
+				LogRecord: []string{`IsMatch(log.body, ".*password.*")`},
+				LogInclude: &config.LogMatchProperties{
+					MatchType:     config.MatchTypeStrict,
+					SeverityTexts: []string{"INFO", "DEBUG"},
+					Bodies:        []string{"exact body"},
+					SeverityNumber: &config.LogSeverityNumberMatchProperties{
+						Min:            "WARN",
+						MatchUndefined: new(false),
 					},
+					RecordAttributes: []config.FilterAttribute{{Key: "foo", Value: "bar"}},
 				},
-			})
+			}, config.SignalLogs)
 
 			Expect(out["logs"]).To(Equal(map[string]any{
 				"log_record": []string{`IsMatch(log.body, ".*password.*")`},
@@ -242,12 +239,29 @@ var _ = Describe("filter processor", func() {
 			}))
 		})
 
-		It("omits signal keys when their filters are empty", func() {
+		It("renders only the metrics block on the metrics signal, ignoring log fields", func() {
+			out := a.getFilterProcessorConfig(config.FilterRule{
+				Metric:    []string{metricNameFooCondition},
+				LogRecord: []string{trueCondition}, // ignored on the metrics signal
+			}, config.SignalMetrics)
+
+			Expect(out).To(HaveKey("metrics"))
+			Expect(out).NotTo(HaveKey("logs"))
+		})
+
+		It("renders the logs block for the events signal", func() {
+			out := a.getFilterProcessorConfig(config.FilterRule{
+				LogRecord: []string{trueCondition},
+			}, config.SignalEvents)
+
+			Expect(out).To(HaveKey("logs"))
+			Expect(out).NotTo(HaveKey("metrics"))
+		})
+
+		It("omits signal keys when the fields are empty", func() {
 			out := a.getFilterProcessorConfig(config.FilterRule{
 				ErrorMode: config.FilterErrorModePropagate,
-				Metrics:   &config.MetricFilters{},
-				Logs:      &config.LogFilters{},
-			})
+			}, config.SignalMetrics)
 
 			Expect(out).To(Equal(map[string]any{"error_mode": "propagate"}))
 		})
@@ -257,7 +271,7 @@ var _ = Describe("filter processor", func() {
 				MetricConditions: []config.ContextConditions{
 					{Conditions: []string{metricNameFooCondition, `metric.name == "bar"`}},
 				},
-			})
+			}, config.SignalMetrics)
 
 			Expect(out["metric_conditions"]).To(Equal([]any{
 				metricNameFooCondition,
@@ -274,7 +288,7 @@ var _ = Describe("filter processor", func() {
 						ErrorMode:  config.FilterErrorModeSilent,
 					},
 				},
-			})
+			}, config.SignalLogs)
 
 			Expect(out["log_conditions"]).To(Equal([]any{
 				map[string]any{
@@ -290,7 +304,7 @@ var _ = Describe("filter processor", func() {
 				Conditions: []config.ContextConditions{
 					{Conditions: []string{`resource.attributes["k8s.namespace.name"] == "kube-system"`}},
 				},
-			})
+			}, config.SignalTraces)
 
 			Expect(out["conditions"]).To(Equal([]any{
 				`resource.attributes["k8s.namespace.name"] == "kube-system"`,

@@ -498,78 +498,6 @@ type LogMatchProperties struct {
 	Bodies []string `json:"bodies,omitempty"`
 }
 
-// MetricFilters specifies the filter processor settings for the metrics signal.
-//
-// The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
-// match properties (Include, Exclude) are mutually exclusive.
-type MetricFilters struct {
-	// Include specifies the metrics that should be included in the collector
-	// service pipeline; all other metrics are dropped. If both Include and
-	// Exclude are specified, Include filtering occurs first.
-	//
-	// +k8s:optional
-	Include *MetricMatchProperties `json:"include,omitzero"`
-
-	// Exclude specifies the metrics that should be excluded from the collector
-	// service pipeline; all other metrics are included. If both Include and
-	// Exclude are specified, Include filtering occurs first.
-	//
-	// +k8s:optional
-	Exclude *MetricMatchProperties `json:"exclude,omitzero"`
-
-	// Resource is a list of OTTL conditions for an ottlresource context. If any
-	// condition resolves to true, the whole resource is dropped.
-	//
-	// +k8s:optional
-	Resource []string `json:"resource,omitempty"`
-
-	// Metric is a list of OTTL conditions for an ottlmetric context. If any
-	// condition resolves to true, the metric is dropped.
-	//
-	// +k8s:optional
-	Metric []string `json:"metric,omitempty"`
-
-	// DataPoint is a list of OTTL conditions for an ottldatapoint context. If
-	// any condition resolves to true, the datapoint is dropped.
-	//
-	// +k8s:optional
-	DataPoint []string `json:"datapoint,omitempty"`
-}
-
-// LogFilters specifies the filter processor settings for the logs and events signal.
-//
-// The OTTL condition lists (Resource, LogRecord) and the object-based match
-// properties (Include, Exclude) are mutually exclusive.
-type LogFilters struct {
-	// Include specifies the logs that should be included in the collector
-	// service pipeline; all other logs are dropped. If both Include and Exclude
-	// are specified, Include filtering occurs first.
-	//
-	// +k8s:optional
-	Include *LogMatchProperties `json:"include,omitzero"`
-
-	// Exclude specifies the logs that should be excluded from the collector
-	// service pipeline; all other logs are included. If both Include and
-	// Exclude are specified, Include filtering occurs first.
-	//
-	// +k8s:optional
-	Exclude *LogMatchProperties `json:"exclude,omitzero"`
-
-	// Resource is a list of OTTL conditions for an ottlresource context. If any
-	// condition resolves to true, the whole resource is dropped. Supports `and`,
-	// `or`, and `()`.
-	//
-	// +k8s:optional
-	Resource []string `json:"resource,omitempty"`
-
-	// LogRecord is a list of OTTL conditions for an ottllog context. If any
-	// condition resolves to true, the log record is dropped. Supports `and`,
-	// `or`, and `()`.
-	//
-	// +k8s:optional
-	LogRecord []string `json:"log_record,omitempty"`
-}
-
 // ContextConditions specifies a group of OTTL conditions for the filter
 // processor's context-inferred condition style (metric_conditions /
 // log_conditions).
@@ -601,9 +529,15 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 }
 
-// FilterRule specifies a single filter processor instance, which drops metrics
-// and logs matching the given OTTL conditions or match properties. A signal's
+// FilterRule specifies a single filter processor instance, which drops
+// telemetry matching the given OTTL conditions or match properties. A signal's
 // Filters list produces one filter processor per rule, applied in order.
+//
+// The fields are flattened per signal: the metrics-only fields (Metric,
+// DataPoint, MetricInclude, MetricExclude, MetricConditions) are valid on the
+// metrics signal; the logs-only fields (LogRecord, LogInclude, LogExclude,
+// LogConditions) on the logs and events signals; Resource on metrics, logs and
+// events; and traces and profiles accept only Conditions.
 //
 // See [Filter Processor] for more details.
 //
@@ -615,27 +549,69 @@ type FilterRule struct {
 	// +k8s:optional
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 
-	// Metrics specifies the filter settings for the metrics signal. It is only
-	// valid on the metrics signal.
+	// Resource is a list of OTTL conditions for an ottlresource context. If any
+	// condition resolves to true, the whole resource is dropped. Valid on the
+	// metrics, logs and events signals.
 	//
 	// +k8s:optional
-	Metrics *MetricFilters `json:"metrics,omitzero"`
+	Resource []string `json:"resource,omitempty"`
 
-	// Logs specifies the filter settings for the logs signal. Because events
-	// are collected as the logs signal, it is valid on both the logs and events
-	// signals.
+	// Metric is a list of OTTL conditions for an ottlmetric context. If any
+	// condition resolves to true, the metric is dropped. Valid only on the
+	// metrics signal.
 	//
 	// +k8s:optional
-	Logs *LogFilters `json:"logs,omitzero"`
+	Metric []string `json:"metric,omitempty"`
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context. If
+	// any condition resolves to true, the datapoint is dropped. Valid only on
+	// the metrics signal.
+	//
+	// +k8s:optional
+	DataPoint []string `json:"datapoint,omitempty"`
+
+	// LogRecord is a list of OTTL conditions for an ottllog context. If any
+	// condition resolves to true, the log record is dropped. Valid on the logs
+	// and events signals.
+	//
+	// +k8s:optional
+	LogRecord []string `json:"log_record,omitempty"`
+
+	// MetricInclude specifies the metrics that should be kept in the pipeline;
+	// all other metrics are dropped. If both MetricInclude and MetricExclude are
+	// specified, include filtering occurs first. Valid only on the metrics
+	// signal.
+	//
+	// +k8s:optional
+	MetricInclude *MetricMatchProperties `json:"include,omitzero"`
+
+	// MetricExclude specifies the metrics that should be dropped from the
+	// pipeline; all other metrics are kept. Valid only on the metrics signal.
+	//
+	// +k8s:optional
+	MetricExclude *MetricMatchProperties `json:"exclude,omitzero"`
+
+	// LogInclude specifies the logs that should be kept in the pipeline; all
+	// other logs are dropped. If both LogInclude and LogExclude are specified,
+	// include filtering occurs first. Valid on the logs and events signals.
+	//
+	// +k8s:optional
+	LogInclude *LogMatchProperties `json:"logInclude,omitzero"`
+
+	// LogExclude specifies the logs that should be dropped from the pipeline;
+	// all other logs are kept. Valid on the logs and events signals.
+	//
+	// +k8s:optional
+	LogExclude *LogMatchProperties `json:"logExclude,omitzero"`
 
 	// MetricConditions specifies the metrics filter using the context-inferred
-	// condition style. It is mutually exclusive with Metrics.
+	// condition style. Valid only on the metrics signal.
 	//
 	// +k8s:optional
 	MetricConditions []ContextConditions `json:"metric_conditions,omitempty"`
 
 	// LogConditions specifies the logs filter using the context-inferred
-	// condition style. It is mutually exclusive with Logs.
+	// condition style. Valid on the logs and events signals.
 	//
 	// +k8s:optional
 	LogConditions []ContextConditions `json:"log_conditions,omitempty"`

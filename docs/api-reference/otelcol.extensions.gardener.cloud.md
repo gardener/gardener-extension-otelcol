@@ -257,9 +257,15 @@ _Appears in:_
 
 
 
-FilterRule specifies a single filter processor instance, which drops metrics
-and logs matching the given OTTL conditions or match properties. A signal's
+FilterRule specifies a single filter processor instance, which drops
+telemetry matching the given OTTL conditions or match properties. A signal's
 Filters list produces one filter processor per rule, applied in order.
+
+The fields are flattened per signal: the metrics-only fields (Metric,
+DataPoint, MetricInclude, MetricExclude, MetricConditions) are valid on the
+metrics signal; the logs-only fields (LogRecord, LogInclude, LogExclude,
+LogConditions) on the logs and events signals; Resource on metrics, logs and
+events; and traces and profiles accept only Conditions.
 
 See [Filter Processor] for more details.
 
@@ -273,10 +279,16 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing an OTTL condition. If empty, the processor default is used. |  | Optional: \{\} <br /> |
-| `metrics` _[MetricFilters](#metricfilters)_ | Metrics specifies the filter settings for the metrics signal. It is only<br />valid on the metrics signal. |  | Optional: \{\} <br /> |
-| `logs` _[LogFilters](#logfilters)_ | Logs specifies the filter settings for the logs signal. Because events<br />are collected as the logs signal, it is valid on both the logs and events<br />signals. |  | Optional: \{\} <br /> |
-| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. It is mutually exclusive with Metrics. |  | Optional: \{\} <br /> |
-| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. It is mutually exclusive with Logs. |  | Optional: \{\} <br /> |
+| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. Valid on the<br />metrics, logs and events signals. |  | Optional: \{\} <br /> |
+| `metric` _string array_ | Metric is a list of OTTL conditions for an ottlmetric context. If any<br />condition resolves to true, the metric is dropped. Valid only on the<br />metrics signal. |  | Optional: \{\} <br /> |
+| `datapoint` _string array_ | DataPoint is a list of OTTL conditions for an ottldatapoint context. If<br />any condition resolves to true, the datapoint is dropped. Valid only on<br />the metrics signal. |  | Optional: \{\} <br /> |
+| `log_record` _string array_ | LogRecord is a list of OTTL conditions for an ottllog context. If any<br />condition resolves to true, the log record is dropped. Valid on the logs<br />and events signals. |  | Optional: \{\} <br /> |
+| `include` _[MetricMatchProperties](#metricmatchproperties)_ | MetricInclude specifies the metrics that should be kept in the pipeline;<br />all other metrics are dropped. If both MetricInclude and MetricExclude are<br />specified, include filtering occurs first. Valid only on the metrics<br />signal. |  | Optional: \{\} <br /> |
+| `exclude` _[MetricMatchProperties](#metricmatchproperties)_ | MetricExclude specifies the metrics that should be dropped from the<br />pipeline; all other metrics are kept. Valid only on the metrics signal. |  | Optional: \{\} <br /> |
+| `logInclude` _[LogMatchProperties](#logmatchproperties)_ | LogInclude specifies the logs that should be kept in the pipeline; all<br />other logs are dropped. If both LogInclude and LogExclude are specified,<br />include filtering occurs first. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
+| `logExclude` _[LogMatchProperties](#logmatchproperties)_ | LogExclude specifies the logs that should be dropped from the pipeline;<br />all other logs are kept. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
+| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. Valid only on the metrics signal. |  | Optional: \{\} <br /> |
+| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
 | `conditions` _[ContextConditions](#contextconditions) array_ | Conditions specifies a signal-agnostic filter using the context-inferred<br />condition style. It is the only form allowed for the traces and profiles<br />signals. |  | Optional: \{\} <br /> |
 
 
@@ -299,28 +311,6 @@ _Appears in:_
 | --- | --- |
 | `console` | LogEncodingConsole sets the collector's internal logger with console<br />encoding.<br /> |
 | `json` | LogEncodingJSON sets the collector's internal logger with JSON<br />encoding.<br /> |
-
-
-#### LogFilters
-
-
-
-LogFilters specifies the filter processor settings for the logs and events signal.
-
-The OTTL condition lists (Resource, LogRecord) and the object-based match
-properties (Include, Exclude) are mutually exclusive.
-
-
-
-_Appears in:_
-- [FilterRule](#filterrule)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `include` _[LogMatchProperties](#logmatchproperties)_ | Include specifies the logs that should be included in the collector<br />service pipeline; all other logs are dropped. If both Include and Exclude<br />are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
-| `exclude` _[LogMatchProperties](#logmatchproperties)_ | Exclude specifies the logs that should be excluded from the collector<br />service pipeline; all other logs are included. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
-| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. Supports `and`,<br />`or`, and `()`. |  | Optional: \{\} <br /> |
-| `log_record` _string array_ | LogRecord is a list of OTTL conditions for an ottllog context. If any<br />condition resolves to true, the log record is dropped. Supports `and`,<br />`or`, and `()`. |  | Optional: \{\} <br /> |
 
 
 #### LogLevel
@@ -356,7 +346,7 @@ matches logs against, and the type of string pattern matching to use.
 
 
 _Appears in:_
-- [LogFilters](#logfilters)
+- [FilterRule](#filterrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -403,29 +393,6 @@ _Appears in:_
 | `json` | MessageEncodingJSON specifies that JSON is used for encoding<br />messages.<br /> |
 
 
-#### MetricFilters
-
-
-
-MetricFilters specifies the filter processor settings for the metrics signal.
-
-The OTTL condition lists (Resource, Metric, DataPoint) and the object-based
-match properties (Include, Exclude) are mutually exclusive.
-
-
-
-_Appears in:_
-- [FilterRule](#filterrule)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `include` _[MetricMatchProperties](#metricmatchproperties)_ | Include specifies the metrics that should be included in the collector<br />service pipeline; all other metrics are dropped. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
-| `exclude` _[MetricMatchProperties](#metricmatchproperties)_ | Exclude specifies the metrics that should be excluded from the collector<br />service pipeline; all other metrics are included. If both Include and<br />Exclude are specified, Include filtering occurs first. |  | Optional: \{\} <br /> |
-| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. |  | Optional: \{\} <br /> |
-| `metric` _string array_ | Metric is a list of OTTL conditions for an ottlmetric context. If any<br />condition resolves to true, the metric is dropped. |  | Optional: \{\} <br /> |
-| `datapoint` _string array_ | DataPoint is a list of OTTL conditions for an ottldatapoint context. If<br />any condition resolves to true, the datapoint is dropped. |  | Optional: \{\} <br /> |
-
-
 #### MetricMatchProperties
 
 
@@ -436,7 +403,7 @@ matches metrics against, and the type of string pattern matching to use.
 
 
 _Appears in:_
-- [MetricFilters](#metricfilters)
+- [FilterRule](#filterrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
