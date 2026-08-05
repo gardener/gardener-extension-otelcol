@@ -40,25 +40,26 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				Signals: config.SignalsConfig{
-					Logs: config.SignalConfig{
-						Enabled: new(true),
-						Targets: []config.SignalTarget{
-							{Exporter: config.ExporterConfig{
-								Protocol: config.ExporterProtocolHTTP,
-								Endpoint: "https://example.com:4318",
-							}},
-							{Exporter: config.ExporterConfig{
-								Protocol:  config.ExporterProtocolDebug,
-								Verbosity: config.DebugExporterVerbosityBasic,
-							}},
+				Targets: []config.Target{
+					{
+						Signals: []config.SignalType{config.SignalLogs},
+						Exporter: config.ExporterConfig{
+							Protocol: config.ExporterProtocolHTTP,
+							Endpoint: "https://example.com:4318",
+						},
+					},
+					{
+						Signals: []config.SignalType{config.SignalLogs},
+						Exporter: config.ExporterConfig{
+							Protocol:  config.ExporterProtocolDebug,
+							Verbosity: config.DebugExporterVerbosityBasic,
 						},
 					},
 				},
 			},
 		}
 
-		providerConfigWithNoSignals = config.CollectorConfig{
+		providerConfigWithNoTargets = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{},
 		}
 	)
@@ -127,8 +128,8 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		Expect(err).To(MatchError(ContainSubstring("no provider config specified")))
 	})
 
-	It("should fail to validate when no signal is enabled", func() {
-		data, err := json.Marshal(providerConfigWithNoSignals)
+	It("should fail to validate when no target is defined", func() {
+		data, err := json.Marshal(providerConfigWithNoTargets)
 		Expect(err).NotTo(HaveOccurred())
 		shoot.Spec.Extensions = []core.Extension{
 			{
@@ -140,6 +141,6 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 		}
 
 		err = shootValidator.Validate(ctx, shoot, nil)
-		Expect(err).To(MatchError(ContainSubstring("no signal enabled")))
+		Expect(err).To(MatchError(ContainSubstring("at least one target must be defined")))
 	})
 })

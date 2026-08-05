@@ -91,6 +91,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*FilterLogs)(nil), (*config.FilterLogs)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_FilterLogs_To_config_FilterLogs(a.(*FilterLogs), b.(*config.FilterLogs), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.FilterLogs)(nil), (*FilterLogs)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_FilterLogs_To_v1alpha1_FilterLogs(a.(*config.FilterLogs), b.(*FilterLogs), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*FilterMetrics)(nil), (*config.FilterMetrics)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_FilterMetrics_To_config_FilterMetrics(a.(*FilterMetrics), b.(*config.FilterMetrics), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.FilterMetrics)(nil), (*FilterMetrics)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_FilterMetrics_To_v1alpha1_FilterMetrics(a.(*config.FilterMetrics), b.(*FilterMetrics), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*FilterRule)(nil), (*config.FilterRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_FilterRule_To_config_FilterRule(a.(*FilterRule), b.(*config.FilterRule), scope)
 	}); err != nil {
@@ -171,36 +191,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SignalConfig)(nil), (*config.SignalConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_SignalConfig_To_config_SignalConfig(a.(*SignalConfig), b.(*config.SignalConfig), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.SignalConfig)(nil), (*SignalConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_SignalConfig_To_v1alpha1_SignalConfig(a.(*config.SignalConfig), b.(*SignalConfig), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*SignalTarget)(nil), (*config.SignalTarget)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_SignalTarget_To_config_SignalTarget(a.(*SignalTarget), b.(*config.SignalTarget), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.SignalTarget)(nil), (*SignalTarget)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_SignalTarget_To_v1alpha1_SignalTarget(a.(*config.SignalTarget), b.(*SignalTarget), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*SignalsConfig)(nil), (*config.SignalsConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_SignalsConfig_To_config_SignalsConfig(a.(*SignalsConfig), b.(*config.SignalsConfig), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.SignalsConfig)(nil), (*SignalsConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_SignalsConfig_To_v1alpha1_SignalsConfig(a.(*config.SignalsConfig), b.(*SignalsConfig), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*TLSConfig)(nil), (*config.TLSConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_TLSConfig_To_config_TLSConfig(a.(*TLSConfig), b.(*config.TLSConfig), scope)
 	}); err != nil {
@@ -208,6 +198,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.TLSConfig)(nil), (*TLSConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_TLSConfig_To_v1alpha1_TLSConfig(a.(*config.TLSConfig), b.(*TLSConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*Target)(nil), (*config.Target)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Target_To_config_Target(a.(*Target), b.(*config.Target), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.Target)(nil), (*Target)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_Target_To_v1alpha1_Target(a.(*config.Target), b.(*Target), scope)
 	}); err != nil {
 		return err
 	}
@@ -239,9 +239,7 @@ func Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in *config.Colle
 }
 
 func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *CollectorConfigSpec, out *config.CollectorConfigSpec, s conversion.Scope) error {
-	if err := Convert_v1alpha1_SignalsConfig_To_config_SignalsConfig(&in.Signals, &out.Signals, s); err != nil {
-		return err
-	}
+	out.Targets = *(*[]config.Target)(unsafe.Pointer(&in.Targets))
 	if err := Convert_v1alpha1_CollectorLogsConfig_To_config_CollectorLogsConfig(&in.Logs, &out.Logs, s); err != nil {
 		return err
 	}
@@ -257,9 +255,7 @@ func Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *Coll
 }
 
 func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *config.CollectorConfigSpec, out *CollectorConfigSpec, s conversion.Scope) error {
-	if err := Convert_config_SignalsConfig_To_v1alpha1_SignalsConfig(&in.Signals, &out.Signals, s); err != nil {
-		return err
-	}
+	out.Targets = *(*[]Target)(unsafe.Pointer(&in.Targets))
 	if err := Convert_config_CollectorLogsConfig_To_v1alpha1_CollectorLogsConfig(&in.Logs, &out.Logs, s); err != nil {
 		return err
 	}
@@ -406,19 +402,68 @@ func Convert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in *config.Filte
 	return autoConvert_config_FilterAttribute_To_v1alpha1_FilterAttribute(in, out, s)
 }
 
-func autoConvert_v1alpha1_FilterRule_To_config_FilterRule(in *FilterRule, out *config.FilterRule, s conversion.Scope) error {
-	out.ErrorMode = config.FilterErrorMode(in.ErrorMode)
+func autoConvert_v1alpha1_FilterLogs_To_config_FilterLogs(in *FilterLogs, out *config.FilterLogs, s conversion.Scope) error {
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
+	out.Include = (*config.LogMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*config.LogMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.LogConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.LogConditions))
+	return nil
+}
+
+// Convert_v1alpha1_FilterLogs_To_config_FilterLogs is an autogenerated conversion function.
+func Convert_v1alpha1_FilterLogs_To_config_FilterLogs(in *FilterLogs, out *config.FilterLogs, s conversion.Scope) error {
+	return autoConvert_v1alpha1_FilterLogs_To_config_FilterLogs(in, out, s)
+}
+
+func autoConvert_config_FilterLogs_To_v1alpha1_FilterLogs(in *config.FilterLogs, out *FilterLogs, s conversion.Scope) error {
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
+	out.Include = (*LogMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*LogMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.LogConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.LogConditions))
+	return nil
+}
+
+// Convert_config_FilterLogs_To_v1alpha1_FilterLogs is an autogenerated conversion function.
+func Convert_config_FilterLogs_To_v1alpha1_FilterLogs(in *config.FilterLogs, out *FilterLogs, s conversion.Scope) error {
+	return autoConvert_config_FilterLogs_To_v1alpha1_FilterLogs(in, out, s)
+}
+
+func autoConvert_v1alpha1_FilterMetrics_To_config_FilterMetrics(in *FilterMetrics, out *config.FilterMetrics, s conversion.Scope) error {
 	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
 	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
 	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
-	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
-	out.MetricInclude = (*config.MetricMatchProperties)(unsafe.Pointer(in.MetricInclude))
-	out.MetricExclude = (*config.MetricMatchProperties)(unsafe.Pointer(in.MetricExclude))
-	out.LogInclude = (*config.LogMatchProperties)(unsafe.Pointer(in.LogInclude))
-	out.LogExclude = (*config.LogMatchProperties)(unsafe.Pointer(in.LogExclude))
+	out.Include = (*config.MetricMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*config.MetricMatchProperties)(unsafe.Pointer(in.Exclude))
 	out.MetricConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.MetricConditions))
-	out.LogConditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.LogConditions))
-	out.Conditions = *(*[]config.ContextConditions)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1alpha1_FilterMetrics_To_config_FilterMetrics is an autogenerated conversion function.
+func Convert_v1alpha1_FilterMetrics_To_config_FilterMetrics(in *FilterMetrics, out *config.FilterMetrics, s conversion.Scope) error {
+	return autoConvert_v1alpha1_FilterMetrics_To_config_FilterMetrics(in, out, s)
+}
+
+func autoConvert_config_FilterMetrics_To_v1alpha1_FilterMetrics(in *config.FilterMetrics, out *FilterMetrics, s conversion.Scope) error {
+	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
+	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
+	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
+	out.Include = (*MetricMatchProperties)(unsafe.Pointer(in.Include))
+	out.Exclude = (*MetricMatchProperties)(unsafe.Pointer(in.Exclude))
+	out.MetricConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.MetricConditions))
+	return nil
+}
+
+// Convert_config_FilterMetrics_To_v1alpha1_FilterMetrics is an autogenerated conversion function.
+func Convert_config_FilterMetrics_To_v1alpha1_FilterMetrics(in *config.FilterMetrics, out *FilterMetrics, s conversion.Scope) error {
+	return autoConvert_config_FilterMetrics_To_v1alpha1_FilterMetrics(in, out, s)
+}
+
+func autoConvert_v1alpha1_FilterRule_To_config_FilterRule(in *FilterRule, out *config.FilterRule, s conversion.Scope) error {
+	out.ErrorMode = config.FilterErrorMode(in.ErrorMode)
+	out.Metrics = (*config.FilterMetrics)(unsafe.Pointer(in.Metrics))
+	out.Logs = (*config.FilterLogs)(unsafe.Pointer(in.Logs))
 	return nil
 }
 
@@ -429,17 +474,8 @@ func Convert_v1alpha1_FilterRule_To_config_FilterRule(in *FilterRule, out *confi
 
 func autoConvert_config_FilterRule_To_v1alpha1_FilterRule(in *config.FilterRule, out *FilterRule, s conversion.Scope) error {
 	out.ErrorMode = FilterErrorMode(in.ErrorMode)
-	out.Resource = *(*[]string)(unsafe.Pointer(&in.Resource))
-	out.Metric = *(*[]string)(unsafe.Pointer(&in.Metric))
-	out.DataPoint = *(*[]string)(unsafe.Pointer(&in.DataPoint))
-	out.LogRecord = *(*[]string)(unsafe.Pointer(&in.LogRecord))
-	out.MetricInclude = (*MetricMatchProperties)(unsafe.Pointer(in.MetricInclude))
-	out.MetricExclude = (*MetricMatchProperties)(unsafe.Pointer(in.MetricExclude))
-	out.LogInclude = (*LogMatchProperties)(unsafe.Pointer(in.LogInclude))
-	out.LogExclude = (*LogMatchProperties)(unsafe.Pointer(in.LogExclude))
-	out.MetricConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.MetricConditions))
-	out.LogConditions = *(*[]ContextConditions)(unsafe.Pointer(&in.LogConditions))
-	out.Conditions = *(*[]ContextConditions)(unsafe.Pointer(&in.Conditions))
+	out.Metrics = (*FilterMetrics)(unsafe.Pointer(in.Metrics))
+	out.Logs = (*FilterLogs)(unsafe.Pointer(in.Logs))
 	return nil
 }
 
@@ -624,102 +660,6 @@ func Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in *co
 	return autoConvert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in, out, s)
 }
 
-func autoConvert_v1alpha1_SignalConfig_To_config_SignalConfig(in *SignalConfig, out *config.SignalConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	out.Targets = *(*[]config.SignalTarget)(unsafe.Pointer(&in.Targets))
-	return nil
-}
-
-// Convert_v1alpha1_SignalConfig_To_config_SignalConfig is an autogenerated conversion function.
-func Convert_v1alpha1_SignalConfig_To_config_SignalConfig(in *SignalConfig, out *config.SignalConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha1_SignalConfig_To_config_SignalConfig(in, out, s)
-}
-
-func autoConvert_config_SignalConfig_To_v1alpha1_SignalConfig(in *config.SignalConfig, out *SignalConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	out.Targets = *(*[]SignalTarget)(unsafe.Pointer(&in.Targets))
-	return nil
-}
-
-// Convert_config_SignalConfig_To_v1alpha1_SignalConfig is an autogenerated conversion function.
-func Convert_config_SignalConfig_To_v1alpha1_SignalConfig(in *config.SignalConfig, out *SignalConfig, s conversion.Scope) error {
-	return autoConvert_config_SignalConfig_To_v1alpha1_SignalConfig(in, out, s)
-}
-
-func autoConvert_v1alpha1_SignalTarget_To_config_SignalTarget(in *SignalTarget, out *config.SignalTarget, s conversion.Scope) error {
-	if err := Convert_v1alpha1_ExporterConfig_To_config_ExporterConfig(&in.Exporter, &out.Exporter, s); err != nil {
-		return err
-	}
-	out.Filters = *(*[]config.FilterRule)(unsafe.Pointer(&in.Filters))
-	return nil
-}
-
-// Convert_v1alpha1_SignalTarget_To_config_SignalTarget is an autogenerated conversion function.
-func Convert_v1alpha1_SignalTarget_To_config_SignalTarget(in *SignalTarget, out *config.SignalTarget, s conversion.Scope) error {
-	return autoConvert_v1alpha1_SignalTarget_To_config_SignalTarget(in, out, s)
-}
-
-func autoConvert_config_SignalTarget_To_v1alpha1_SignalTarget(in *config.SignalTarget, out *SignalTarget, s conversion.Scope) error {
-	if err := Convert_config_ExporterConfig_To_v1alpha1_ExporterConfig(&in.Exporter, &out.Exporter, s); err != nil {
-		return err
-	}
-	out.Filters = *(*[]FilterRule)(unsafe.Pointer(&in.Filters))
-	return nil
-}
-
-// Convert_config_SignalTarget_To_v1alpha1_SignalTarget is an autogenerated conversion function.
-func Convert_config_SignalTarget_To_v1alpha1_SignalTarget(in *config.SignalTarget, out *SignalTarget, s conversion.Scope) error {
-	return autoConvert_config_SignalTarget_To_v1alpha1_SignalTarget(in, out, s)
-}
-
-func autoConvert_v1alpha1_SignalsConfig_To_config_SignalsConfig(in *SignalsConfig, out *config.SignalsConfig, s conversion.Scope) error {
-	if err := Convert_v1alpha1_SignalConfig_To_config_SignalConfig(&in.Metrics, &out.Metrics, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_SignalConfig_To_config_SignalConfig(&in.Logs, &out.Logs, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_SignalConfig_To_config_SignalConfig(&in.Traces, &out.Traces, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_SignalConfig_To_config_SignalConfig(&in.Profiles, &out.Profiles, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_SignalConfig_To_config_SignalConfig(&in.Events, &out.Events, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_SignalsConfig_To_config_SignalsConfig is an autogenerated conversion function.
-func Convert_v1alpha1_SignalsConfig_To_config_SignalsConfig(in *SignalsConfig, out *config.SignalsConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha1_SignalsConfig_To_config_SignalsConfig(in, out, s)
-}
-
-func autoConvert_config_SignalsConfig_To_v1alpha1_SignalsConfig(in *config.SignalsConfig, out *SignalsConfig, s conversion.Scope) error {
-	if err := Convert_config_SignalConfig_To_v1alpha1_SignalConfig(&in.Metrics, &out.Metrics, s); err != nil {
-		return err
-	}
-	if err := Convert_config_SignalConfig_To_v1alpha1_SignalConfig(&in.Logs, &out.Logs, s); err != nil {
-		return err
-	}
-	if err := Convert_config_SignalConfig_To_v1alpha1_SignalConfig(&in.Traces, &out.Traces, s); err != nil {
-		return err
-	}
-	if err := Convert_config_SignalConfig_To_v1alpha1_SignalConfig(&in.Profiles, &out.Profiles, s); err != nil {
-		return err
-	}
-	if err := Convert_config_SignalConfig_To_v1alpha1_SignalConfig(&in.Events, &out.Events, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_config_SignalsConfig_To_v1alpha1_SignalsConfig is an autogenerated conversion function.
-func Convert_config_SignalsConfig_To_v1alpha1_SignalsConfig(in *config.SignalsConfig, out *SignalsConfig, s conversion.Scope) error {
-	return autoConvert_config_SignalsConfig_To_v1alpha1_SignalsConfig(in, out, s)
-}
-
 func autoConvert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *config.TLSConfig, s conversion.Scope) error {
 	out.InsecureSkipVerify = (*bool)(unsafe.Pointer(in.InsecureSkipVerify))
 	out.CA = (*config.ResourceReference)(unsafe.Pointer(in.CA))
@@ -746,4 +686,32 @@ func autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, ou
 // Convert_config_TLSConfig_To_v1alpha1_TLSConfig is an autogenerated conversion function.
 func Convert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, out *TLSConfig, s conversion.Scope) error {
 	return autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_Target_To_config_Target(in *Target, out *config.Target, s conversion.Scope) error {
+	if err := Convert_v1alpha1_ExporterConfig_To_config_ExporterConfig(&in.Exporter, &out.Exporter, s); err != nil {
+		return err
+	}
+	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
+	out.Filters = *(*[]config.FilterRule)(unsafe.Pointer(&in.Filters))
+	return nil
+}
+
+// Convert_v1alpha1_Target_To_config_Target is an autogenerated conversion function.
+func Convert_v1alpha1_Target_To_config_Target(in *Target, out *config.Target, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Target_To_config_Target(in, out, s)
+}
+
+func autoConvert_config_Target_To_v1alpha1_Target(in *config.Target, out *Target, s conversion.Scope) error {
+	if err := Convert_config_ExporterConfig_To_v1alpha1_ExporterConfig(&in.Exporter, &out.Exporter, s); err != nil {
+		return err
+	}
+	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
+	out.Filters = *(*[]FilterRule)(unsafe.Pointer(&in.Filters))
+	return nil
+}
+
+// Convert_config_Target_To_v1alpha1_Target is an autogenerated conversion function.
+func Convert_config_Target_To_v1alpha1_Target(in *config.Target, out *Target, s conversion.Scope) error {
+	return autoConvert_config_Target_To_v1alpha1_Target(in, out, s)
 }

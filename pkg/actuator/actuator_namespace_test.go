@@ -39,29 +39,19 @@ var _ = Describe("parseShootNamespaceAttributes", func() {
 })
 
 var _ = Describe("signal selection", func() {
+	// configWithSignals builds a config with a single target serving the given
+	// signals.
 	configWithSignals := func(enabled ...config.SignalType) config.CollectorConfig {
-		signals := config.SignalsConfig{}
-		for _, sig := range enabled {
-			s := config.SignalConfig{Enabled: new(true), Targets: []config.SignalTarget{{}}}
-			switch sig {
-			case config.SignalMetrics:
-				signals.Metrics = s
-			case config.SignalLogs:
-				signals.Logs = s
-			case config.SignalTraces:
-				signals.Traces = s
-			case config.SignalProfiles:
-				signals.Profiles = s
-			case config.SignalEvents:
-				signals.Events = s
-			default:
-			}
+		if len(enabled) == 0 {
+			return config.CollectorConfig{}
 		}
 
-		return config.CollectorConfig{Spec: config.CollectorConfigSpec{Signals: signals}}
+		return config.CollectorConfig{Spec: config.CollectorConfigSpec{
+			Targets: []config.Target{{Signals: enabled}},
+		}}
 	}
 
-	DescribeTable("buildPipelines includes exactly the pipelines for the enabled signals",
+	DescribeTable("buildPipelines includes exactly the pipelines for the served signals",
 		func(cfg config.CollectorConfig, wantPipelines []string) {
 			pipelines := buildPipelines(cfg, nil)
 			Expect(pipelines).To(HaveLen(len(wantPipelines)))
@@ -69,7 +59,7 @@ var _ = Describe("signal selection", func() {
 				Expect(pipelines).To(HaveKey(name))
 			}
 		},
-		Entry("no signal enabled builds no pipelines",
+		Entry("no target builds no pipelines",
 			configWithSignals(),
 			[]string{},
 		),
@@ -82,23 +72,21 @@ var _ = Describe("signal selection", func() {
 			[]string{signalPipelineName(config.SignalLogs, 0), signalPipelineName(config.SignalEvents, 0)},
 		),
 		Entry("all signals",
-			configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalTraces, config.SignalProfiles, config.SignalEvents),
+			configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents),
 			[]string{
 				signalPipelineName(config.SignalMetrics, 0),
 				signalPipelineName(config.SignalLogs, 0),
-				signalPipelineName(config.SignalTraces, 0),
-				signalPipelineName(config.SignalProfiles, 0),
 				signalPipelineName(config.SignalEvents, 0),
 			},
 		),
 	)
 
-	It("wires the enabled receivers and per-target exporters into each pipeline", func() {
+	It("wires the served receivers and per-target exporters into each pipeline", func() {
 		cfg := configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents)
-		exporterNames := map[config.SignalType][]string{
-			config.SignalMetrics: {signalExporterName(config.SignalMetrics, 0, config.ExporterProtocolHTTP)},
-			config.SignalLogs:    {signalExporterName(config.SignalLogs, 0, config.ExporterProtocolHTTP)},
-			config.SignalEvents:  {signalExporterName(config.SignalEvents, 0, config.ExporterProtocolHTTP)},
+		exporterNames := map[config.SignalType]map[int]string{
+			config.SignalMetrics: {0: signalExporterName(config.SignalMetrics, 0, config.ExporterProtocolHTTP)},
+			config.SignalLogs:    {0: signalExporterName(config.SignalLogs, 0, config.ExporterProtocolHTTP)},
+			config.SignalEvents:  {0: signalExporterName(config.SignalEvents, 0, config.ExporterProtocolHTTP)},
 		}
 
 		pipelines := buildPipelines(cfg, exporterNames)
@@ -107,8 +95,8 @@ var _ = Describe("signal selection", func() {
 		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{eventsReceiverName}))
 		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{prometheusReceiverName}))
 
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal(exporterNames[config.SignalMetrics]))
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal(exporterNames[config.SignalLogs]))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal(exporterNames[config.SignalEvents]))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalMetrics][0]}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalLogs][0]}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalEvents][0]}))
 	})
 })

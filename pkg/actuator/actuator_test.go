@@ -40,18 +40,19 @@ var _ = Describe("Actuator", Ordered, func() {
 		actuatorOpts   []actuator.Option
 		providerConfig = config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{
-				Signals: config.SignalsConfig{
-					Logs: config.SignalConfig{
-						Enabled: new(true),
-						Targets: []config.SignalTarget{
-							{Exporter: config.ExporterConfig{
-								Protocol: config.ExporterProtocolHTTP,
-								Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
-							}},
-							{Exporter: config.ExporterConfig{
-								Protocol:  config.ExporterProtocolDebug,
-								Verbosity: config.DebugExporterVerbosityNormal,
-							}},
+				Targets: []config.Target{
+					{
+						Signals: []config.SignalType{config.SignalLogs},
+						Exporter: config.ExporterConfig{
+							Protocol: config.ExporterProtocolHTTP,
+							Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
+						},
+					},
+					{
+						Signals: []config.SignalType{config.SignalLogs},
+						Exporter: config.ExporterConfig{
+							Protocol:  config.ExporterProtocolDebug,
+							Verbosity: config.DebugExporterVerbosityNormal,
 						},
 					},
 				},
@@ -200,7 +201,7 @@ var _ = Describe("Actuator", Ordered, func() {
 		Expect(err).To(MatchError(ContainSubstring("no provider config specified")))
 	})
 
-	It("should fail to reconcile with no signal enabled", func() {
+	It("should fail to reconcile with no target defined", func() {
 		emptyProviderConfig := config.CollectorConfig{
 			Spec: config.CollectorConfigSpec{},
 		}
@@ -217,7 +218,7 @@ var _ = Describe("Actuator", Ordered, func() {
 
 		err = act.Reconcile(ctx, logger, extResource)
 		Expect(err).Should(HaveOccurred())
-		Expect(err).To(MatchError(ContainSubstring("no signal enabled")))
+		Expect(err).To(MatchError(ContainSubstring("at least one target must be defined")))
 	})
 
 	It("should succeed on Reconcile", func() {

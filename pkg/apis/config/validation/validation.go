@@ -18,59 +18,96 @@ func Validate(cfg config.CollectorConfig) error {
 	allErrs := make(field.ErrorList, 0)
 
 	specPath := field.NewPath("spec")
+	targetsPath := specPath.Child("targets")
 
-	// At least one signal must be enabled.
+	// At least one target must be defined.
+	if len(cfg.Spec.Targets) == 0 {
+		allErrs = append(allErrs, field.Required(targetsPath, "at least one target must be defined"))
+
+		return allErrs.ToAggregate()
+	}
+
+	// anyEnabled tracks whether the targets collectively enable at least one
+	// signal.
 	anyEnabled := false
-	for _, sig := range config.AllSignals() {
-		signal := cfg.Spec.Signals.Signal(sig)
-		if !signal.IsEnabled() {
+
+	for i, target := range cfg.Spec.Targets {
+		targetPath := targetsPath.Index(i)
+
+		enabledSignals := validateSignals(target.Signals, targetPath.Child("signals"), &allErrs)
+		if len(enabledSignals) > 0 {
+			anyEnabled = true
+		}
+
+		// Each filter rule may only set a block for a signal this target serves.
+		for j, rule := range target.Filters {
+			allErrs = append(allErrs, validateFilterRule(rule, enabledSignals, targetPath.Child("filters").Index(j))...)
+		}
+
+		// A debug target writes to the collector's own logs; it does not use an
+		// endpoint, TLS or a token, so those checks are skipped.
+		if target.Exporter.Protocol == config.ExporterProtocolDebug {
 			continue
 		}
-		anyEnabled = true
 
-		signalPath := specPath.Child("signals", string(sig))
+		allErrs = append(allErrs, validateExporter(target.Exporter, targetPath.Child("exporter"))...)
 
-		// An enabled signal must define at least one target.
-		if len(signal.Targets) == 0 {
+		// A non-debug target must specify an endpoint.
+		if target.Exporter.Endpoint == "" {
 			allErrs = append(
 				allErrs,
-				field.Required(signalPath.Child("targets"), "an enabled signal must define at least one target"),
+				field.Required(targetPath.Child("exporter", "endpoint"), "no endpoint specified for the target"),
 			)
-
-			continue
-		}
-
-		for i, target := range signal.Targets {
-			targetPath := signalPath.Child("targets").Index(i)
-
-			// Each filter rule may only use the fields valid for this signal.
-			for j, rule := range target.Filters {
-				allErrs = append(allErrs, validateFilterRule(rule, sig, targetPath.Child("filters").Index(j))...)
-			}
-
-			// A debug target writes to the collector's own logs; it does not
-			// use an endpoint, TLS or a token, so those checks are skipped.
-			if target.Exporter.Protocol == config.ExporterProtocolDebug {
-				continue
-			}
-
-			allErrs = append(allErrs, validateExporter(target.Exporter, targetPath.Child("exporter"))...)
-
-			// A non-debug target must specify an endpoint.
-			if target.Exporter.Endpoint == "" {
-				allErrs = append(
-					allErrs,
-					field.Required(targetPath.Child("exporter", "endpoint"), "no endpoint specified for the target"),
-				)
-			}
 		}
 	}
 
 	if !anyEnabled {
-		allErrs = append(allErrs, field.Required(specPath.Child("signals"), "no signal enabled"))
+		allErrs = append(allErrs, field.Required(targetsPath, "no signal enabled by any target"))
 	}
 
 	return allErrs.ToAggregate()
+}
+
+// validateSignals validates a target's signal list: every entry must be a known
+// signal type and must not be duplicated. It returns the set of valid signals
+// found. The map does double duty: an entry only exists for known signals, and
+// its value counts how many times we have already seen that signal.
+func validateSignals(signals []config.SignalType, path *field.Path, allErrs *field.ErrorList) map[config.SignalType]bool {
+	if len(signals) == 0 {
+		*allErrs = append(*allErrs, field.Required(path, "a target must serve at least one signal"))
+
+		return nil
+	}
+
+	seenSignals := map[config.SignalType]int{
+		config.SignalLogs:    0,
+		config.SignalEvents:  0,
+		config.SignalMetrics: 0,
+	}
+	enabled := map[config.SignalType]bool{}
+
+	for i, s := range signals {
+		cnt, ok := seenSignals[s]
+		if !ok {
+			*allErrs = append(
+				*allErrs,
+				field.NotSupported(path.Index(i), string(s), []string{
+					string(config.SignalLogs),
+					string(config.SignalEvents),
+					string(config.SignalMetrics),
+				}),
+			)
+
+			continue
+		}
+		if cnt >= 1 {
+			*allErrs = append(*allErrs, field.Duplicate(path.Index(i), string(s)))
+		}
+		seenSignals[s]++
+		enabled[s] = true
+	}
+
+	return enabled
 }
 
 // validateExporter validates the fields of a single exporter configuration.
@@ -115,40 +152,24 @@ func validateResourceReference(ref *config.ResourceReference, path *field.Path) 
 	return nil
 }
 
-// validateFilterRule ensures a filter rule only uses fields valid for the given
-// signal. The metrics-only fields are valid on the metrics signal, the
-// logs-only fields on the logs and events signals, and the traces and profiles
-// signals accept only the signal-agnostic Conditions form. The Resource field
-// is valid on metrics, logs and events. ErrorMode is valid everywhere.
-func validateFilterRule(rule config.FilterRule, sig config.SignalType, path *field.Path) field.ErrorList {
+// validateFilterRule ensures a filter rule only sets a block for a signal the
+// enclosing target serves. The Metrics block requires the metrics signal; the
+// Logs block requires the logs or events signal.
+func validateFilterRule(rule config.FilterRule, enabledSignals map[config.SignalType]bool, path *field.Path) field.ErrorList {
 	allErrs := make(field.ErrorList, 0)
 
-	metricUsed := len(rule.Metric) > 0 || len(rule.DataPoint) > 0 ||
-		rule.MetricInclude != nil || rule.MetricExclude != nil || len(rule.MetricConditions) > 0
-	logUsed := len(rule.LogRecord) > 0 ||
-		rule.LogInclude != nil || rule.LogExclude != nil || len(rule.LogConditions) > 0
-	resourceUsed := len(rule.Resource) > 0
-	conditionsUsed := len(rule.Conditions) > 0
-
-	reject := func(used bool, child, detail string) {
-		if used {
-			allErrs = append(allErrs, field.Invalid(path.Child(child), "", detail))
-		}
+	if rule.Metrics != nil && !enabledSignals[config.SignalMetrics] {
+		allErrs = append(allErrs, field.Invalid(
+			path.Child("metrics"), "",
+			"the metrics filter block requires the target to serve the metrics signal",
+		))
 	}
 
-	switch sig {
-	case config.SignalMetrics:
-		reject(logUsed, "log_record", "log filter fields are not valid on the metrics signal")
-		reject(conditionsUsed, "conditions", "the signal-agnostic conditions form is not valid on the metrics signal; use metric/datapoint/metric_conditions")
-	case config.SignalLogs, config.SignalEvents:
-		reject(metricUsed, "metric", "metric filter fields are not valid on the logs signal")
-		reject(conditionsUsed, "conditions", "the signal-agnostic conditions form is not valid on the logs signal; use log_record/log_conditions")
-	case config.SignalTraces, config.SignalProfiles:
-		reject(metricUsed, "metric", "metric filter fields are not valid on this signal; use conditions")
-		reject(logUsed, "log_record", "log filter fields are not valid on this signal; use conditions")
-		reject(resourceUsed, "resource", "the resource field is not valid on this signal; use conditions")
-	default:
-		// Unknown signal; no per-signal field restrictions to apply.
+	if rule.Logs != nil && !enabledSignals[config.SignalLogs] && !enabledSignals[config.SignalEvents] {
+		allErrs = append(allErrs, field.Invalid(
+			path.Child("logs"), "",
+			"the logs filter block requires the target to serve the logs or events signal",
+		))
 	}
 
 	return allErrs

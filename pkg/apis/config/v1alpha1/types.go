@@ -529,15 +529,92 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 }
 
+// FilterMetrics specifies the metrics filterprocessor block. It mirrors the
+// "metrics" section of the OTel filter processor and is valid on targets that
+// serve the metrics signal.
+type FilterMetrics struct {
+	// Resource is a list of OTTL conditions for an ottlresource context. If any
+	// condition resolves to true, the whole resource is dropped.
+	//
+	// +k8s:optional
+	Resource []string `json:"resource,omitempty"`
+
+	// Metric is a list of OTTL conditions for an ottlmetric context. If any
+	// condition resolves to true, the metric is dropped.
+	//
+	// +k8s:optional
+	Metric []string `json:"metric,omitempty"`
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context. If
+	// any condition resolves to true, the datapoint is dropped.
+	//
+	// +k8s:optional
+	DataPoint []string `json:"datapoint,omitempty"`
+
+	// Include specifies the metrics that should be kept in the pipeline; all
+	// other metrics are dropped. If both Include and Exclude are specified,
+	// include filtering occurs first.
+	//
+	// +k8s:optional
+	Include *MetricMatchProperties `json:"include,omitzero"`
+
+	// Exclude specifies the metrics that should be dropped from the pipeline;
+	// all other metrics are kept.
+	//
+	// +k8s:optional
+	Exclude *MetricMatchProperties `json:"exclude,omitzero"`
+
+	// MetricConditions specifies the metrics filter using the context-inferred
+	// condition style.
+	//
+	// +k8s:optional
+	MetricConditions []ContextConditions `json:"metric_conditions,omitempty"`
+}
+
+// FilterLogs specifies the logs filterprocessor block. It mirrors the "logs"
+// section of the OTel filter processor and is valid on targets that serve the
+// logs or events signals.
+type FilterLogs struct {
+	// Resource is a list of OTTL conditions for an ottlresource context. If any
+	// condition resolves to true, the whole resource is dropped.
+	//
+	// +k8s:optional
+	Resource []string `json:"resource,omitempty"`
+
+	// LogRecord is a list of OTTL conditions for an ottllog context. If any
+	// condition resolves to true, the log record is dropped.
+	//
+	// +k8s:optional
+	LogRecord []string `json:"log_record,omitempty"`
+
+	// Include specifies the logs that should be kept in the pipeline; all other
+	// logs are dropped. If both Include and Exclude are specified, include
+	// filtering occurs first.
+	//
+	// +k8s:optional
+	Include *LogMatchProperties `json:"include,omitzero"`
+
+	// Exclude specifies the logs that should be dropped from the pipeline; all
+	// other logs are kept.
+	//
+	// +k8s:optional
+	Exclude *LogMatchProperties `json:"exclude,omitzero"`
+
+	// LogConditions specifies the logs filter using the context-inferred
+	// condition style.
+	//
+	// +k8s:optional
+	LogConditions []ContextConditions `json:"log_conditions,omitempty"`
+}
+
 // FilterRule specifies a single filter processor instance, which drops
-// telemetry matching the given OTTL conditions or match properties. A signal's
-// Filters list produces one filter processor per rule, applied in order.
+// telemetry matching the given OTTL conditions or match properties. A target's
+// Filters list produces one filter processor per rule per signal, applied in
+// order.
 //
-// The fields are flattened per signal: the metrics-only fields (Metric,
-// DataPoint, MetricInclude, MetricExclude, MetricConditions) are valid on the
-// metrics signal; the logs-only fields (LogRecord, LogInclude, LogExclude,
-// LogConditions) on the logs and events signals; Resource on metrics, logs and
-// events; and traces and profiles accept only Conditions.
+// Its blocks mirror the OTel filterprocessor, keyed by signal: the Metrics
+// block feeds a target's metrics pipeline, the Logs block its logs and events
+// pipelines. A block may only be set for a signal the enclosing target serves.
 //
 // See [Filter Processor] for more details.
 //
@@ -549,155 +626,68 @@ type FilterRule struct {
 	// +k8s:optional
 	ErrorMode FilterErrorMode `json:"error_mode,omitzero"`
 
-	// Resource is a list of OTTL conditions for an ottlresource context. If any
-	// condition resolves to true, the whole resource is dropped. Valid on the
-	// metrics, logs and events signals.
+	// Metrics specifies the metrics filterprocessor block. Valid only on targets
+	// that serve the metrics signal.
 	//
 	// +k8s:optional
-	Resource []string `json:"resource,omitempty"`
+	Metrics *FilterMetrics `json:"metrics,omitzero"`
 
-	// Metric is a list of OTTL conditions for an ottlmetric context. If any
-	// condition resolves to true, the metric is dropped. Valid only on the
-	// metrics signal.
+	// Logs specifies the logs filterprocessor block. Valid on targets that serve
+	// the logs or events signals.
 	//
 	// +k8s:optional
-	Metric []string `json:"metric,omitempty"`
-
-	// DataPoint is a list of OTTL conditions for an ottldatapoint context. If
-	// any condition resolves to true, the datapoint is dropped. Valid only on
-	// the metrics signal.
-	//
-	// +k8s:optional
-	DataPoint []string `json:"datapoint,omitempty"`
-
-	// LogRecord is a list of OTTL conditions for an ottllog context. If any
-	// condition resolves to true, the log record is dropped. Valid on the logs
-	// and events signals.
-	//
-	// +k8s:optional
-	LogRecord []string `json:"log_record,omitempty"`
-
-	// MetricInclude specifies the metrics that should be kept in the pipeline;
-	// all other metrics are dropped. If both MetricInclude and MetricExclude are
-	// specified, include filtering occurs first. Valid only on the metrics
-	// signal.
-	//
-	// +k8s:optional
-	MetricInclude *MetricMatchProperties `json:"include,omitzero"`
-
-	// MetricExclude specifies the metrics that should be dropped from the
-	// pipeline; all other metrics are kept. Valid only on the metrics signal.
-	//
-	// +k8s:optional
-	MetricExclude *MetricMatchProperties `json:"exclude,omitzero"`
-
-	// LogInclude specifies the logs that should be kept in the pipeline; all
-	// other logs are dropped. If both LogInclude and LogExclude are specified,
-	// include filtering occurs first. Valid on the logs and events signals.
-	//
-	// +k8s:optional
-	LogInclude *LogMatchProperties `json:"logInclude,omitzero"`
-
-	// LogExclude specifies the logs that should be dropped from the pipeline;
-	// all other logs are kept. Valid on the logs and events signals.
-	//
-	// +k8s:optional
-	LogExclude *LogMatchProperties `json:"logExclude,omitzero"`
-
-	// MetricConditions specifies the metrics filter using the context-inferred
-	// condition style. Valid only on the metrics signal.
-	//
-	// +k8s:optional
-	MetricConditions []ContextConditions `json:"metric_conditions,omitempty"`
-
-	// LogConditions specifies the logs filter using the context-inferred
-	// condition style. Valid on the logs and events signals.
-	//
-	// +k8s:optional
-	LogConditions []ContextConditions `json:"log_conditions,omitempty"`
-
-	// Conditions specifies a signal-agnostic filter using the context-inferred
-	// condition style. It is the only form allowed for the traces and profiles
-	// signals.
-	//
-	// +k8s:optional
-	Conditions []ContextConditions `json:"conditions,omitempty"`
+	Logs *FilterLogs `json:"logs,omitzero"`
 }
 
-// SignalTarget pairs an exporter with its own ordered list of filter rules.
-// Each target produces one collector service pipeline for the signal, so a
-// signal can fan out to multiple destinations, each with its own filtering.
-type SignalTarget struct {
+// Target pairs a self-contained exporter with the signals it receives and its
+// own ordered list of filter rules. Each (target, signal) pair produces one
+// collector service pipeline, so a target can fan out several signals to one
+// destination, each with independent filtering.
+type Target struct {
 	// Exporter is the exporter this target sends to. Set its Protocol to
 	// [ExporterProtocolDebug] to make this target a debug destination.
 	//
 	// +k8s:optional
 	Exporter ExporterConfig `json:"exporter,omitzero"`
 
+	// Signals lists the telemetry signals sent to this target's exporter. Valid
+	// values are "logs", "events" and "metrics". A signal is enabled iff at
+	// least one target lists it.
+	//
+	// +k8s:required
+	Signals []SignalType `json:"signals"`
+
 	// Filters is an ordered list of filter rules applied to this target's
-	// pipeline. Each rule becomes a filter processor instance in the target's
-	// pipeline.
+	// pipelines. Each rule becomes a filter processor instance per matching
+	// signal.
 	//
 	// +k8s:optional
 	Filters []FilterRule `json:"filters,omitempty"`
 }
 
-// SignalConfig configures a single telemetry signal: whether it is enabled and
-// the list of targets (exporter/filters pairs) it fans out to.
-type SignalConfig struct {
-	// Enabled turns the signal's pipelines on or off. Default is false.
-	//
-	// +k8s:optional
-	// +default=false
-	Enabled *bool `json:"enabled,omitzero"`
+// SignalType identifies a telemetry signal. It is used both as the value of a
+// target's Signals list and internally for pipeline and component naming.
+//
+// +k8s:enum
+type SignalType string
 
-	// Targets is the list of exporter/filters pairs for this signal. Each
-	// target becomes its own collector service pipeline, allowing a signal to
-	// fan out to multiple destinations with independent filtering. An enabled
-	// signal must define at least one target.
-	//
-	// +k8s:optional
-	Targets []SignalTarget `json:"targets,omitempty"`
-}
-
-// SignalsConfig groups the per-signal configuration sections.
-type SignalsConfig struct {
-	// Metrics configures the metrics signal, which is scraped via Prometheus.
-	//
-	// +k8s:optional
-	Metrics SignalConfig `json:"metrics,omitzero"`
-
-	// Logs configures the logs signal, which is received via OTLP.
-	//
-	// +k8s:optional
-	Logs SignalConfig `json:"logs,omitzero"`
-
-	// Traces configures the traces signal, which is received via OTLP.
-	//
-	// +k8s:optional
-	Traces SignalConfig `json:"traces,omitzero"`
-
-	// Profiles configures the profiles signal, which is received via OTLP.
-	// Profiles support is under development in the collector and disabled by
-	// default.
-	//
-	// +k8s:optional
-	Profiles SignalConfig `json:"profiles,omitzero"`
-
-	// Events configures the Kubernetes events signal, which is collected from
-	// the shoot cluster.
-	//
-	// +k8s:optional
-	Events SignalConfig `json:"events,omitzero"`
-}
+const (
+	// SignalMetrics is the metrics signal, scraped via Prometheus.
+	SignalMetrics SignalType = "metrics"
+	// SignalLogs is the logs signal, received via OTLP.
+	SignalLogs SignalType = "logs"
+	// SignalEvents is the Kubernetes events signal, collected from the shoot.
+	SignalEvents SignalType = "events"
+)
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Signals groups the per-signal configuration sections (metrics, logs,
-	// traces, profiles, events).
+	// Targets is the list of exporter destinations. Each target pairs a
+	// self-contained exporter with the signals it receives and its own filter
+	// rules. Each (target, signal) pair becomes one collector service pipeline.
 	//
 	// +k8s:optional
-	Signals SignalsConfig `json:"signals,omitzero"`
+	Targets []Target `json:"targets,omitempty"`
 
 	// Logs specifies the settings for the collector's internal logs.
 	//

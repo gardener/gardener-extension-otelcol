@@ -25,7 +25,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `signals` _[SignalsConfig](#signalsconfig)_ | Signals groups the per-signal configuration sections (metrics, logs,<br />traces, profiles, events). |  | Optional: \{\} <br /> |
+| `targets` _[Target](#target) array_ | Targets is the list of exporter destinations. Each target pairs a<br />self-contained exporter with the signals it receives and its own filter<br />rules. Each (target, signal) pair becomes one collector service pipeline. |  | Optional: \{\} <br /> |
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector's internal logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
 
@@ -107,7 +107,8 @@ from each expression. Otherwise it is rendered as an explicit group
 
 
 _Appears in:_
-- [FilterRule](#filterrule)
+- [FilterLogs](#filterlogs)
+- [FilterMetrics](#filtermetrics)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -156,7 +157,7 @@ details.
 
 
 _Appears in:_
-- [SignalTarget](#signaltarget)
+- [Target](#target)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -234,6 +235,28 @@ _Appears in:_
 | `propagate` | FilterErrorModePropagate means the processor returns the error up the<br />pipeline, which results in the payload being dropped from the collector.<br /> |
 
 
+#### FilterLogs
+
+
+
+FilterLogs specifies the logs filterprocessor block. It mirrors the "logs"
+section of the OTel filter processor and is valid on targets that serve the
+logs or events signals.
+
+
+
+_Appears in:_
+- [FilterRule](#filterrule)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. |  | Optional: \{\} <br /> |
+| `log_record` _string array_ | LogRecord is a list of OTTL conditions for an ottllog context. If any<br />condition resolves to true, the log record is dropped. |  | Optional: \{\} <br /> |
+| `include` _[LogMatchProperties](#logmatchproperties)_ | Include specifies the logs that should be kept in the pipeline; all other<br />logs are dropped. If both Include and Exclude are specified, include<br />filtering occurs first. |  | Optional: \{\} <br /> |
+| `exclude` _[LogMatchProperties](#logmatchproperties)_ | Exclude specifies the logs that should be dropped from the pipeline; all<br />other logs are kept. |  | Optional: \{\} <br /> |
+| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. |  | Optional: \{\} <br /> |
+
+
 #### FilterMatchType
 
 _Underlying type:_ _string_
@@ -253,19 +276,41 @@ _Appears in:_
 | `regexp` | MatchTypeRegexp matches values against regular expressions.<br /> |
 
 
+#### FilterMetrics
+
+
+
+FilterMetrics specifies the metrics filterprocessor block. It mirrors the
+"metrics" section of the OTel filter processor and is valid on targets that
+serve the metrics signal.
+
+
+
+_Appears in:_
+- [FilterRule](#filterrule)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. |  | Optional: \{\} <br /> |
+| `metric` _string array_ | Metric is a list of OTTL conditions for an ottlmetric context. If any<br />condition resolves to true, the metric is dropped. |  | Optional: \{\} <br /> |
+| `datapoint` _string array_ | DataPoint is a list of OTTL conditions for an ottldatapoint context. If<br />any condition resolves to true, the datapoint is dropped. |  | Optional: \{\} <br /> |
+| `include` _[MetricMatchProperties](#metricmatchproperties)_ | Include specifies the metrics that should be kept in the pipeline; all<br />other metrics are dropped. If both Include and Exclude are specified,<br />include filtering occurs first. |  | Optional: \{\} <br /> |
+| `exclude` _[MetricMatchProperties](#metricmatchproperties)_ | Exclude specifies the metrics that should be dropped from the pipeline;<br />all other metrics are kept. |  | Optional: \{\} <br /> |
+| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. |  | Optional: \{\} <br /> |
+
+
 #### FilterRule
 
 
 
 FilterRule specifies a single filter processor instance, which drops
-telemetry matching the given OTTL conditions or match properties. A signal's
-Filters list produces one filter processor per rule, applied in order.
+telemetry matching the given OTTL conditions or match properties. A target's
+Filters list produces one filter processor per rule per signal, applied in
+order.
 
-The fields are flattened per signal: the metrics-only fields (Metric,
-DataPoint, MetricInclude, MetricExclude, MetricConditions) are valid on the
-metrics signal; the logs-only fields (LogRecord, LogInclude, LogExclude,
-LogConditions) on the logs and events signals; Resource on metrics, logs and
-events; and traces and profiles accept only Conditions.
+Its blocks mirror the OTel filterprocessor, keyed by signal: the Metrics
+block feeds a target's metrics pipeline, the Logs block its logs and events
+pipelines. A block may only be set for a signal the enclosing target serves.
 
 See [Filter Processor] for more details.
 
@@ -274,22 +319,13 @@ See [Filter Processor] for more details.
 
 
 _Appears in:_
-- [SignalTarget](#signaltarget)
+- [Target](#target)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `error_mode` _[FilterErrorMode](#filtererrormode)_ | ErrorMode determines how the processor reacts to errors that occur while<br />processing an OTTL condition. If empty, the processor default is used. |  | Optional: \{\} <br /> |
-| `resource` _string array_ | Resource is a list of OTTL conditions for an ottlresource context. If any<br />condition resolves to true, the whole resource is dropped. Valid on the<br />metrics, logs and events signals. |  | Optional: \{\} <br /> |
-| `metric` _string array_ | Metric is a list of OTTL conditions for an ottlmetric context. If any<br />condition resolves to true, the metric is dropped. Valid only on the<br />metrics signal. |  | Optional: \{\} <br /> |
-| `datapoint` _string array_ | DataPoint is a list of OTTL conditions for an ottldatapoint context. If<br />any condition resolves to true, the datapoint is dropped. Valid only on<br />the metrics signal. |  | Optional: \{\} <br /> |
-| `log_record` _string array_ | LogRecord is a list of OTTL conditions for an ottllog context. If any<br />condition resolves to true, the log record is dropped. Valid on the logs<br />and events signals. |  | Optional: \{\} <br /> |
-| `include` _[MetricMatchProperties](#metricmatchproperties)_ | MetricInclude specifies the metrics that should be kept in the pipeline;<br />all other metrics are dropped. If both MetricInclude and MetricExclude are<br />specified, include filtering occurs first. Valid only on the metrics<br />signal. |  | Optional: \{\} <br /> |
-| `exclude` _[MetricMatchProperties](#metricmatchproperties)_ | MetricExclude specifies the metrics that should be dropped from the<br />pipeline; all other metrics are kept. Valid only on the metrics signal. |  | Optional: \{\} <br /> |
-| `logInclude` _[LogMatchProperties](#logmatchproperties)_ | LogInclude specifies the logs that should be kept in the pipeline; all<br />other logs are dropped. If both LogInclude and LogExclude are specified,<br />include filtering occurs first. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
-| `logExclude` _[LogMatchProperties](#logmatchproperties)_ | LogExclude specifies the logs that should be dropped from the pipeline;<br />all other logs are kept. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
-| `metric_conditions` _[ContextConditions](#contextconditions) array_ | MetricConditions specifies the metrics filter using the context-inferred<br />condition style. Valid only on the metrics signal. |  | Optional: \{\} <br /> |
-| `log_conditions` _[ContextConditions](#contextconditions) array_ | LogConditions specifies the logs filter using the context-inferred<br />condition style. Valid on the logs and events signals. |  | Optional: \{\} <br /> |
-| `conditions` _[ContextConditions](#contextconditions) array_ | Conditions specifies a signal-agnostic filter using the context-inferred<br />condition style. It is the only form allowed for the traces and profiles<br />signals. |  | Optional: \{\} <br /> |
+| `metrics` _[FilterMetrics](#filtermetrics)_ | Metrics specifies the metrics filterprocessor block. Valid only on targets<br />that serve the metrics signal. |  | Optional: \{\} <br /> |
+| `logs` _[FilterLogs](#filterlogs)_ | Logs specifies the logs filterprocessor block. Valid on targets that serve<br />the logs or events signals. |  | Optional: \{\} <br /> |
 
 
 #### LogEncoding
@@ -346,7 +382,7 @@ matches logs against, and the type of string pattern matching to use.
 
 
 _Appears in:_
-- [FilterRule](#filterrule)
+- [FilterLogs](#filterlogs)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -403,7 +439,7 @@ matches metrics against, and the type of string pattern matching to use.
 
 
 _Appears in:_
-- [FilterRule](#filterrule)
+- [FilterMetrics](#filtermetrics)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -510,61 +546,23 @@ _Appears in:_
 | `multiplier` _float_ | Multiplier specifies the factor by which the retry interval is<br />multiplied on each attempt. The default value is<br />[DefaultRetryMultiplier]. | <nil> | Optional: \{\} <br /> |
 
 
-#### SignalConfig
+#### SignalType
 
+_Underlying type:_ _string_
 
-
-SignalConfig configures a single telemetry signal: whether it is enabled and
-the list of targets (exporter/filters pairs) it fans out to.
-
-
-
-_Appears in:_
-- [SignalsConfig](#signalsconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled turns the signal's pipelines on or off. Default is false. | false | Optional: \{\} <br /> |
-| `targets` _[SignalTarget](#signaltarget) array_ | Targets is the list of exporter/filters pairs for this signal. Each<br />target becomes its own collector service pipeline, allowing a signal to<br />fan out to multiple destinations with independent filtering. An enabled<br />signal must define at least one target. |  | Optional: \{\} <br /> |
-
-
-#### SignalTarget
-
-
-
-SignalTarget pairs an exporter with its own ordered list of filter rules.
-Each target produces one collector service pipeline for the signal, so a
-signal can fan out to multiple destinations, each with its own filtering.
+SignalType identifies a telemetry signal. It is used both as the value of a
+target's Signals list and internally for pipeline and component naming.
 
 
 
 _Appears in:_
-- [SignalConfig](#signalconfig)
+- [Target](#target)
 
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `exporter` _[ExporterConfig](#exporterconfig)_ | Exporter is the exporter this target sends to. Set its Protocol to<br />[ExporterProtocolDebug] to make this target a debug destination. |  | Optional: \{\} <br /> |
-| `filters` _[FilterRule](#filterrule) array_ | Filters is an ordered list of filter rules applied to this target's<br />pipeline. Each rule becomes a filter processor instance in the target's<br />pipeline. |  | Optional: \{\} <br /> |
-
-
-#### SignalsConfig
-
-
-
-SignalsConfig groups the per-signal configuration sections.
-
-
-
-_Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `metrics` _[SignalConfig](#signalconfig)_ | Metrics configures the metrics signal, which is scraped via Prometheus. |  | Optional: \{\} <br /> |
-| `logs` _[SignalConfig](#signalconfig)_ | Logs configures the logs signal, which is received via OTLP. |  | Optional: \{\} <br /> |
-| `traces` _[SignalConfig](#signalconfig)_ | Traces configures the traces signal, which is received via OTLP. |  | Optional: \{\} <br /> |
-| `profiles` _[SignalConfig](#signalconfig)_ | Profiles configures the profiles signal, which is received via OTLP.<br />Profiles support is under development in the collector and disabled by<br />default. |  | Optional: \{\} <br /> |
-| `events` _[SignalConfig](#signalconfig)_ | Events configures the Kubernetes events signal, which is collected from<br />the shoot cluster. |  | Optional: \{\} <br /> |
+| Field | Description |
+| --- | --- |
+| `metrics` | SignalMetrics is the metrics signal, scraped via Prometheus.<br /> |
+| `logs` | SignalLogs is the logs signal, received via OTLP.<br /> |
+| `events` | SignalEvents is the Kubernetes events signal, collected from the shoot.<br /> |
 
 
 #### TLSConfig
@@ -585,5 +583,26 @@ _Appears in:_
 | `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  | Optional: \{\} <br /> |
 | `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  | Optional: \{\} <br /> |
 | `reloadInterval` _[Duration](#duration)_ | ReloadInterval specifies mTLS key and cert reload interval<br />from mounted secret volume | <nil> | Optional: \{\} <br /> |
+
+
+#### Target
+
+
+
+Target pairs a self-contained exporter with the signals it receives and its
+own ordered list of filter rules. Each (target, signal) pair produces one
+collector service pipeline, so a target can fan out several signals to one
+destination, each with independent filtering.
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `exporter` _[ExporterConfig](#exporterconfig)_ | Exporter is the exporter this target sends to. Set its Protocol to<br />[ExporterProtocolDebug] to make this target a debug destination. |  | Optional: \{\} <br /> |
+| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals sent to this target's exporter. Valid<br />values are "logs", "events" and "metrics". A signal is enabled iff at<br />least one target lists it. |  | Required: \{\} <br /> |
+| `filters` _[FilterRule](#filterrule) array_ | Filters is an ordered list of filter rules applied to this target's<br />pipelines. Each rule becomes a filter processor instance per matching<br />signal. |  | Optional: \{\} <br /> |
 
 

@@ -350,11 +350,56 @@ type ContextConditions struct {
 	ErrorMode FilterErrorMode
 }
 
+// FilterMetrics specifies the metrics filterprocessor block. It mirrors the
+// "metrics" section of the OTel filter processor and is valid on targets that
+// serve the metrics signal.
+type FilterMetrics struct {
+	// Resource is a list of OTTL conditions for an ottlresource context.
+	Resource []string
+
+	// Metric is a list of OTTL conditions for an ottlmetric context.
+	Metric []string
+
+	// DataPoint is a list of OTTL conditions for an ottldatapoint context.
+	DataPoint []string
+
+	// Include specifies the metrics to keep; all others are dropped.
+	Include *MetricMatchProperties
+
+	// Exclude specifies the metrics to drop; all others are kept.
+	Exclude *MetricMatchProperties
+
+	// MetricConditions specifies the metrics filter using the context-inferred
+	// condition style.
+	MetricConditions []ContextConditions
+}
+
+// FilterLogs specifies the logs filterprocessor block. It mirrors the "logs"
+// section of the OTel filter processor and is valid on targets that serve the
+// logs or events signals.
+type FilterLogs struct {
+	// Resource is a list of OTTL conditions for an ottlresource context.
+	Resource []string
+
+	// LogRecord is a list of OTTL conditions for an ottllog context.
+	LogRecord []string
+
+	// Include specifies the logs to keep; all others are dropped.
+	Include *LogMatchProperties
+
+	// Exclude specifies the logs to drop; all others are kept.
+	Exclude *LogMatchProperties
+
+	// LogConditions specifies the logs filter using the context-inferred
+	// condition style.
+	LogConditions []ContextConditions
+}
+
 // FilterRule specifies a single filter processor instance, which drops
-// telemetry matching the given OTTL conditions or match properties. The fields
-// are flattened per signal: the metrics-only fields are valid on the metrics
-// signal, the logs-only fields on the logs and events signals, and traces and
-// profiles accept only Conditions.
+// telemetry matching the given OTTL conditions or match properties. Its blocks
+// mirror the OTel filterprocessor, keyed by signal: the Metrics block feeds a
+// target's metrics pipeline, the Logs block its logs and events pipelines. A
+// block may only be set for a signal the enclosing target serves.
 //
 // See [Filter Processor] for more details.
 //
@@ -364,106 +409,36 @@ type FilterRule struct {
 	// processing an OTTL condition. If empty, the processor default is used.
 	ErrorMode FilterErrorMode
 
-	// Resource is a list of OTTL conditions for an ottlresource context. Valid
-	// on the metrics, logs and events signals.
-	Resource []string
+	// Metrics specifies the metrics filterprocessor block. Valid only on targets
+	// that serve the metrics signal.
+	Metrics *FilterMetrics
 
-	// Metric is a list of OTTL conditions for an ottlmetric context. Valid only
-	// on the metrics signal.
-	Metric []string
-
-	// DataPoint is a list of OTTL conditions for an ottldatapoint context. Valid
-	// only on the metrics signal.
-	DataPoint []string
-
-	// LogRecord is a list of OTTL conditions for an ottllog context. Valid on
-	// the logs and events signals.
-	LogRecord []string
-
-	// MetricInclude specifies the metrics to keep; all others are dropped. Valid
-	// only on the metrics signal.
-	MetricInclude *MetricMatchProperties
-
-	// MetricExclude specifies the metrics to drop; all others are kept. Valid
-	// only on the metrics signal.
-	MetricExclude *MetricMatchProperties
-
-	// LogInclude specifies the logs to keep; all others are dropped. Valid on
-	// the logs and events signals.
-	LogInclude *LogMatchProperties
-
-	// LogExclude specifies the logs to drop; all others are kept. Valid on the
-	// logs and events signals.
-	LogExclude *LogMatchProperties
-
-	// MetricConditions specifies the metrics filter using the context-inferred
-	// condition style. Valid only on the metrics signal.
-	MetricConditions []ContextConditions
-
-	// LogConditions specifies the logs filter using the context-inferred
-	// condition style. Valid on the logs and events signals.
-	LogConditions []ContextConditions
-
-	// Conditions specifies a signal-agnostic filter using the context-inferred
-	// condition style. It is the only form allowed for the traces and profiles
-	// signals.
-	Conditions []ContextConditions
+	// Logs specifies the logs filterprocessor block. Valid on targets that serve
+	// the logs or events signals.
+	Logs *FilterLogs
 }
 
-// SignalTarget pairs an exporter with its own ordered list of filter rules.
-// Each target produces one collector service pipeline for the signal, so a
-// signal can fan out to multiple destinations, each with its own filtering.
-type SignalTarget struct {
+// Target pairs a self-contained exporter with the signals it receives and its
+// own ordered list of filter rules. Each (target, signal) pair produces one
+// collector service pipeline, so a target can fan out several signals to one
+// destination, each with independent filtering.
+type Target struct {
 	// Exporter is the exporter this target sends to.
 	Exporter ExporterConfig
 
+	// Signals lists the telemetry signals sent to this target's exporter. Valid
+	// values are "logs", "events" and "metrics". A signal is enabled iff at
+	// least one target lists it.
+	Signals []SignalType
+
 	// Filters is an ordered list of filter rules applied to this target's
-	// pipeline.
+	// pipelines. Each rule becomes a filter processor instance.
 	Filters []FilterRule
 }
 
-// SignalConfig configures a single telemetry signal end to end.
-type SignalConfig struct {
-	// Enabled turns the signal's pipelines on or off.
-	Enabled *bool
-
-	// Targets is the list of exporter/filters pairs for this signal. Each
-	// target becomes its own collector service pipeline.
-	Targets []SignalTarget
-}
-
-// IsEnabled is a predicate which returns whether the signal's pipelines should
-// be created.
-func (s SignalConfig) IsEnabled() bool {
-	if s.Enabled != nil {
-		return *s.Enabled
-	}
-
-	return false
-}
-
-// SignalsConfig groups the per-signal configuration sections.
-type SignalsConfig struct {
-	// Metrics configures the metrics signal, which is scraped via Prometheus.
-	Metrics SignalConfig
-
-	// Logs configures the logs signal, which is received via OTLP.
-	Logs SignalConfig
-
-	// Traces configures the traces signal, which is received via OTLP.
-	Traces SignalConfig
-
-	// Profiles configures the profiles signal, which is received via OTLP.
-	Profiles SignalConfig
-
-	// Events configures the Kubernetes events signal, which is collected from
-	// the shoot cluster.
-	Events SignalConfig
-}
-
-// SignalType identifies a telemetry signal. It is used internally to iterate
-// the per-signal configuration sections in a stable order; it is not part of
-// the serialized configuration.
+// SignalType identifies a telemetry signal. It is used both as the value of a
+// target's Signals list and internally to iterate the signals in a stable
+// order for pipeline and component naming.
 type SignalType string
 
 const (
@@ -471,18 +446,16 @@ const (
 	SignalMetrics SignalType = "metrics"
 	// SignalLogs is the logs signal, received via OTLP.
 	SignalLogs SignalType = "logs"
-	// SignalTraces is the traces signal, received via OTLP.
-	SignalTraces SignalType = "traces"
-	// SignalProfiles is the profiles signal, received via OTLP.
-	SignalProfiles SignalType = "profiles"
 	// SignalEvents is the Kubernetes events signal, collected from the shoot.
 	SignalEvents SignalType = "events"
 )
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Signals groups the per-signal configuration sections.
-	Signals SignalsConfig
+	// Targets is the list of exporter destinations. Each target pairs a
+	// self-contained exporter with the signals it receives and its own filter
+	// rules. Each (target, signal) pair becomes one collector service pipeline.
+	Targets []Target
 
 	// Logs specifies the settings for the collector's internal logs.
 	Logs CollectorLogsConfig
@@ -491,27 +464,9 @@ type CollectorConfigSpec struct {
 	Metrics CollectorMetricsConfig
 }
 
-// Signal returns the [SignalConfig] for the given signal type.
-func (s SignalsConfig) Signal(sig SignalType) SignalConfig {
-	switch sig {
-	case SignalMetrics:
-		return s.Metrics
-	case SignalLogs:
-		return s.Logs
-	case SignalTraces:
-		return s.Traces
-	case SignalProfiles:
-		return s.Profiles
-	case SignalEvents:
-		return s.Events
-	default:
-		return SignalConfig{}
-	}
-}
-
 // AllSignals lists the signal types in a stable iteration order.
 func AllSignals() []SignalType {
-	return []SignalType{SignalMetrics, SignalLogs, SignalTraces, SignalProfiles, SignalEvents}
+	return []SignalType{SignalMetrics, SignalLogs, SignalEvents}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

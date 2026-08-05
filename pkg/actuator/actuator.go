@@ -161,8 +161,8 @@ const (
 	// processor, used to derive per-signal and global filter processor names.
 	filterProcessorBaseName = "filter"
 
-	// otlpReceiverName is the name of the OTLP receiver. It feeds the logs,
-	// traces and profiles signals.
+	// otlpReceiverName is the name of the OTLP receiver. It feeds the logs
+	// signal.
 	otlpReceiverName = "otlp"
 
 	// eventsReceiverName is the name of the k8sobjects receiver for events.
@@ -183,12 +183,6 @@ const (
 
 	// metricsPipelineName is the name of the metrics pipeline.
 	metricsPipelineName = "metrics"
-
-	// tracesPipelineName is the name of the traces pipeline.
-	tracesPipelineName = "traces"
-
-	// profilesPipelineName is the name of the profiles pipeline.
-	profilesPipelineName = "profiles"
 
 	// telemetryMetricsKey is the telemetry config key for metrics settings.
 	telemetryMetricsKey = "metrics"
@@ -233,10 +227,6 @@ func signalPipelineBaseName(sig config.SignalType) string {
 		return metricsPipelineName
 	case config.SignalLogs:
 		return logsPipelineName
-	case config.SignalTraces:
-		return tracesPipelineName
-	case config.SignalProfiles:
-		return profilesPipelineName
 	case config.SignalEvents:
 		return eventsPipelineName
 	default:
@@ -252,7 +242,7 @@ func signalReceiverName(sig config.SignalType) string {
 	case config.SignalEvents:
 		return eventsReceiverName
 	default:
-		// Logs, traces and profiles are all received via OTLP.
+		// Logs are received via OTLP.
 		return otlpReceiverName
 	}
 }
@@ -1155,11 +1145,10 @@ func renderContextConditions(groups []config.ContextConditions) []any {
 // getFilterProcessorConfig returns the OTel settings for a single filter
 // processor instance built from one [config.FilterRule] for the given signal.
 //
-// The flattened rule fields are grouped back into the OTel filterprocessor's
-// per-signal blocks: on the metrics signal the metric-only fields render into a
-// "metrics" block; on the logs and events signals the log-only fields render
-// into a "logs" block. The context-inferred condition forms and the
-// signal-agnostic conditions are rendered as-is.
+// The rule's per-signal blocks map onto the OTel filterprocessor's per-signal
+// blocks: on the metrics signal the Metrics block renders into a "metrics"
+// block; on the logs and events signals the Logs block renders into a "logs"
+// block.
 //
 // See the link below for more details about each config setting of the filter
 // processor.
@@ -1172,60 +1161,69 @@ func (a *Actuator) getFilterProcessorConfig(rule config.FilterRule, sig config.S
 		processor["error_mode"] = string(rule.ErrorMode)
 	}
 
-	if sig == config.SignalMetrics {
+	if sig == config.SignalMetrics && rule.Metrics != nil {
+		m := rule.Metrics
 		metrics := map[string]any{}
-		if len(rule.Resource) > 0 {
-			metrics["resource"] = rule.Resource
+		if len(m.Resource) > 0 {
+			metrics["resource"] = m.Resource
 		}
-		if len(rule.Metric) > 0 {
-			metrics["metric"] = rule.Metric
+		if len(m.Metric) > 0 {
+			metrics["metric"] = m.Metric
 		}
-		if len(rule.DataPoint) > 0 {
-			metrics["datapoint"] = rule.DataPoint
+		if len(m.DataPoint) > 0 {
+			metrics["datapoint"] = m.DataPoint
 		}
-		if rule.MetricInclude != nil {
-			metrics["include"] = getMetricMatchProperties(rule.MetricInclude)
+		if m.Include != nil {
+			metrics["include"] = getMetricMatchProperties(m.Include)
 		}
-		if rule.MetricExclude != nil {
-			metrics["exclude"] = getMetricMatchProperties(rule.MetricExclude)
+		if m.Exclude != nil {
+			metrics["exclude"] = getMetricMatchProperties(m.Exclude)
 		}
 		if len(metrics) > 0 {
 			processor["metrics"] = metrics
 		}
+		if len(m.MetricConditions) > 0 {
+			processor["metric_conditions"] = renderContextConditions(m.MetricConditions)
+		}
 	}
 
-	if sig == config.SignalLogs || sig == config.SignalEvents {
+	if (sig == config.SignalLogs || sig == config.SignalEvents) && rule.Logs != nil {
+		l := rule.Logs
 		logs := map[string]any{}
-		if len(rule.Resource) > 0 {
-			logs["resource"] = rule.Resource
+		if len(l.Resource) > 0 {
+			logs["resource"] = l.Resource
 		}
-		if len(rule.LogRecord) > 0 {
-			logs["log_record"] = rule.LogRecord
+		if len(l.LogRecord) > 0 {
+			logs["log_record"] = l.LogRecord
 		}
-		if rule.LogInclude != nil {
-			logs["include"] = getLogMatchProperties(rule.LogInclude)
+		if l.Include != nil {
+			logs["include"] = getLogMatchProperties(l.Include)
 		}
-		if rule.LogExclude != nil {
-			logs["exclude"] = getLogMatchProperties(rule.LogExclude)
+		if l.Exclude != nil {
+			logs["exclude"] = getLogMatchProperties(l.Exclude)
 		}
 		if len(logs) > 0 {
 			processor["logs"] = logs
 		}
-	}
-
-	if len(rule.MetricConditions) > 0 {
-		processor["metric_conditions"] = renderContextConditions(rule.MetricConditions)
-	}
-
-	if len(rule.LogConditions) > 0 {
-		processor["log_conditions"] = renderContextConditions(rule.LogConditions)
-	}
-
-	if len(rule.Conditions) > 0 {
-		processor["conditions"] = renderContextConditions(rule.Conditions)
+		if len(l.LogConditions) > 0 {
+			processor["log_conditions"] = renderContextConditions(l.LogConditions)
+		}
 	}
 
 	return processor
+}
+
+// ruleAppliesTo reports whether the filter rule populates a block for the given
+// signal, i.e. it should produce a filter processor in that signal's pipeline.
+func ruleAppliesTo(rule config.FilterRule, sig config.SignalType) bool {
+	switch sig {
+	case config.SignalMetrics:
+		return rule.Metrics != nil
+	case config.SignalLogs, config.SignalEvents:
+		return rule.Logs != nil
+	default:
+		return false
+	}
 }
 
 // getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
@@ -1350,30 +1348,26 @@ func (a *Actuator) getSignalExporterConfig(cfg config.ExporterConfig, sig config
 }
 
 // getOtelExporters returns the OpenTelemetry exporters based on the given
-// [config.CollectorConfig] spec, along with the exporter component names
-// grouped per signal so pipelines can reference them. For each signal the
-// returned slice is indexed by target, i.e. element i is the exporter name for
-// that signal's i-th target.
-func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) (map[string]any, map[config.SignalType][]string) {
+// [config.CollectorConfig] spec, along with the exporter component names keyed
+// by signal and target index so pipelines can reference them. A target that
+// serves several signals gets one exporter component per signal (Option B), so
+// each (target, signal) pipeline references its own exporter component.
+func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) (map[string]any, map[config.SignalType]map[int]string) {
 	exporters := make(map[string]any)
-	perSignalTarget := make(map[config.SignalType][]string)
+	exporterNames := make(map[config.SignalType]map[int]string)
 
-	for _, sig := range config.AllSignals() {
-		signal := cfg.Spec.Signals.Signal(sig)
-		if !signal.IsEnabled() {
-			continue
-		}
-
-		names := make([]string, len(signal.Targets))
-		for i, target := range signal.Targets {
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.Signals {
 			name := signalExporterName(sig, i, target.Exporter.Protocol)
 			exporters[name] = a.getSignalExporterConfig(target.Exporter, sig, i)
-			names[i] = name
+			if exporterNames[sig] == nil {
+				exporterNames[sig] = make(map[int]string)
+			}
+			exporterNames[sig][i] = name
 		}
-		perSignalTarget[sig] = names
 	}
 
-	return exporters, perSignalTarget
+	return exporters, exporterNames
 }
 
 // parseShootNamespaceAttributes extracts OTel resource attributes from a shoot
@@ -1393,36 +1387,33 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 	return clusterName, projectName, shootName
 }
 
-// buildPipelines returns the collector service pipelines for the signals
-// enabled by cfg. Each enabled signal produces one pipeline per target, wired
-// to that target's own exporter and filter processor instances.
+// buildPipelines returns the collector service pipelines for the targets in
+// cfg. Each target produces one pipeline per signal it serves, wired to that
+// target's own exporter and filter processor instances.
 //
 // The processor chain is: resource, memory_limiter, (transform/events for the
-// events signal), the target's own filter processors, and finally batch. The
-// filter processors are inserted after memory_limiter and before batch so
-// unwanted telemetry is dropped before batching.
-func buildPipelines(cfg config.CollectorConfig, perSignalTargetExporterNames map[config.SignalType][]string) map[string]*otelv1beta1.Pipeline {
+// events signal), the target's own filter processors for that signal, and
+// finally batch. The filter processors are inserted after memory_limiter and
+// before batch so unwanted telemetry is dropped before batching.
+func buildPipelines(cfg config.CollectorConfig, exporterNames map[config.SignalType]map[int]string) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
-	for _, sig := range config.AllSignals() {
-		signal := cfg.Spec.Signals.Signal(sig)
-		if !signal.IsEnabled() {
-			continue
-		}
-
-		for i, target := range signal.Targets {
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.Signals {
 			processors := []string{resourceProcessorName, memoryLimiterProcessorName}
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
 			}
-			for ruleIdx := range target.Filters {
-				processors = append(processors, signalFilterName(sig, i, ruleIdx))
+			for ruleIdx, rule := range target.Filters {
+				if ruleAppliesTo(rule, sig) {
+					processors = append(processors, signalFilterName(sig, i, ruleIdx))
+				}
 			}
 			processors = append(processors, batchProcessorName)
 
 			var exporters []string
-			if names := perSignalTargetExporterNames[sig]; i < len(names) {
-				exporters = []string{names[i]}
+			if name, ok := exporterNames[sig][i]; ok {
+				exporters = []string{name}
 			}
 
 			pipelines[signalPipelineName(sig, i)] = &otelv1beta1.Pipeline{
@@ -1626,16 +1617,15 @@ func (a *Actuator) getOtelCollector(
 	}
 
 	// Register the per-target filter processors and configure the per-target
-	// exporter TLS and bearer token authentication volumes. Only enabled
-	// signals are processed so the collector does not report unused components.
-	for _, sig := range config.AllSignals() {
-		signal := cfg.Spec.Signals.Signal(sig)
-		if !signal.IsEnabled() {
-			continue
-		}
-
-		for i, target := range signal.Targets {
+	// exporter TLS and bearer token authentication volumes. Components are keyed
+	// per (target, signal) so a target that serves several signals gets one
+	// exporter, filter set and volume per signal.
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.Signals {
 			for ruleIdx, rule := range target.Filters {
+				if !ruleAppliesTo(rule, sig) {
+					continue
+				}
 				obj.Spec.Config.Processors.Object[signalFilterName(sig, i, ruleIdx)] = a.getFilterProcessorConfig(rule, sig)
 			}
 

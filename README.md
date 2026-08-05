@@ -48,11 +48,13 @@ The following example shoot manifest snippet enables the extension and
 configures the OpenTelemetry Collector to emit the metrics signal for the shoot
 control-plane components via the
 [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter).
-Each signal (`metrics`, `logs`, `traces`, `profiles`, `events`) has its own
-section under `spec.signals` with an `enabled` flag and a list of `targets`.
-Each target pairs an exporter with its own filters and becomes one collector
-pipeline, so a signal can fan out to several destinations. Setting a target's
-exporter `protocol` to `debug` makes it a debug destination.
+The configuration is exporter-oriented: `spec.targets` is a list of exporter
+destinations. Each target pairs a self-contained exporter with the signals it
+receives (`metrics`, `logs` and/or `events`) and an optional list of filters.
+Each `(target, signal)` pair becomes one collector pipeline, so a target can
+fan out several signals to one destination, and a signal can fan out to several
+targets. A signal is enabled iff at least one target lists it. Setting a
+target's exporter `protocol` to `debug` makes it a debug destination.
 
 ``` yaml
 ...
@@ -64,13 +66,11 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    protocol: debug
-                    verbosity: basic  # basic, normal or detailed
+          targets:
+            - exporter:
+                protocol: debug
+                verbosity: basic  # basic, normal or detailed
+              signals: [metrics]
 ```
 
 This configuration however is only useful while developing or troubleshooting an
@@ -79,8 +79,8 @@ issue with the collector, because signals are not actually forwarded to a remote
 
 The following configuration snippet enables the extension for a shoot and
 configures it to forward the signals of the control-plane components to a remote
-collector. Each signal declares one or more `targets`; each target carries its
-own self-contained exporter. Here every target uses the
+collector. A single target can serve several signals at once via its `signals`
+list. Here the target uses the
 [OTLP HTTP exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter)
 (`protocol: http`, the default).
 
@@ -94,23 +94,11 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    protocol: http  # http or grpc
-                    endpoint: "https://opentelemetry-receiver.example.org"
-            logs:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
-            events:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
+          targets:
+            - exporter:
+                protocol: http  # http or grpc
+                endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics, logs, events]
 ```
 
 The following example snippet expands on the previous one by adding
@@ -128,30 +116,28 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    protocol: http
-                    endpoint: "https://opentelemetry-receiver.example.org"
-                    token:
-                      resourceRef:
-                        name: otelcol-bearer-token
-                        dataKey: token
-                    tls:
-                      ca:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: ca.crt
-                      cert:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: client.crt
-                      key:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: client.key
+          targets:
+            - exporter:
+                protocol: http
+                endpoint: "https://opentelemetry-receiver.example.org"
+                token:
+                  resourceRef:
+                    name: otelcol-bearer-token
+                    dataKey: token
+                tls:
+                  ca:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: ca.crt
+                  cert:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: client.crt
+                  key:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: client.key
+              signals: [metrics]
   resources:
   - name: otelcol-bearer-token
     resourceRef:
@@ -182,35 +168,31 @@ HTTP and the events signal over the
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-                    token:
-                      resourceRef:
-                        name: otelcol-bearer-token
-                        dataKey: token
-                    tls:
-                      ca:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: ca.crt
-                      cert:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: client.crt
-                      key:
-                        resourceRef:
-                          name: otelcol-tls
-                          dataKey: client.key
-            events:
-              enabled: true
-              targets:
-                - exporter:
-                    protocol: grpc
-                    endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+          targets:
+            - exporter:
+                endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+                token:
+                  resourceRef:
+                    name: otelcol-bearer-token
+                    dataKey: token
+                tls:
+                  ca:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: ca.crt
+                  cert:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: client.crt
+                  key:
+                    resourceRef:
+                      name: otelcol-tls
+                      dataKey: client.key
+              signals: [metrics]
+            - exporter:
+                protocol: grpc
+                endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+              signals: [events]
 ```
 
 For additional configuration settings, which can be provided to the extension,
@@ -219,11 +201,11 @@ please make sure to check the
 
 ### Fan a signal out to multiple destinations
 
-Because each signal holds a list of `targets` and each target becomes its own
-pipeline, a single signal can be exported to several destinations at once, each
-with an independent exporter and filter chain. This example sends metrics to a
-primary HTTP collector, a secondary gRPC collector, and additionally mirrors
-them to a debug exporter.
+Because a signal is enabled by listing it in a target's `signals`, the same
+signal can appear in several targets and thus be exported to several
+destinations at once, each with an independent exporter and filter chain. This
+example sends metrics to a primary HTTP collector, a secondary gRPC collector,
+and additionally mirrors them to a debug exporter.
 
 ``` yaml
   extensions:
@@ -232,37 +214,38 @@ them to a debug exporter.
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                # Primary: a remote collector over HTTP.
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
-                # Secondary: a different collector over gRPC.
-                - exporter:
-                    protocol: grpc
-                    endpoint: "https://backup-receiver.example.org:4317"
-                # Debug: write to the collector's own logs. protocol: debug
-                # ignores endpoint/tls/token and only honors verbosity.
-                - exporter:
-                    protocol: debug
-                    verbosity: basic
+          targets:
+            # Primary: a remote collector over HTTP.
+            - exporter:
+                endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics]
+            # Secondary: a different collector over gRPC.
+            - exporter:
+                protocol: grpc
+                endpoint: "https://backup-receiver.example.org:4317"
+              signals: [metrics]
+            # Debug: write to the collector's own logs. protocol: debug
+            # ignores endpoint/tls/token and only honors verbosity.
+            - exporter:
+                protocol: debug
+                verbosity: basic
+              signals: [metrics]
 ```
 
 ## Filtering signals
 
 The extension can restrict which telemetry the collector processes at two
 levels:
-- Enabling or disabling whole signals via each signal's `enabled` flag.
+- Enabling or disabling whole signals by listing (or omitting) them in the
+targets' `signals`.
 - Filtering individual records with OTTL filtration based on OpenTelemetry
 [filterprocessor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor).
 
 ### Select which signals are collected
 
-Each signal under `spec.signals` (`metrics`, `logs`, `traces`, `profiles`,
-`events`) has an `enabled` flag, which defaults to `false`. Only enabled signals
-get a pipeline; disabled signals are not collected or exported.
+A signal (`metrics`, `logs`, `events`) is collected iff at least one target
+lists it in its `signals`. Only enabled signals get a pipeline; a signal listed
+by no target is not collected or exported.
 
 ``` yaml
 spec:
@@ -272,37 +255,34 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
+          targets:
             # Only collect and export metrics; the other pipelines are not created.
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
+            - exporter:
+                endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics]
 ```
 
 ### Drop individual records with the filter processor
 
 Each target's `filters` field is an ordered list of filter rules. Each rule
-becomes a filterprocessor instance in that target's pipeline, dropping metrics,
-logs and events matching the given [OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry/)
+becomes a filterprocessor instance in that target's pipelines, dropping
+metrics, logs and events matching the given [OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry/)
 conditions or match properties. Because filters live on the target, different
-targets of the same signal can filter independently.
+targets serving the same signal can filter independently.
 
-The filter fields are specific to the signal being configured, so there is no
-signal wrapper: under `metrics` you use `metric`, `datapoint`, `resource`,
-`include`/`exclude` (metric match properties) and `metric_conditions`; under
-`logs` (and `events`) you use `log_record`, `resource`, `logInclude`/`logExclude`
-(log match properties) and `log_conditions`; and `traces`/`profiles` accept only
-the signal-agnostic `conditions` form. Using a field that does not belong to the
-signal is rejected by validation. The extension mirrors the filterprocessor
-filtration, so for more information you can check the
+Filter rules mirror the filterprocessor, keyed by signal: a `metrics` block
+feeds the target's metrics pipeline and uses `metric`, `datapoint`, `resource`,
+`include`/`exclude` (metric match properties) and `metric_conditions`; a `logs`
+block feeds the logs and events pipelines and uses `log_record`, `resource`,
+`include`/`exclude` (log match properties) and `log_conditions`. A block for a
+signal the target does not serve is rejected by validation. The extension
+mirrors the filterprocessor filtration, so for more information you can check the
 [filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
 
 #### Examples
 
 - The following example drops noisy metrics and logs using OTTL conditions on
-each target.
+the target's per-signal filter blocks.
 
 ``` yaml
 spec:
@@ -312,29 +292,23 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
-                  filters:
-                    - error_mode: ignore  # ignore, silent or propagate
-                      # Drop individual metrics by name.
-                      metric:
-                        - 'name == "apiserver_request_total"'
-                      # Drop datapoints by value.
-                      datapoint:
-                        - 'value_int == 0'
-            logs:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
-                  filters:
+          targets:
+            - exporter:
+                endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics, logs]
+              filters:
+                - error_mode: ignore  # ignore, silent or propagate
+                  metrics:
+                    # Drop individual metrics by name.
+                    metric:
+                      - 'name == "apiserver_request_total"'
+                    # Drop datapoints by value.
+                    datapoint:
+                      - 'value_int == 0'
+                  logs:
                     # Drop log records whose body matches a pattern.
-                    - log_record:
-                        - 'IsMatch(body, ".*password.*")'
+                    log_record:
+                      - 'IsMatch(body, ".*password.*")'
 ```
 
 - The next example uses the declarative include/exclude match properties instead
@@ -349,18 +323,17 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          signals:
-            metrics:
-              enabled: true
-              targets:
-                - exporter:
-                    endpoint: "https://opentelemetry-receiver.example.org"
-                  filters:
-                    - include:
-                        match_type: regexp  # strict or regexp
-                        metric_names:
-                          - "apiserver_.*"
-                          - "etcd_.*"
+          targets:
+            - exporter:
+                endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics]
+              filters:
+                - metrics:
+                    include:
+                      match_type: regexp  # strict or regexp
+                      metric_names:
+                        - "apiserver_.*"
+                        - "etcd_.*"
 ```
 
 # Development
