@@ -8,6 +8,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // MetricsVerbosityLevel specifies the verbosity of the internal collector
@@ -32,18 +33,18 @@ const (
 	MetricsVerbosityLevelDetailed MetricsVerbosityLevel = "detailed"
 )
 
-// ExporterProtocol selects the OTLP transport used by an exporter.
-type ExporterProtocol string
+// SignalType identifies a telemetry signal the collector can collect and
+// export.
+type SignalType string
 
 const (
-	// ExporterProtocolHTTP selects the OTLP HTTP exporter.
-	ExporterProtocolHTTP ExporterProtocol = "http"
-	// ExporterProtocolGRPC selects the OTLP gRPC exporter.
-	ExporterProtocolGRPC ExporterProtocol = "grpc"
-	// ExporterProtocolDebug selects the debug exporter, which writes telemetry
-	// to the collector's own logs. It only honors the Verbosity field; the
-	// endpoint, TLS, token and buffer settings are ignored.
-	ExporterProtocolDebug ExporterProtocol = "debug"
+	// SignalLogs is the signal for logs received via OTLP.
+	SignalLogs SignalType = "logs"
+	// SignalEvents is the signal for Kubernetes events collected from the
+	// shoot cluster.
+	SignalEvents SignalType = "events"
+	// SignalMetrics is the signal for metrics scraped via Prometheus.
+	SignalMetrics SignalType = "metrics"
 )
 
 // LogLevel specifies the minimum enabled logging level for the collector.
@@ -106,37 +107,6 @@ const (
 	CompressionNone Compression = "none"
 )
 
-// FilterErrorMode determines how the filter processor reacts to errors that
-// occur while processing an OTTL condition.
-//
-// See the link below for more details.
-//
-// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor#error-modes
-type FilterErrorMode string
-
-const (
-	// FilterErrorModeIgnore means the processor ignores errors returned by
-	// conditions, logs them, and continues on to the next condition.
-	FilterErrorModeIgnore FilterErrorMode = "ignore"
-	// FilterErrorModeSilent means the processor ignores errors returned by
-	// conditions, does not log them, and continues on to the next condition.
-	FilterErrorModeSilent FilterErrorMode = "silent"
-	// FilterErrorModePropagate means the processor returns the error up the
-	// pipeline, which results in the payload being dropped from the collector.
-	FilterErrorModePropagate FilterErrorMode = "propagate"
-)
-
-// MatchType specifies the type of string pattern matching used by the filter
-// processor include/exclude match properties.
-type MatchType string
-
-const (
-	// MatchTypeStrict matches values by exact string equality.
-	MatchTypeStrict MatchType = "strict"
-	// MatchTypeRegexp matches values against regular expressions.
-	MatchTypeRegexp MatchType = "regexp"
-)
-
 // RetryOnFailureConfig provides the retry policy for an exporter.
 type RetryOnFailureConfig struct {
 	// Enabled specifies whether retry on failure is enabled or not.
@@ -158,59 +128,47 @@ type RetryOnFailureConfig struct {
 	Multiplier float64
 }
 
-// ExporterConfig provides a full exporter configuration.
+// OTLPHTTPExporterConfig provides the OTLP HTTP Exporter configuration settings.
 //
-// It folds the OTLP HTTP, OTLP gRPC and debug exporters into a single type,
-// selected by Protocol. Each signal target carries its own ExporterConfig.
-//
-// When Protocol is [ExporterProtocolDebug] only Verbosity is honored; the
-// endpoint, TLS, token and buffer settings are ignored.
-//
-// See [OTLP HTTP Exporter], [OTLP gRPC Exporter] and [Debug Exporter] for more
-// details.
+// See [OTLP HTTP Exporter] for more details.
 //
 // [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
-// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-// [Debug Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
-type ExporterConfig struct {
-	// Protocol selects the transport used by the exporter.
-	Protocol ExporterProtocol
-
-	// Endpoint specifies the target endpoint to send data to. For HTTP this is
-	// a base URL; for gRPC this is a gRPC endpoint. It is ignored when Protocol
-	// is [ExporterProtocolDebug].
+type OTLPHTTPExporterConfig struct {
+	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
+	//
+	// To send each signal a corresponding path will be added to this base
+	// URL, i.e. for metrics "/v1/metrics" will be appended, for logs "/v1/logs"
+	// will be appended.
 	Endpoint string
 
-	// TLS specifies the TLS configuration settings for the exporter. It is
-	// ignored when Protocol is [ExporterProtocolDebug].
+	// TLS specifies the TLS configuration settings for the exporter.
 	TLS *TLSConfig
 
-	// Token references a bearer token for authentication. It is ignored when
-	// Protocol is [ExporterProtocolDebug].
+	// Token references a bearer token for authentication.
 	Token *ResourceReference
 
-	// Timeout specifies the request time limit.
+	// Timeout specifies the HTTP request time limit.
 	Timeout time.Duration
 
-	// ReadBufferSize specifies the ReadBufferSize for the client.
+	// ReadBufferSize specifies the ReadBufferSize for the HTTP
+	// client.
 	ReadBufferSize int
 
-	// WriteBufferSize specifies the WriteBufferSize for the client.
+	// WriteBufferSize specifies the WriteBufferSize for the HTTP
+	// client.
 	WriteBufferSize int
 
-	// Encoding specifies the encoding to use for the messages. It is only
-	// honored by the HTTP protocol.
+	// Encoding specifies the encoding to use for the messages. Valid
+	// options are `proto' and `json'.
 	Encoding MessageEncoding
 
 	// RetryOnFailure specifies the retry policy of the exporter.
 	RetryOnFailure RetryOnFailureConfig
 
 	// Compression specifies the compression to use.
+	//
+	// Possible options are gzip, zstd, snappy and none.
 	Compression Compression
-
-	// Verbosity specifies the verbosity level of the debug exporter. It is only
-	// honored when Protocol is [ExporterProtocolDebug].
-	Verbosity DebugExporterVerbosity
 }
 
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
@@ -224,6 +182,63 @@ const (
 	// DebugExporterVerbosityDetailed specifies detailed level of verbosity.
 	DebugExporterVerbosityDetailed DebugExporterVerbosity = "detailed"
 )
+
+// DebugExporterConfig provides the settings for the debug exporter
+type DebugExporterConfig struct {
+	// Verbosity specifies the verbosity level for the debug exporter.
+	Verbosity DebugExporterVerbosity
+}
+
+// OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
+//
+// See [OTLP gRPC Exporter] for more details.
+//
+// [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
+type OTLPGRPCExporterConfig struct {
+	// Endpoint specifies the gRPC endpoint to which signals will be exported.
+	//
+	// Check the link below for more details about the format of this field.
+	//
+	// https://github.com/grpc/grpc/blob/master/doc/naming.md
+	Endpoint string
+
+	// TLS specifies the TLS configuration settings for the exporter.
+	TLS *TLSConfig
+
+	// Token references a bearer token for authentication.
+	Token *ResourceReference
+
+	// Timeout specifies the time to wait per individual attempt to send
+	// data to the backend.
+	Timeout time.Duration
+
+	// ReadBufferSize specifies the ReadBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientReadBufferSize].
+	ReadBufferSize int
+
+	// WriteBufferSize specifies the WriteBufferSize for the gRPC
+	// client. Default value is [DefaultGRPCExporterClientWriteBufferSize].
+	WriteBufferSize int
+
+	// RetryOnFailure specifies the retry policy of the exporter.
+	RetryOnFailure RetryOnFailureConfig
+
+	// Compression specifies the compression to use. The default value is
+	// [CompressionGzip].
+	Compression Compression
+}
+
+// CollectorExportersConfig provides the OTLP exporter settings.
+type CollectorExportersConfig struct {
+	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
+	OTLPGRPCExporter *OTLPGRPCExporterConfig
+
+	// OTLPHTTPExporter provides the OTLP HTTP Exporter settings.
+	OTLPHTTPExporter *OTLPHTTPExporterConfig
+
+	// DebugExporter provides the settings for the debug exporter.
+	DebugExporter *DebugExporterConfig
+}
 
 // CollectorLogsConfig provides the settings for the collector internal logs.
 //
@@ -249,222 +264,38 @@ type CollectorMetricsConfig struct {
 	Level MetricsVerbosityLevel
 }
 
-// FilterAttribute specifies an attribute key/value pair that the filter
-// processor match properties evaluate against.
-type FilterAttribute struct {
-	// Key specifies the attribute key to match against.
-	Key string
-
-	// Value specifies the attribute value to match against. If empty, only the
-	// presence of the key is checked.
-	Value string
-}
-
-// RegexpConfig specifies the options for the regexp match type used by the
-// filter processor include/exclude match properties.
-type RegexpConfig struct {
-	// CacheEnabled specifies whether match results are cached.
-	CacheEnabled *bool
-
-	// CacheMaxNumEntries specifies the maximum number of entries in the cache.
-	CacheMaxNumEntries int
-}
-
-// LogSeverityNumberMatchProperties specifies how the filter processor matches
-// against a log record's severity number.
-type LogSeverityNumberMatchProperties struct {
-	// Min specifies the minimum severity a log record must have to match.
-	Min string
-
-	// MatchUndefined specifies whether log records with an "unspecified"
-	// severity match.
-	MatchUndefined *bool
-}
-
-// MetricMatchProperties specifies the set of properties the filter processor
-// matches metrics against, and the type of string pattern matching to use.
-type MetricMatchProperties struct {
-	// MatchType specifies the type of matching desired.
-	MatchType MatchType
-
-	// Regexp specifies the options for the regexp match type.
-	Regexp *RegexpConfig
-
-	// MetricNames specifies the list of string patterns to match metric names
-	// against.
-	MetricNames []string
-
-	// Expressions specifies the list of expr expressions to match metrics
-	// against.
-	Expressions []string
-
-	// ResourceAttributes specifies a list of resource attributes to match
-	// metrics against.
-	ResourceAttributes []FilterAttribute
-}
-
-// LogMatchProperties specifies the set of properties the filter processor
-// matches logs against, and the type of string pattern matching to use.
-type LogMatchProperties struct {
-	// MatchType specifies the type of matching desired.
-	MatchType MatchType
-
-	// ResourceAttributes specifies a list of resource attributes to match logs
-	// against.
-	ResourceAttributes []FilterAttribute
-
-	// RecordAttributes specifies a list of record attributes to match logs
-	// against.
-	RecordAttributes []FilterAttribute
-
-	// SeverityTexts specifies a list of strings that the log record's severity
-	// text field must match against.
-	SeverityTexts []string
-
-	// SeverityNumber specifies how to match against a log record's severity
-	// number, if defined.
-	SeverityNumber *LogSeverityNumberMatchProperties
-
-	// Bodies specifies a list of strings that the log record's body field must
-	// match against.
-	Bodies []string
-}
-
-// ContextConditions specifies a group of OTTL conditions for the filter
-// processor's context-inferred condition style (metric_conditions /
-// log_conditions).
-//
-// When Context and ErrorMode are both empty, the group is rendered as a flat
-// list of condition strings (basic style) and the OTTL context is inferred
-// from each expression. Otherwise it is rendered as an explicit group
-// (advanced style).
-type ContextConditions struct {
-	// Context specifies the OTTL context the conditions are evaluated against.
-	// If empty, the context is inferred from each condition.
-	Context string
-
-	// Conditions is the list of OTTL conditions.
-	Conditions []string
-
-	// ErrorMode overrides the top-level ErrorMode for this group of conditions.
-	ErrorMode FilterErrorMode
-}
-
-// FilterMetrics specifies the metrics filterprocessor block. It mirrors the
-// "metrics" section of the OTel filter processor and is valid on targets that
-// serve the metrics signal.
-type FilterMetrics struct {
-	// Resource is a list of OTTL conditions for an ottlresource context.
-	Resource []string
-
-	// Metric is a list of OTTL conditions for an ottlmetric context.
-	Metric []string
-
-	// DataPoint is a list of OTTL conditions for an ottldatapoint context.
-	DataPoint []string
-
-	// Include specifies the metrics to keep; all others are dropped.
-	Include *MetricMatchProperties
-
-	// Exclude specifies the metrics to drop; all others are kept.
-	Exclude *MetricMatchProperties
-
-	// MetricConditions specifies the metrics filter using the context-inferred
-	// condition style.
-	MetricConditions []ContextConditions
-}
-
-// FilterLogs specifies the logs filterprocessor block. It mirrors the "logs"
-// section of the OTel filter processor and is valid on targets that serve the
-// logs or events signals.
-type FilterLogs struct {
-	// Resource is a list of OTTL conditions for an ottlresource context.
-	Resource []string
-
-	// LogRecord is a list of OTTL conditions for an ottllog context.
-	LogRecord []string
-
-	// Include specifies the logs to keep; all others are dropped.
-	Include *LogMatchProperties
-
-	// Exclude specifies the logs to drop; all others are kept.
-	Exclude *LogMatchProperties
-
-	// LogConditions specifies the logs filter using the context-inferred
-	// condition style.
-	LogConditions []ContextConditions
-}
-
-// FilterRule specifies a single filter processor instance, which drops
-// telemetry matching the given OTTL conditions or match properties. Its blocks
-// mirror the OTel filterprocessor, keyed by signal: the Metrics block feeds a
-// target's metrics pipeline, the Logs block its logs and events pipelines. A
-// block may only be set for a signal the enclosing target serves.
-//
-// See [Filter Processor] for more details.
-//
-// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
-type FilterRule struct {
-	// ErrorMode determines how the processor reacts to errors that occur while
-	// processing an OTTL condition. If empty, the processor default is used.
-	ErrorMode FilterErrorMode
-
-	// Metrics specifies the metrics filterprocessor block. Valid only on targets
-	// that serve the metrics signal.
-	Metrics *FilterMetrics
-
-	// Logs specifies the logs filterprocessor block. Valid on targets that serve
-	// the logs or events signals.
-	Logs *FilterLogs
-}
-
-// Target pairs a self-contained exporter with the signals it receives and its
-// own ordered list of filter rules. Each (target, signal) pair produces one
-// collector service pipeline, so a target can fan out several signals to one
-// destination, each with independent filtering.
+// Target consists of exporter and filter configurations for signals.
 type Target struct {
-	// Exporter is the exporter this target sends to.
-	Exporter ExporterConfig
+	// Exporters specifies the exporters configuration of the collector.
+	Exporter CollectorExportersConfig
 
-	// Signals lists the telemetry signals sent to this target's exporter. Valid
-	// values are "logs", "events" and "metrics". A signal is enabled iff at
-	// least one target lists it.
+	// Signals lists the telemetry signals the collector should collect and
+	// export. Valid values are "logs", "events" and "metrics". If empty, all
+	// signals are enabled.
 	Signals []SignalType
 
-	// Filters is an ordered list of filter rules applied to this target's
-	// pipelines. Each rule becomes a filter processor instance.
-	Filters []FilterRule
+	// Filters mirrors the filterprocessor configuration.
+	//
+	// See [Filter Processor] for more details.
+	//
+	// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+	Filters runtime.RawExtension
 }
-
-// SignalType identifies a telemetry signal. It is used both as the value of a
-// target's Signals list and internally to iterate the signals in a stable
-// order for pipeline and component naming.
-type SignalType string
-
-const (
-	// SignalMetrics is the metrics signal, scraped via Prometheus.
-	SignalMetrics SignalType = "metrics"
-	// SignalLogs is the logs signal, received via OTLP.
-	SignalLogs SignalType = "logs"
-	// SignalEvents is the Kubernetes events signal, collected from the shoot.
-	SignalEvents SignalType = "events"
-)
 
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Targets is the list of exporter destinations. Each target pairs a
-	// self-contained exporter with the signals it receives and its own filter
-	// rules. Each (target, signal) pair becomes one collector service pipeline.
+	// Targets is a list of collector destinations. Each target consists of a
+	// self-contained exporter, the signals it receives, and its own filter rules.
 	Targets []Target
 
-	// Logs specifies the settings for the collector's internal logs.
+	// Logs specifies the settings for the collector logs.
 	Logs CollectorLogsConfig
 
 	// Metrics specifies the settings for the internal collector metrics.
 	Metrics CollectorMetricsConfig
 }
 
-// AllSignals lists the signal types in a stable iteration order.
+// AllSignals lists all supported signals.
 func AllSignals() []SignalType {
 	return []SignalType{SignalMetrics, SignalLogs, SignalEvents}
 }
@@ -493,8 +324,8 @@ type TLSConfig struct {
 	Cert *ResourceReference
 	// Key references the client key to use for TLS required connections.
 	Key *ResourceReference
-	// ReloadInterval specifies the duration after which the certificate will be reloaded.
-	// If not set, it will never be reloaded
+	// ReloadInterval specifies the duration after which the certificate will be
+	// reloaded. If not set, it will never be reloaded.
 	ReloadInterval time.Duration
 }
 

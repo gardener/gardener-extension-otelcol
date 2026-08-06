@@ -43,16 +43,18 @@ var _ = Describe("Actuator", Ordered, func() {
 				Targets: []config.Target{
 					{
 						Signals: []config.SignalType{config.SignalLogs},
-						Exporter: config.ExporterConfig{
-							Protocol: config.ExporterProtocolHTTP,
-							Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
+						Exporter: config.CollectorExportersConfig{
+							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+								Endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318",
+							},
 						},
 					},
 					{
 						Signals: []config.SignalType{config.SignalLogs},
-						Exporter: config.ExporterConfig{
-							Protocol:  config.ExporterProtocolDebug,
-							Verbosity: config.DebugExporterVerbosityNormal,
+						Exporter: config.CollectorExportersConfig{
+							DebugExporter: &config.DebugExporterConfig{
+								Verbosity: config.DebugExporterVerbosityNormal,
+							},
 						},
 					},
 				},

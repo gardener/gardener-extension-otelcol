@@ -83,10 +83,10 @@ var _ = Describe("signal selection", func() {
 
 	It("wires the served receivers and per-target exporters into each pipeline", func() {
 		cfg := configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents)
-		exporterNames := map[config.SignalType]map[int]string{
-			config.SignalMetrics: {0: signalExporterName(config.SignalMetrics, 0, config.ExporterProtocolHTTP)},
-			config.SignalLogs:    {0: signalExporterName(config.SignalLogs, 0, config.ExporterProtocolHTTP)},
-			config.SignalEvents:  {0: signalExporterName(config.SignalEvents, 0, config.ExporterProtocolHTTP)},
+		exporterNames := map[config.SignalType]map[int][]string{
+			config.SignalMetrics: {0: {signalExporterName(config.SignalMetrics, 0, transportHTTP)}},
+			config.SignalLogs:    {0: {signalExporterName(config.SignalLogs, 0, transportHTTP)}},
+			config.SignalEvents:  {0: {signalExporterName(config.SignalEvents, 0, transportHTTP)}},
 		}
 
 		pipelines := buildPipelines(cfg, exporterNames)
@@ -95,8 +95,8 @@ var _ = Describe("signal selection", func() {
 		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{eventsReceiverName}))
 		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{prometheusReceiverName}))
 
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalMetrics][0]}))
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalLogs][0]}))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal([]string{exporterNames[config.SignalEvents][0]}))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal(exporterNames[config.SignalMetrics][0]))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal(exporterNames[config.SignalLogs][0]))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal(exporterNames[config.SignalEvents][0]))
 	})
 })

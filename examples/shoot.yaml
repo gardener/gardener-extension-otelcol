@@ -15,94 +15,97 @@ spec:
         spec:
           # Exporter-oriented configuration. Each entry in `targets` pairs a
           # self-contained exporter with the signals it receives ("logs",
-          # "metrics" and/or "events") and an optional ordered list of filter
-          # rules. Each (target, signal) pair becomes one collector pipeline, so
-          # a target can fan out several signals to one destination, and a signal
-          # can fan out to several targets. A signal is enabled iff at least one
-          # target lists it. Every non-debug target must set an endpoint.
+          # "metrics" and/or "events") and an optional filter. Each (target,
+          # signal) pair becomes one collector pipeline, so a target can fan out
+          # several signals to one destination, and a signal can fan out to
+          # several targets. A signal is enabled if at least one target lists it.
           #
-          # Filter rules mirror the OTel filterprocessor, keyed by signal
-          # ("metrics"/"logs"); a "metrics" block feeds the target's metrics
-          # pipeline, a "logs" block its logs and events pipelines. See:
+          # An exporter enables one or more transports (`otlp_http`, `otlp_grpc`,
+          # `debug`); a target's signal pipelines fan out to all enabled
+          # transports. Each OTLP transport must set an endpoint.
+          #
+          # "filters" is an opaque OTel filterprocessor configuration applied to
+          # all of the target's signals, validated against the upstream filter
+          # processor. See:
           # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
           targets:
             # First destination: a remote collector over HTTP receiving both
             # logs and metrics, with a metrics-only filter.
             - exporter:
-                protocol: http  # http or grpc
-                endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-                compression: gzip  # gzip, zstd, snappy or none
-                encoding: proto  # proto or json (http only)
-                token:
-                  resourceRef:
-                    name: otelcol-bearer-token
-                    dataKey: token
-                tls:
-                  ca:
+                otlp_http:
+                  endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+                  compression: gzip  # gzip, zstd, snappy or none
+                  encoding: proto  # proto or json
+                  token:
                     resourceRef:
-                      name: otelcol-tls
-                      dataKey: ca.crt
-                  cert:
-                    resourceRef:
-                      name: otelcol-tls
-                      dataKey: client.crt
-                  key:
-                    resourceRef:
-                      name: otelcol-tls
-                      dataKey: client.key
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
               signals: [logs, metrics]
-              # filters:
-              #   - error_mode: ignore  # ignore, silent or propagate
-              #     # The metrics block feeds the metrics pipeline.
-              #     metrics:
-              #       # OTTL condition style (mutually exclusive with include/exclude)
-              #       resource:
-              #         - resource.attributes["env"] == "dev"
-              #       metric:
-              #         - metric.name == "some.unwanted.metric"
-              #       datapoint:
-              #         - value_int == 0
-              #       # Object/match style (mutually exclusive with the lists above)
-              #       # include:
-              #       #   match_type: strict  # strict or regexp
-              #       #   metric_names: ["metric.a", "metric.b"]
-              #       # Alternatively, the context-inferred condition style:
-              #       # metric_conditions:
-              #       #   - context: datapoint  # optional; inferred when omitted
-              #       #     error_mode: ignore  # optional
-              #       #     conditions:
-              #       #       - metric.name == "some.unwanted.metric"
-              #     # The logs block feeds the logs and events pipelines.
-              #     logs:
-              #       log_record:
-              #         - IsMatch(log.body, ".*password.*")
-              #       # include:
-              #       #   match_type: strict
-              #       #   severity_texts: ["INFO", "DEBUG"]
-              #       #   severity_number:
-              #       #     min: WARN
-              #       #     match_undefined: false
+              # "filters" is the OTel filterprocessor configuration verbatim,
+              # applied to all of the target's signals. The processor only acts
+              # on the sections relevant to each pipeline's signal (here, only
+              # the metrics pipeline is affected).
+              filters:
+                error_mode: ignore  # ignore, silent or propagate
+                metrics:
+                  # OTTL condition style (mutually exclusive with include/exclude)
+                  resource:
+                    - resource.attributes["env"] == "dev"
+                  metric:
+                    - metric.name == "some.unwanted.metric"
+                  datapoint:
+                    - value_int == 0
 
             # Second destination: a debug exporter writing to the collector logs.
-            # protocol: debug ignores endpoint/tls/token; only verbosity is
-            # honored.
+            # The debug transport ignores endpoint/tls/token; only verbosity is
+            # considered.
             - exporter:
-                protocol: debug
-                verbosity: basic  # basic, normal or detailed
+                debug:
+                  verbosity: basic  # basic, normal or detailed
               signals: [logs]
 
             # Third destination: ship Kubernetes events over gRPC.
             - exporter:
-                protocol: grpc
-                endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+                otlp_grpc:
+                  endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+                  token:
+                    resourceRef:
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
               signals: [events]
 
-          # Collector's own internal log settings (not a signal).
+          # Collector's own internal log settings.
           logs:
             level: INFO  # INFO, WARN, ERROR or DEBUG
             encoding: console  # console or json
 
-          # Collector's own internal metrics settings (not a signal).
+          # Collector's own internal metrics settings.
           metrics:
             level: normal  # none, basic, normal or detailed
   resources:

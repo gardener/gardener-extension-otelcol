@@ -43,16 +43,18 @@ var _ = Describe("Shoot Validator", Ordered, func() {
 				Targets: []config.Target{
 					{
 						Signals: []config.SignalType{config.SignalLogs},
-						Exporter: config.ExporterConfig{
-							Protocol: config.ExporterProtocolHTTP,
-							Endpoint: "https://example.com:4318",
+						Exporter: config.CollectorExportersConfig{
+							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+								Endpoint: "https://example.com:4318",
+							},
 						},
 					},
 					{
 						Signals: []config.SignalType{config.SignalLogs},
-						Exporter: config.ExporterConfig{
-							Protocol:  config.ExporterProtocolDebug,
-							Verbosity: config.DebugExporterVerbosityBasic,
+						Exporter: config.CollectorExportersConfig{
+							DebugExporter: &config.DebugExporterConfig{
+								Verbosity: config.DebugExporterVerbosityBasic,
+							},
 						},
 					},
 				},
