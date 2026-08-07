@@ -15,6 +15,7 @@ var _ = Describe("parseShootNamespaceAttributes", func() {
 	DescribeTable("should parse the namespace into OTel resource attributes",
 		func(namespace, wantCluster, wantProject, wantShoot string) {
 			cluster, project, shoot := parseShootNamespaceAttributes(namespace)
+
 			Expect(cluster).To(Equal(wantCluster))
 			Expect(project).To(Equal(wantProject))
 			Expect(shoot).To(Equal(wantShoot))
@@ -101,12 +102,18 @@ var _ = Describe("signal selection", func() {
 
 		pipelines := buildPipelines(cfg, exporterNames)
 
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).To(Equal([]string{"otlp"}))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{"k8sobjects/events"}))
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{"prometheus"}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).
+			To(Equal([]string{"otlp"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).
+			To(Equal([]string{"k8sobjects/events"}))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).
+			To(Equal([]string{"prometheus"}))
 
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{"otlphttp/metrics/0"}))
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal([]string{"otlphttp/logs/0"}))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal([]string{"otlphttp/events/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).
+			To(Equal([]string{"otlphttp/metrics/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).
+			To(Equal([]string{"otlphttp/logs/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).
+			To(Equal([]string{"otlphttp/events/0"}))
 	})
 })

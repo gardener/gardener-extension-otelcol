@@ -242,17 +242,19 @@ var _ = Describe("filter processor", func() {
 		It("fans a signal pipeline out to all of a target's enabled transports", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
-					Targets: []config.Target{{
-						Signals: []config.SignalType{config.SignalMetrics},
-						Exporter: config.CollectorExportersConfig{
-							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
-								Endpoint: "https://a:4318",
-							},
-							OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{
-								Endpoint: "https://a:4317",
+					Targets: []config.Target{
+						{
+							Signals: []config.SignalType{config.SignalMetrics},
+							Exporter: config.CollectorExportersConfig{
+								OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+									Endpoint: "https://a:4318",
+								},
+								OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{
+									Endpoint: "https://a:4317",
+								},
 							},
 						},
-					}},
+					},
 				},
 			}
 			exporters, exporterNames := (&Actuator{}).getOtelExporters(cfg)
