@@ -260,6 +260,10 @@ const (
 	transportDebug transport = "debug"
 )
 
+// exporterNamesBySignal maps each signal type to its target index to the list
+// of exporter component names configured for that target and signal.
+type exporterNamesBySignal = map[config.SignalType]map[int][]string
+
 // signalExporterName returns the exporter component name for the i-th target of
 // a signal and the given transport, e.g. "otlphttp/metrics/0", "otlp/events/0"
 // or "debug/metrics/2".
@@ -1352,9 +1356,9 @@ func (a *Actuator) getExporterTLSConfig(
 // [config.CollectorConfig] spec and a map containing exporter names per signal.
 func (a *Actuator) getOtelExporters(
 	cfg config.CollectorConfig,
-) (map[string]any, map[config.SignalType]map[int][]string) {
+) (map[string]any, exporterNamesBySignal) {
 	exporters := make(map[string]any)
-	exporterNames := make(map[config.SignalType]map[int][]string)
+	exporterNames := make(exporterNamesBySignal)
 
 	for i, target := range cfg.Spec.Targets {
 		for _, sig := range target.Signals {
@@ -1417,7 +1421,7 @@ func parseShootNamespaceAttributes(
 //   - batch
 func buildPipelines(
 	cfg config.CollectorConfig,
-	exporterNames map[config.SignalType]map[int][]string,
+	exporterNames exporterNamesBySignal,
 ) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
