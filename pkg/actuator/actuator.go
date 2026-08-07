@@ -284,10 +284,7 @@ func signalFilterName(sig config.SignalType, i int) string {
 	return fmt.Sprintf("%s/%s/%d", filterProcessorBaseName, sig, i)
 }
 
-// targetHasFilter reports whether the target carries a non-empty filter
-// configuration, i.e. it should produce a filter processor in each of its signal
-// pipelines. It keeps the pipeline references in buildPipelines consistent with
-// the processors registered in getOtelCollector.
+// targetHasFilter reports whether the target carries a non-empty filter configuration.
 func targetHasFilter(target config.Target) bool {
 	rendered, err := filterrender.FilterProcessorConfig(target)
 
@@ -313,13 +310,13 @@ func signalVolumeMountPathTLS(sig config.SignalType, i int, t transport) string 
 }
 
 // signalVolumeNameBearerToken returns the bearer token volume name for the i-th
-// target of a signal and transport.
+// target of a signal and transport, e.g. "bearer-token-auth-http-metrics-0".
 func signalVolumeNameBearerToken(sig config.SignalType, i int, t transport) string {
 	return fmt.Sprintf("bearer-token-auth-%s-%s-%d", t, sig, i)
 }
 
 // signalVolumeMountPathBearerToken returns the bearer token mount path for the
-// i-th target of a signal and transport.
+// i-th target of a signal and transport, e.g. "/etc/auth/bearer-http-metrics-0".
 func signalVolumeMountPathBearerToken(sig config.SignalType, i int, t transport) string {
 	return fmt.Sprintf("/etc/auth/bearer-%s-%s-%d", t, sig, i)
 }
@@ -1127,7 +1124,11 @@ func (a *Actuator) getExporterTLSConfig(tls *config.TLSConfig, mountPath string)
 
 // getOTLPGRPCExporterConfig returns the OTel settings for the OTLP gRPC
 // exporter of the given signal's i-th target.
-func (a *Actuator) getOTLPGRPCExporterConfig(cfg *config.OTLPGRPCExporterConfig, sig config.SignalType, i int) map[string]any {
+func (a *Actuator) getOTLPGRPCExporterConfig(
+	cfg *config.OTLPGRPCExporterConfig,
+	sig config.SignalType,
+	i int,
+) map[string]any {
 	// See the link below for more details about each config setting of the
 	// OTLP gRPC exporter.
 	//
@@ -1172,7 +1173,9 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg *config.OTLPGRPCExporterConfig,
 // enable several transports at once, so each (target, signal) pair yields one
 // exporter component per enabled transport and its pipeline fans out to all of
 // them.
-func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) (map[string]any, map[config.SignalType]map[int][]string) {
+func (a *Actuator) getOtelExporters(
+	cfg config.CollectorConfig,
+) (map[string]any, map[config.SignalType]map[int][]string) {
 	exporters := make(map[string]any)
 	exporterNames := make(map[config.SignalType]map[int][]string)
 
