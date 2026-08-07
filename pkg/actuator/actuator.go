@@ -158,8 +158,7 @@ const (
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
 
-	// filterProcessorBaseName is the base name of the OpenTelemetry Filter
-	// processor, used to derive per-signal and global filter processor names.
+	// filterProcessorBaseName is the base name of the OpenTelemetry Filter processor.
 	filterProcessorBaseName = "filter"
 
 	// otlpReceiverName is the name of the OTLP receiver.
@@ -1055,9 +1054,13 @@ func (a *Actuator) getDebugExporterConfig(cfg *config.DebugExporterConfig) map[s
 	return exporter
 }
 
-// getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
-// exporter of the given signal's i-th target.
-func (a *Actuator) getOTLPHTTPExporterConfig(cfg *config.OTLPHTTPExporterConfig, sig config.SignalType, i int) map[string]any {
+// getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP exporter
+// of the given signal's i-th target.
+func (a *Actuator) getOTLPHTTPExporterConfig(
+	cfg *config.OTLPHTTPExporterConfig,
+	sig config.SignalType,
+	i int,
+) map[string]any {
 	exporter := map[string]any{}
 
 	// See the link below for more details about each config setting of the
