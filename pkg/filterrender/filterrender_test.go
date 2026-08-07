@@ -31,9 +31,11 @@ var _ = Describe("FilterProcessorConfig", func() {
 	})
 
 	It("decodes the opaque body into a map verbatim", func() {
-		out, err := filterrender.FilterProcessorConfig(filterTarget(
-			`{"error_mode":"ignore","metrics":{"metric":["metric.name == \"foo\""]}}`,
-		))
+		out, err := filterrender.FilterProcessorConfig(
+			filterTarget(
+				`{"error_mode":"ignore","metrics":{"metric":["metric.name == \"foo\""]}}`,
+			),
+		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).To(Equal(map[string]any{
 			"error_mode": "ignore",
