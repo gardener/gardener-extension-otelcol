@@ -74,23 +74,49 @@ var _ = Describe("filter processor", func() {
 				config.SignalLogs:    {0},
 				config.SignalEvents:  {0},
 			})
-
 			pipelines := buildPipelines(cfg, exporterNames)
 
 			Expect(pipelines).To(HaveLen(3))
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{prometheusReceiverName}))
-			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).To(Equal([]string{otlpReceiverName}))
-			Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{eventsReceiverName}))
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{signalExporterName(config.SignalMetrics, 0, transportHTTP)}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).
+				To(Equal([]string{"prometheus"}))
+			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).
+				To(Equal([]string{"otlp"}))
+			Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).
+				To(Equal([]string{"k8sobjects/events"}))
 		})
 
 		It("builds one pipeline per target and wires each to its own exporter", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Targets: []config.Target{
-						{Signals: []config.SignalType{config.SignalMetrics}, Exporter: config.CollectorExportersConfig{OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{Endpoint: "https://a:4318"}}},
-						{Signals: []config.SignalType{config.SignalMetrics}, Exporter: config.CollectorExportersConfig{OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{Endpoint: "https://b:4317"}}},
-						{Signals: []config.SignalType{config.SignalMetrics}, Exporter: config.CollectorExportersConfig{DebugExporter: &config.DebugExporterConfig{}}},
+						{
+							Signals: []config.SignalType{
+								config.SignalMetrics,
+							},
+							Exporter: config.CollectorExportersConfig{
+								OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+									Endpoint: "https://a:4318",
+								},
+							},
+						},
+						{
+							Signals: []config.SignalType{
+								config.SignalMetrics,
+							},
+							Exporter: config.CollectorExportersConfig{
+								OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{
+									Endpoint: "https://b:4317",
+								},
+							},
+						},
+						{
+							Signals: []config.SignalType{
+								config.SignalMetrics,
+							},
+							Exporter: config.CollectorExportersConfig{
+								DebugExporter: &config.DebugExporterConfig{},
+							},
+						},
 					},
 				},
 			}
@@ -101,28 +127,39 @@ var _ = Describe("filter processor", func() {
 					2: {signalExporterName(config.SignalMetrics, 2, transportDebug)},
 				},
 			}
-
 			pipelines := buildPipelines(cfg, exporterNames)
 
 			Expect(pipelines).To(HaveLen(3))
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{"otlphttp/metrics/0"}))
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 1)].Exporters).To(Equal([]string{"otlp/metrics/1"}))
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 2)].Exporters).To(Equal([]string{"debug/metrics/2"}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).
+				To(Equal([]string{"otlphttp/metrics/0"}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 1)].Exporters).
+				To(Equal([]string{"otlp/metrics/1"}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 2)].Exporters).
+				To(Equal([]string{"debug/metrics/2"}))
 		})
 
 		It("does not wire a filter processor when the target has no filters", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
-					Targets: []config.Target{target([]config.SignalType{config.SignalMetrics})},
+					Targets: []config.Target{
+						target(
+							[]config.SignalType{
+								config.SignalMetrics,
+							},
+						),
+					},
 				},
 			}
-
 			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
 				config.SignalMetrics: {0},
 			}))
 
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).To(Equal(
-				[]string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{
+					resourceProcessorName,
+					memoryLimiterProcessorName,
+					batchProcessorName,
+				}))
 		})
 
 		It("wires the target filter after memory_limiter and before batch", func() {
@@ -134,20 +171,29 @@ var _ = Describe("filter processor", func() {
 					},
 				},
 			}
+			pipelines := buildPipelines(
+				cfg,
+				exporterNamesFor(map[config.SignalType][]int{
+					config.SignalMetrics: {0},
+					config.SignalEvents:  {1},
+				}),
+			)
 
-			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
-				config.SignalMetrics: {0},
-				config.SignalEvents:  {1},
-			}))
-
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).To(Equal([]string{
-				resourceProcessorName, memoryLimiterProcessorName,
-				signalFilterName(config.SignalMetrics, 0), batchProcessorName,
-			}))
-			Expect(pipelines[signalPipelineName(config.SignalEvents, 1)].Processors).To(Equal([]string{
-				resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName,
-				signalFilterName(config.SignalEvents, 1), batchProcessorName,
-			}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{
+					resourceProcessorName,
+					memoryLimiterProcessorName,
+					signalFilterName(config.SignalMetrics, 0),
+					batchProcessorName,
+				}))
+			Expect(pipelines[signalPipelineName(config.SignalEvents, 1)].Processors).
+				To(Equal([]string{
+					resourceProcessorName,
+					memoryLimiterProcessorName,
+					transformEventsProcessorName,
+					signalFilterName(config.SignalEvents, 1),
+					batchProcessorName,
+				}))
 		})
 
 		It("wires the target filter into every signal the target serves", func() {
@@ -160,14 +206,15 @@ var _ = Describe("filter processor", func() {
 					},
 				},
 			}
-
 			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
 				config.SignalLogs:    {0},
 				config.SignalMetrics: {0},
 			}))
 
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).To(ContainElement(signalFilterName(config.SignalMetrics, 0)))
-			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).To(ContainElement(signalFilterName(config.SignalLogs, 0)))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(ContainElement(signalFilterName(config.SignalMetrics, 0)))
+			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
+				To(ContainElement(signalFilterName(config.SignalLogs, 0)))
 		})
 
 		It("does not wire a filter processor when the filter body is empty", func() {
@@ -175,10 +222,13 @@ var _ = Describe("filter processor", func() {
 			// stays free of a dangling reference.
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
-					Targets: []config.Target{target([]config.SignalType{config.SignalMetrics})},
+					Targets: []config.Target{
+						target([]config.SignalType{
+							config.SignalMetrics,
+						}),
+					},
 				},
 			}
-
 			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
 				config.SignalMetrics: {0},
 			}))
@@ -195,26 +245,33 @@ var _ = Describe("filter processor", func() {
 					Targets: []config.Target{{
 						Signals: []config.SignalType{config.SignalMetrics},
 						Exporter: config.CollectorExportersConfig{
-							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{Endpoint: "https://a:4318"},
-							OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{Endpoint: "https://a:4317"},
+							OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+								Endpoint: "https://a:4318",
+							},
+							OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{
+								Endpoint: "https://a:4317",
+							},
 						},
 					}},
 				},
 			}
-
 			exporters, exporterNames := (&Actuator{}).getOtelExporters(cfg)
 
-			Expect(exporterNames[config.SignalMetrics][0]).To(Equal([]string{
-				signalExporterName(config.SignalMetrics, 0, transportHTTP),
-				signalExporterName(config.SignalMetrics, 0, transportGRPC),
-			}))
-			Expect(exporters).To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportHTTP)))
-			Expect(exporters).To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportGRPC)))
+			Expect(exporterNames[config.SignalMetrics][0]).
+				To(Equal([]string{
+					signalExporterName(config.SignalMetrics, 0, transportHTTP),
+					signalExporterName(config.SignalMetrics, 0, transportGRPC),
+				}))
+			Expect(exporters).
+				To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportHTTP)))
+			Expect(exporters).
+				To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportGRPC)))
 
 			pipelines := buildPipelines(cfg, exporterNames)
-			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{
-				"otlphttp/metrics/0", "otlp/metrics/0",
-			}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).
+				To(Equal([]string{
+					"otlphttp/metrics/0", "otlp/metrics/0",
+				}))
 		})
 	})
 })
