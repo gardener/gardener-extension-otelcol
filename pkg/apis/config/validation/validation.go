@@ -25,7 +25,10 @@ func Validate(cfg config.CollectorConfig) error {
 
 	// At least one target must be defined.
 	if len(cfg.Spec.Targets) == 0 {
-		allErrs = append(allErrs, field.Required(targetsPath, "at least one target must be defined"))
+		allErrs = append(
+			allErrs,
+			field.Required(targetsPath, "at least one target must be defined"),
+		)
 
 		return allErrs.ToAggregate()
 	}
@@ -37,22 +40,33 @@ func Validate(cfg config.CollectorConfig) error {
 	for i, target := range cfg.Spec.Targets {
 		targetPath := targetsPath.Index(i)
 
-		enabledSignals := validateSignals(target.Signals, targetPath.Child("signals"), &allErrs)
+		enabledSignals := validateSignals(
+			target.Signals,
+			targetPath.Child("signals"),
+			&allErrs,
+		)
 		if len(enabledSignals) > 0 {
 			anyEnabled = true
 		}
 
 		// Validate the target's opaque filter configuration, if any.
-		allErrs = append(allErrs, validateTargetFilter(target, targetPath.Child("filters"))...)
+		allErrs = append(
+			allErrs,
+			validateTargetFilter(target, targetPath.Child("filters"))...,
+		)
 
-		// Validate the target's exporters. A target must enable at least one
-		// transport; each enabled OTLP transport is validated (endpoint, buffers,
-		// TLS/token). The debug exporter needs no endpoint/TLS/token.
-		allErrs = append(allErrs, validateExporters(target.Exporter, targetPath.Child("exporter"))...)
+		// Validate the target's exporters.
+		allErrs = append(
+			allErrs,
+			validateExporters(target.Exporter, targetPath.Child("exporter"))...,
+		)
 	}
 
 	if !anyEnabled {
-		allErrs = append(allErrs, field.Required(targetsPath, "no signal enabled by any target"))
+		allErrs = append(
+			allErrs,
+			field.Required(targetsPath, "no signal enabled by any target"),
+		)
 	}
 
 	return allErrs.ToAggregate()
@@ -60,10 +74,12 @@ func Validate(cfg config.CollectorConfig) error {
 
 // validateSignals validates a target's signal list: every entry must be a known
 // signal type and must not be duplicated. An empty list is valid and means all
-// signals are enabled (see [config.Target.EffectiveSignals]). It returns the set
-// of enabled signals. The map does double duty: an entry only exists for known
-// signals, and its value counts how many times we have already seen that signal.
-func validateSignals(signals []config.SignalType, path *field.Path, allErrs *field.ErrorList) map[config.SignalType]bool {
+// signals are enabled (see [config.Target.EffectiveSignals]).
+func validateSignals(
+	signals []config.SignalType,
+	path *field.Path,
+	allErrs *field.ErrorList,
+) map[config.SignalType]bool {
 	if len(signals) == 0 {
 		// An empty list enables all signals.
 		enabled := map[config.SignalType]bool{}
@@ -96,7 +112,10 @@ func validateSignals(signals []config.SignalType, path *field.Path, allErrs *fie
 			continue
 		}
 		if cnt >= 1 {
-			*allErrs = append(*allErrs, field.Duplicate(path.Index(i), string(s)))
+			*allErrs = append(
+				*allErrs,
+				field.Duplicate(path.Index(i), string(s)),
+			)
 		}
 		seenSignals[s]++
 		enabled[s] = true
@@ -109,20 +128,48 @@ func validateSignals(signals []config.SignalType, path *field.Path, allErrs *fie
 // transport must be enabled. Each enabled OTLP transport must specify an
 // endpoint and have valid buffer sizes and resource references; the debug
 // exporter needs none of those.
-func validateExporters(exp config.CollectorExportersConfig, path *field.Path) field.ErrorList {
+func validateExporters(
+	exp config.CollectorExportersConfig,
+	path *field.Path,
+) field.ErrorList {
 	allErrs := make(field.ErrorList, 0)
 
-	if exp.OTLPHTTPExporter == nil && exp.OTLPGRPCExporter == nil && exp.DebugExporter == nil {
-		allErrs = append(allErrs, field.Required(path, "at least one exporter transport must be enabled"))
+	if exp.OTLPHTTPExporter == nil &&
+		exp.OTLPGRPCExporter == nil &&
+		exp.DebugExporter == nil {
+		allErrs = append(
+			allErrs,
+			field.Required(path, "at least one exporter transport must be enabled"),
+		)
 
 		return allErrs
 	}
 
 	if e := exp.OTLPHTTPExporter; e != nil {
-		allErrs = append(allErrs, validateOTLPExporter(e.Endpoint, e.ReadBufferSize, e.WriteBufferSize, e.Token, e.TLS, path.Child("otlp_http"))...)
+		allErrs = append(
+			allErrs,
+			validateOTLPExporter(
+				e.Endpoint,
+				e.ReadBufferSize,
+				e.WriteBufferSize,
+				e.Token,
+				e.TLS,
+				path.Child("otlp_http"),
+			)...,
+		)
 	}
 	if e := exp.OTLPGRPCExporter; e != nil {
-		allErrs = append(allErrs, validateOTLPExporter(e.Endpoint, e.ReadBufferSize, e.WriteBufferSize, e.Token, e.TLS, path.Child("otlp_grpc"))...)
+		allErrs = append(
+			allErrs,
+			validateOTLPExporter(
+				e.Endpoint,
+				e.ReadBufferSize,
+				e.WriteBufferSize,
+				e.Token,
+				e.TLS,
+				path.Child("otlp_grpc"),
+			)...,
+		)
 	}
 
 	return allErrs
@@ -131,27 +178,85 @@ func validateExporters(exp config.CollectorExportersConfig, path *field.Path) fi
 // validateOTLPExporter validates the common fields of an OTLP (HTTP or gRPC)
 // exporter: a required endpoint, non-negative buffer sizes, and valid token/TLS
 // resource references.
-func validateOTLPExporter(endpoint string, readBufferSize, writeBufferSize int, token *config.ResourceReference, tls *config.TLSConfig, path *field.Path) field.ErrorList {
+func validateOTLPExporter(
+	endpoint string,
+	readBufferSize,
+	writeBufferSize int,
+	token *config.ResourceReference,
+	tls *config.TLSConfig,
+	path *field.Path,
+) field.ErrorList {
 	allErrs := make(field.ErrorList, 0)
 
 	if endpoint == "" {
-		allErrs = append(allErrs, field.Required(path.Child("endpoint"), "no endpoint specified for the exporter"))
+		allErrs = append(
+			allErrs,
+			field.Required(
+				path.Child("endpoint"),
+				"no endpoint specified for the exporter",
+			),
+		)
 	} else if _, err := url.Parse(endpoint); err != nil {
-		allErrs = append(allErrs, field.Invalid(path.Child("endpoint"), endpoint, "invalid URL specified"))
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				path.Child("endpoint"),
+				endpoint,
+				"invalid URL specified",
+			),
+		)
 	}
 
 	if readBufferSize < 0 {
-		allErrs = append(allErrs, field.Invalid(path.Child("read_buffer_size"), readBufferSize, "value cannot be negative"))
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				path.Child("read_buffer_size"),
+				readBufferSize,
+				"value cannot be negative",
+			),
+		)
 	}
 	if writeBufferSize < 0 {
-		allErrs = append(allErrs, field.Invalid(path.Child("write_buffer_size"), writeBufferSize, "value cannot be negative"))
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				path.Child("write_buffer_size"),
+				writeBufferSize,
+				"value cannot be negative",
+			),
+		)
 	}
 
-	allErrs = append(allErrs, validateResourceReference(token, path.Child("token"))...)
+	allErrs = append(
+		allErrs,
+		validateResourceReference(
+			token,
+			path.Child("token"),
+		)...,
+	)
 	if tls != nil {
-		allErrs = append(allErrs, validateResourceReference(tls.CA, path.Child("tls", "ca"))...)
-		allErrs = append(allErrs, validateResourceReference(tls.Cert, path.Child("tls", "cert"))...)
-		allErrs = append(allErrs, validateResourceReference(tls.Key, path.Child("tls", "key"))...)
+		allErrs = append(
+			allErrs,
+			validateResourceReference(
+				tls.CA,
+				path.Child("tls", "ca"),
+			)...,
+		)
+		allErrs = append(
+			allErrs,
+			validateResourceReference(
+				tls.Cert,
+				path.Child("tls", "cert"),
+			)...,
+		)
+		allErrs = append(
+			allErrs,
+			validateResourceReference(
+				tls.Key,
+				path.Child("tls", "key"),
+			)...,
+		)
 	}
 
 	return allErrs
@@ -159,13 +264,20 @@ func validateOTLPExporter(endpoint string, readBufferSize, writeBufferSize int, 
 
 // validateResourceReference ensures a resource reference has a non-empty name
 // and data key. A nil reference is valid (the field is optional).
-func validateResourceReference(ref *config.ResourceReference, path *field.Path) field.ErrorList {
+func validateResourceReference(
+	ref *config.ResourceReference,
+	path *field.Path,
+) field.ErrorList {
 	if ref == nil {
 		return nil
 	}
 	if ref.ResourceRef.Name == "" || ref.ResourceRef.DataKey == "" {
 		return field.ErrorList{
-			field.Invalid(path, fmt.Sprintf("%+v", ref.ResourceRef), "name or dataKey is empty"),
+			field.Invalid(
+				path,
+				fmt.Sprintf("%+v", ref.ResourceRef),
+				"name or dataKey is empty",
+			),
 		}
 	}
 
@@ -179,9 +291,10 @@ func validateResourceReference(ref *config.ResourceReference, path *field.Path) 
 // delegates the filter semantics to the upstream processor, so new upstream
 // validation is inherited on a dependency version bump.
 //
-// The factory base is required: it populates the OTTL function maps the config
-// needs to parse and validate conditions. A zero-value Config would not validate
-// conditions correctly.
+// See the link below for more details about configuration validation logic at
+// filterprocessor processor.
+//
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/e86757b2340ac9765c9dd42b26509550943ef368/processor/filterprocessor/config.go#L411
 func validateTargetFilter(target config.Target, path *field.Path) field.ErrorList {
 	rendered, err := filterrender.FilterProcessorConfig(target)
 	if err != nil {

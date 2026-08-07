@@ -70,7 +70,10 @@ var _ = Describe("Validate", func() {
 
 	It("rejects a duplicated signal", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalLogs, config.SignalLogs}
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalLogs,
+			config.SignalLogs,
+		}
 
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
@@ -88,7 +91,9 @@ var _ = Describe("Validate", func() {
 
 	It("rejects a grpc exporter without an endpoint", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Exporter = config.CollectorExportersConfig{OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{}}
+		cfg.Spec.Targets[0].Exporter = config.CollectorExportersConfig{
+			OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{},
+		}
 
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
@@ -98,7 +103,9 @@ var _ = Describe("Validate", func() {
 	It("accepts a debug exporter without any endpoint", func() {
 		cfg := baseConfig()
 		cfg.Spec.Targets[0].Exporter = config.CollectorExportersConfig{
-			DebugExporter: &config.DebugExporterConfig{Verbosity: config.DebugExporterVerbosityBasic},
+			DebugExporter: &config.DebugExporterConfig{
+				Verbosity: config.DebugExporterVerbosityBasic,
+			},
 		}
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
@@ -116,8 +123,12 @@ var _ = Describe("Validate", func() {
 	It("accepts a target exporting to both HTTP and gRPC", func() {
 		cfg := baseConfig()
 		cfg.Spec.Targets[0].Exporter = config.CollectorExportersConfig{
-			OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{Endpoint: testEndpoint},
-			OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{Endpoint: "https://example.com:4317"},
+			OTLPHTTPExporter: &config.OTLPHTTPExporterConfig{
+				Endpoint: testEndpoint,
+			},
+			OTLPGRPCExporter: &config.OTLPGRPCExporterConfig{
+				Endpoint: "https://example.com:4317",
+			},
 		}
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
@@ -145,16 +156,24 @@ var _ = Describe("Validate", func() {
 
 	It("accepts a metrics filter body on a target serving the metrics signal", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metrics":{"metric":["metric.name == \"foo\""],"datapoint":["value_int == 0"]}}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metrics":{"metric":["metric.name == \"foo\""],"datapoint":["value_int == 0"]}}`,
+		)
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
 
 	It("accepts a logs filter body on a target serving the events signal", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalEvents}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"logs":{"log_record":["true"]}}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalEvents,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"logs":{"log_record":["true"]}}`,
+		)
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
@@ -168,16 +187,25 @@ var _ = Describe("Validate", func() {
 
 	It("accepts a filter body covering multiple signals of the target", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalLogs, config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metrics":{"metric":["metric.name == \"foo\""]},"logs":{"log_record":["true"]}}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalLogs,
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metrics":{"metric":["metric.name == \"foo\""]},"logs":{"log_record":["true"]}}`,
+		)
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
 
 	It("rejects a filter with an invalid OTTL condition", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metrics":{"metric":["this is ~~ not ottl"]}}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metrics":{"metric":["this is ~~ not ottl"]}}`,
+		)
 
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
@@ -186,7 +214,9 @@ var _ = Describe("Validate", func() {
 
 	It("rejects a filter with an unknown severity number", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Filters = filterBody(`{"logs":{"include":{"match_type":"strict","severity_number":{"min":"NOTASEV"}}}}`)
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"logs":{"include":{"match_type":"strict","severity_number":{"min":"NOTASEV"}}}}`,
+		)
 
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
@@ -213,24 +243,36 @@ var _ = Describe("Validate", func() {
 
 	It("accepts basic-style context-inferred conditions", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metric_conditions":["metric.name == \"foo\""]}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metric_conditions":["metric.name == \"foo\""]}`,
+		)
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
 
 	It("accepts advanced-style context-inferred conditions", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metric_conditions":[{"context":"metric","conditions":["metric.name == \"foo\""]}]}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metric_conditions":[{"context":"metric","conditions":["metric.name == \"foo\""]}]}`,
+		)
 
 		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
 
 	It("rejects mixing basic and advanced condition styles", func() {
 		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{config.SignalMetrics}
-		cfg.Spec.Targets[0].Filters = filterBody(`{"metric_conditions":["metric.name == \"a\"",{"context":"metric","conditions":["metric.name == \"b\""]}]}`)
+		cfg.Spec.Targets[0].Signals = []config.SignalType{
+			config.SignalMetrics,
+		}
+		cfg.Spec.Targets[0].Filters = filterBody(
+			`{"metric_conditions":["metric.name == \"a\"",{"context":"metric","conditions":["metric.name == \"b\""]}]}`,
+		)
 
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
