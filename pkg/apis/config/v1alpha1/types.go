@@ -498,5 +498,5 @@ type Target struct {
 	// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
 	//
 	// +k8s:optional
-	Filters runtime.RawExtension `json:"filters,omitempty"`
+	Filters runtime.RawExtension `json:"filters,omitzero"`
 }
