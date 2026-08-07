@@ -61,12 +61,12 @@ import (
 var ErrInvalidActuator = errors.New("invalid actuator")
 
 const (
-	// Name is the name of the actuator
+	// Name is the name of the actuator.
 	Name = "otelcol"
 	// ExtensionType is the type of the extension resources, which the
 	// actuator reconciles.
 	ExtensionType = "otelcol"
-	// FinalizerSuffix is the finalizer suffix used by the actuator
+	// FinalizerSuffix is the finalizer suffix used by the actuator.
 	FinalizerSuffix = "gardener-extension-otelcol"
 
 	// baseResourceName is the base name for resources.
@@ -385,7 +385,10 @@ func New(c client.Client, opts ...Option) (*Actuator, error) {
 	}
 
 	if act.decoder == nil {
-		act.decoder = serializer.NewCodecFactory(c.Scheme(), serializer.EnableStrict).UniversalDecoder()
+		act.decoder = serializer.NewCodecFactory(
+			c.Scheme(),
+			serializer.EnableStrict,
+		).UniversalDecoder()
 	}
 
 	return act, nil
@@ -440,8 +443,6 @@ func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option
 			return errors.New("invalid memory limiter configuration specified")
 		}
 
-		// https://github.com/open-telemetry/opentelemetry-collector/blob/168030d61d7db2a15176f3e52ab4fd1e96012f15/internal/memorylimiter/config.go#L61
-		cfg.MinGCIntervalWhenSoftLimited = 10 * time.Second
 		a.memoryLimiterConfig = cfg
 
 		return cfg.Validate()
@@ -497,7 +498,11 @@ func (a *Actuator) ExtensionClass() extensionsv1alpha1.ExtensionClass {
 // Reconcile reconciles the [extensionsv1alpha1.Extension] resource by taking
 // care of any resources managed by the [Actuator]. This method implements the
 // [extension.Actuator] interface.
-func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Reconcile(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	otelcolFeature, ok := a.gardenletFeatureGates[gardenerfeatures.OpenTelemetryCollector]
 	if !ok || !otelcolFeature {
 		logger.Info("gardenlet feature gate OpenTelemetryCollector is either missing or disabled")
@@ -526,7 +531,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return nil
 	}
 
-	// Parse and validate the provider config
+	// Parse and validate the provider config.
 	if ex.Spec.ProviderConfig == nil {
 		return errors.New("no provider config specified")
 	}
@@ -540,34 +545,49 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	// Generate CA and server certificate for Target Allocator
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       secretNameCACertificate,
-		CommonName: Name,
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
+	// Generate CA and server certificate for Target Allocator.
+	if _, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:       secretNameCACertificate,
+			CommonName: Name,
+			CertType:   secretsutils.CACert,
+			Validity:   ptr.To(30 * 24 * time.Hour),
+		},
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+		secretsmanager.IgnoreOldSecretsAfter(24*time.Hour),
+	); err != nil {
 		return fmt.Errorf("failed generating CA certificate secret: %w", err)
 	}
 	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
 
-	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameServerCertificate,
-		CommonName:                  targetAllocatorHTTPSServiceName,
-		DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
-		CertType:                    secretsutils.ServerCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(secretNameCACertificate), secretsmanager.Rotate(secretsmanager.InPlace))
+	serverSecret, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        secretNameServerCertificate,
+			CommonName:                  targetAllocatorHTTPSServiceName,
+			DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
+			CertType:                    secretsutils.ServerCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(secretNameCACertificate),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+	)
 	if err != nil {
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
 
-	clientSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameClientCertificate,
-		CommonName:                  secretNameClientCertificate,
-		CertType:                    secretsutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(secretNameCACertificate), secretsmanager.Rotate(secretsmanager.InPlace))
+	clientSecret, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        secretNameClientCertificate,
+			CommonName:                  secretNameClientCertificate,
+			CertType:                    secretsutils.ClientCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(secretNameCACertificate),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+	)
 	if err != nil {
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
@@ -620,7 +640,6 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 			collectorImage,
 		),
 	)
-
 	if err != nil {
 		return err
 	}
@@ -639,7 +658,15 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName, Name, false, shootData); err != nil {
+	if err := managedresources.CreateForShoot(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+		Name,
+		false,
+		shootData,
+	); err != nil {
 		return fmt.Errorf("failed creating shoot managed resource: %w", err)
 	}
 
