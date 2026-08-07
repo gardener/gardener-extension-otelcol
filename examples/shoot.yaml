@@ -74,7 +74,7 @@ spec:
                 otlp_grpc:
                   endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
                   token:
-                    resourceRef
+                    resourceRef:
                       name: otelcol-bearer-token
                       dataKey: token
                   tls:
