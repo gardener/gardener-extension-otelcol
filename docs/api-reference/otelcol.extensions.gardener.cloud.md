@@ -25,8 +25,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `targets` _[Target](#target) array_ | Targets is the list of exporter destinations. Each target pairs a<br />self-contained exporter with the signals it receives and its own filter<br />rules. Each (target, signal) pair becomes one collector service pipeline. |  | Optional: \{\} <br /> |
-| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector's internal logs. |  | Optional: \{\} <br /> |
+| `targets` _[Target](#target) array_ | Targets is a list of collector destinations. Each target consists of a<br />self-contained exporter, the signals it receives, and its own filter rules. |  | Optional: \{\} <br /> |
+| `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
 
 
@@ -34,17 +34,7 @@ _Appears in:_
 
 
 
-CollectorExportersConfig groups the per-transport exporter settings of a
-target. A target may enable several transports at once (e.g. OTLP HTTP and
-OTLP gRPC), in which case each of the target's signal pipelines fans out to
-all of them. A nil field means that transport is not enabled.
-
-See [OTLP HTTP Exporter], [OTLP gRPC Exporter] and [Debug Exporter] for more
-details.
-
-[OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
-[OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-[Debug Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
+CollectorExportersConfig provides the OTLP exporter settings.
 
 
 
@@ -53,9 +43,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. If nil, the OTLP<br />gRPC exporter is not enabled. |  | Optional: \{\} <br /> |
-| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | OTLPHTTPExporter provides the OTLP HTTP Exporter settings. If nil, the OTLP<br />HTTP exporter is not enabled. |  | Optional: \{\} <br /> |
-| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. If nil, the<br />debug exporter is not enabled. The debug exporter writes telemetry to the<br />collector's own logs instead of sending it to a remote endpoint. |  | Optional: \{\} <br /> |
+| `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  | Optional: \{\} <br /> |
+| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | OTLPHTTPExporter provides the OTLP HTTP Exporter settings. |  | Optional: \{\} <br /> |
+| `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  | Optional: \{\} <br /> |
 
 
 #### CollectorLogsConfig
@@ -394,10 +384,7 @@ _Appears in:_
 
 
 
-Target pairs a self-contained exporter with the signals it receives and an
-optional filter applied to those signals. Each (target, signal) pair produces
-one collector service pipeline, so a target can fan out several signals to one
-destination, each independently filtered.
+Target consists of exporter and filter configurations for signals.
 
 
 
@@ -406,8 +393,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporter is the exporter this target sends to. It enables one or more<br />transports; set its DebugExporter field to write to the collector's own logs. |  | Optional: \{\} <br /> |
-| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals sent to this target's exporter. Valid<br />values are "logs", "events" and "metrics". A signal is enabled iff at<br />least one target lists it. |  | Required: \{\} <br /> |
-| `filters` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#rawextension-runtime-pkg)_ | Filters is the opaque OTel filterprocessor configuration applied to this<br />target's pipelines. It is carried verbatim and validated against the<br />upstream filterprocessor.Config rather than mirrored by this API. The same<br />configuration is wired into every signal the target serves; the processor<br />only acts on the sections relevant to each pipeline's signal.<br />See [Filter Processor] for more details.<br />[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor |  | Optional: \{\} <br /> |
+| `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Optional: \{\} <br /> |
+| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled. |  | Optional: \{\} <br /> |
+| `filters` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#rawextension-runtime-pkg)_ | Filters mirrors the filterprocessor configuration.<br />See [Filter Processor] for more details.<br />[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor |  | Optional: \{\} <br /> |
 
 
