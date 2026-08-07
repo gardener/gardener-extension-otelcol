@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -577,6 +576,7 @@ func (a *Actuator) Reconcile(
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
 
+	// Generate client certificate for Collector.
 	clientSecret, err := secretsManager.Generate(
 		ctx,
 		&secretsutils.CertificateSecretConfig{
@@ -682,7 +682,11 @@ func (a *Actuator) Reconcile(
 
 // Delete deletes any resources managed by the [Actuator]. This method
 // implements the [extension.Actuator] interface.
-func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Delete(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	secretsManager, err := a.newSecretsManager(ctx, logger, ex.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed creating a new secrets manager: %w", err)
@@ -694,25 +698,56 @@ func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extension
 		return fmt.Errorf("failed cleaning up secrets managed by secrets manager: %w", err)
 	}
 
-	if err := client.IgnoreNotFound(managedresources.DeleteForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName)); err != nil {
+	if err := client.IgnoreNotFound(
+		managedresources.DeleteForShoot(
+			ctx,
+			a.client,
+			ex.Namespace,
+			shootManagedResourceName,
+		),
+	); err != nil {
 		return fmt.Errorf("failed deleting shoot managed resource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilDeleted(ctx, a.client, ex.Namespace, shootManagedResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+	); err != nil {
 		return fmt.Errorf("failed waiting for shoot managed resource to be deleted: %w", err)
 	}
 
-	if err := client.IgnoreNotFound(a.client.Delete(ctx, gardenerutils.NewShootAccessSecret(shootAccessSecretName, ex.Namespace).Secret)); err != nil {
+	if err := client.IgnoreNotFound(
+		a.client.Delete(
+			ctx,
+			gardenerutils.NewShootAccessSecret(
+				shootAccessSecretName,
+				ex.Namespace,
+			).Secret,
+		),
+	); err != nil {
 		return fmt.Errorf("failed deleting shoot access secret: %w", err)
 	}
 
-	return client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, a.client, ex.Namespace, managedResourceName))
+	return client.IgnoreNotFound(
+		managedresources.DeleteForSeed(
+			ctx,
+			a.client,
+			ex.Namespace,
+			managedResourceName,
+		),
+	)
 }
 
 // ForceDelete signals the [Actuator] to delete any resources managed by it,
 // because of a force-delete event of the shoot cluster. This method implements
 // the [extension.Actuator] interface.
-func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) ForceDelete(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	logger.Info("shoot has been force-deleted, deleting resources managed by extension")
 
 	return a.Delete(ctx, logger, ex)
@@ -720,7 +755,11 @@ func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *exte
 
 // Restore restores the resources managed by the extension [Actuator]. This
 // method implements the [extension.Actuator] interface.
-func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Restore(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	return a.Reconcile(ctx, logger, ex)
 }
 
@@ -732,15 +771,29 @@ func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensio
 // target seed can pick them up after migration. SetKeepObjects prevents the
 // ManagedResource controller from deleting them when the ManagedResource is
 // removed from the old seed.
-func (a *Actuator) Migrate(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	if err := managedresources.SetKeepObjects(ctx, a.client, ex.Namespace, shootManagedResourceName, true); err != nil {
+func (a *Actuator) Migrate(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
+	if err := managedresources.SetKeepObjects(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+		true,
+	); err != nil {
 		return fmt.Errorf("failed setting keep-objects on shoot managed resource: %w", err)
 	}
 
 	return a.Delete(ctx, logger, ex)
 }
 
-func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, namespace string) (secretsmanager.Interface, error) {
+func (a *Actuator) newSecretsManager(
+	ctx context.Context,
+	log logr.Logger,
+	namespace string,
+) (secretsmanager.Interface, error) {
 	return secretsmanager.New(
 		ctx,
 		log,
@@ -768,14 +821,24 @@ func (a *Actuator) getCommonLabels() map[string]string {
 // Policies.
 func (a *Actuator) getNetworkLabels() map[string]string {
 	// The `networking.resources.gardener.cloud/to-all-scrape-targets' label
-	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets
+	toAllScrapeTargetsLabel := fmt.Sprintf(
+		"%sto-%s",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+		v1beta1constants.LabelNetworkPolicyScrapeTargets,
+	)
 
+	taNetworkLabel := fmt.Sprintf(
+		"%sto-%s-tcp-%d",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+		targetAllocatorHTTPSServiceName,
+		targetAllocatorHTTPSPort,
+	)
 	items := map[string]string{
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + targetAllocatorHTTPSServiceName + "-tcp-" + strconv.Itoa(targetAllocatorHTTPSPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		taNetworkLabel:          v1beta1constants.LabelNetworkPolicyAllowed,
 		toAllScrapeTargetsLabel: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
@@ -785,11 +848,16 @@ func (a *Actuator) getNetworkLabels() map[string]string {
 // getAnnotations returns the common set of annotations for the Collector and
 // Target Allocator resources.
 func (a *Actuator) getAnnotations() map[string]string {
-	// The `networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports' annotation
-	fromAllScrapeTargetsAnnotation := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "from-all-scrape-targets-allowed-ports"
-
+	fromAllScrapeTargetsAnnotation := fmt.Sprintf(
+		"%sfrom-all-scrape-targets-allowed-ports",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+	)
 	items := map[string]string{
-		fromAllScrapeTargetsAnnotation: fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, otelCollectorMetricsPort, otelCollectorGRPCReceiverPort),
+		fromAllScrapeTargetsAnnotation: fmt.Sprintf(
+			`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`,
+			otelCollectorMetricsPort,
+			otelCollectorGRPCReceiverPort,
+		),
 	}
 
 	return items
@@ -797,7 +865,9 @@ func (a *Actuator) getAnnotations() map[string]string {
 
 // getTargetAllocatorServiceAccount returns the [corev1.ServiceAccount] for the
 // Target Allocator.
-func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.ServiceAccount {
+func (a *Actuator) getTargetAllocatorServiceAccount(
+	namespace string,
+) *corev1.ServiceAccount {
 	obj := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorServiceAccountName,
@@ -812,7 +882,9 @@ func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.Se
 
 // getTargetAllocatorHTTPSService returns the [corev1.Service] for the
 // HTTPS communication of the Target Allocator.
-func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Service {
+func (a *Actuator) getTargetAllocatorHTTPSService(
+	namespace string,
+) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorHTTPSServiceName,
@@ -835,7 +907,9 @@ func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Serv
 
 // getTargetAllocatorConfigMap returns the [corev1.ConfigMap] for the Target
 // Allocator.
-func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.ConfigMap, error) {
+func (a *Actuator) getTargetAllocatorConfigMap(
+	namespace string,
+) (*corev1.ConfigMap, error) {
 	taConfig := map[string]any{
 		"allocation_strategy":              otelv1alpha1.OpenTelemetryTargetAllocatorAllocationStrategyConsistentHashing,
 		"collector_not_ready_grace_period": 30 * time.Second,
@@ -915,7 +989,9 @@ func (a *Actuator) getTargetAllocatorRole(namespace string) *rbacv1.Role {
 
 // getTargetAllocatorRoleBinding returns the [rbacv1.RoleBinding] for the Target
 // Allocator.
-func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleBinding {
+func (a *Actuator) getTargetAllocatorRoleBinding(
+	namespace string,
+) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorRoleName,
@@ -967,7 +1043,12 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 // - Deployment for the TargetAllocator (getTargetAllocatorDeployment)
 // - ConfigMap for the TargetAllocator (getTargetAllocatorConfigMap)
 // - HTTPS Service for the Target Allocator (getTargetAllocatorHTTPSService)
-func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serverSecret *corev1.Secret, image *imagevectorutils.Image) *appsv1.Deployment {
+func (a *Actuator) getTargetAllocatorDeployment(
+	namespace string,
+	caSecret,
+	serverSecret *corev1.Secret,
+	image *imagevectorutils.Image,
+) *appsv1.Deployment {
 	const (
 		volumeNameCACertificate      = "ca-cert"
 		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
@@ -1006,6 +1087,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 				Spec: corev1.PodSpec{
 					PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
 					ServiceAccountName: targetAllocatorServiceAccountName,
+					// 65532 is the UID of the nonroot user in distroless images.
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
@@ -1018,10 +1100,25 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 							Image: image.String(),
 							Args: []string{
 								"--enable-https-server=true",
-								fmt.Sprintf("--config-file=%s/targetallocator.yaml", volumeMountTargetAllocatorConfig),
-								fmt.Sprintf("--https-ca-file=%s/%s", volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
-								fmt.Sprintf("--https-tls-cert-file=%s/%s", volumeMountPathServerCertificate, secretsutils.DataKeyCertificate),
-								fmt.Sprintf("--https-tls-key-file=%s/%s", volumeMountPathServerCertificate, secretsutils.DataKeyPrivateKey),
+								fmt.Sprintf(
+									"--config-file=%s/targetallocator.yaml",
+									volumeMountTargetAllocatorConfig,
+								),
+								fmt.Sprintf(
+									"--https-ca-file=%s/%s",
+									volumeMountPathCACertificate,
+									secretsutils.DataKeyCertificateBundle,
+								),
+								fmt.Sprintf(
+									"--https-tls-cert-file=%s/%s",
+									volumeMountPathServerCertificate,
+									secretsutils.DataKeyCertificate,
+								),
+								fmt.Sprintf(
+									"--https-tls-key-file=%s/%s",
+									volumeMountPathServerCertificate,
+									secretsutils.DataKeyPrivateKey,
+								),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -1030,9 +1127,21 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
-								{Name: volumeNameServerCertificate, MountPath: volumeMountPathServerCertificate, ReadOnly: true},
-								{Name: volumeNameTargetAllocatorConfig, MountPath: volumeMountTargetAllocatorConfig, ReadOnly: true},
+								{
+									Name:      volumeNameCACertificate,
+									MountPath: volumeMountPathCACertificate,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameServerCertificate,
+									MountPath: volumeMountPathServerCertificate,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameTargetAllocatorConfig,
+									MountPath: volumeMountTargetAllocatorConfig,
+									ReadOnly:  true,
+								},
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: new(false),
@@ -1040,9 +1149,32 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 						},
 					},
 					Volumes: []corev1.Volume{
-						{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
-						{Name: volumeNameServerCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: serverSecret.Name}}},
-						{Name: volumeNameTargetAllocatorConfig, VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: targetAllocatorConfigMapName}}}},
+						{
+							Name: volumeNameCACertificate,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: caSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameServerCertificate,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: serverSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameTargetAllocatorConfig,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: targetAllocatorConfigMapName,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1052,7 +1184,9 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 
 // getOtelCollectorServiceAccount returns the [corev1.ServiceAccount] for the
 // the OTel Collector.
-func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.ServiceAccount {
+func (a *Actuator) getOtelCollectorServiceAccount(
+	namespace string,
+) *corev1.ServiceAccount {
 	obj := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      otelCollectorServiceAccountName,
@@ -1066,7 +1200,9 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 }
 
 // getDebugExporterConfig returns the OTel settings for the debug exporter.
-func (a *Actuator) getDebugExporterConfig(cfg *config.DebugExporterConfig) map[string]any {
+func (a *Actuator) getDebugExporterConfig(
+	cfg *config.DebugExporterConfig,
+) map[string]any {
 	// See the link below for more details about each config setting for the
 	// debug exporter.
 	//
@@ -1101,7 +1237,7 @@ func (a *Actuator) getOTLPHTTPExporterConfig(
 	exporter["compression"] = string(cfg.Compression)
 	exporter["encoding"] = string(cfg.Encoding)
 
-	// Retry on Failure settings
+	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
 			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
@@ -1112,12 +1248,15 @@ func (a *Actuator) getOTLPHTTPExporterConfig(
 		}
 	}
 
-	// TLS settings
+	// TLS settings.
 	if tls := cfg.TLS; tls != nil {
-		exporter["tls"] = a.getExporterTLSConfig(tls, signalVolumeMountPathTLS(sig, i, transportHTTP))
+		exporter["tls"] = a.getExporterTLSConfig(
+			tls,
+			signalVolumeMountPathTLS(sig, i, transportHTTP),
+		)
 	}
 
-	// Bearer Token Authentication settings
+	// Bearer Token Authentication settings.
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
 			"authenticator": signalBearerTokenAuthName(sig, i, transportHTTP),
@@ -1125,28 +1264,6 @@ func (a *Actuator) getOTLPHTTPExporterConfig(
 	}
 
 	return exporter
-}
-
-// getExporterTLSConfig renders the TLS block for an exporter, resolving the
-// CA/cert/key file paths against the given per-signal mount path.
-func (a *Actuator) getExporterTLSConfig(tls *config.TLSConfig, mountPath string) map[string]any {
-	tlsConfig := map[string]any{}
-	if tls.InsecureSkipVerify != nil {
-		tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-	}
-	if tls.CA != nil {
-		tlsConfig["ca_file"] = filepath.Join(mountPath, tls.CA.ResourceRef.DataKey)
-	}
-	if tls.Cert != nil {
-		tlsConfig["cert_file"] = filepath.Join(mountPath, tls.Cert.ResourceRef.DataKey)
-	}
-	if tls.Key != nil {
-		tlsConfig["key_file"] = filepath.Join(mountPath, tls.Key.ResourceRef.DataKey)
-	}
-
-	tlsConfig["reload_interval"] = tls.ReloadInterval.String()
-
-	return tlsConfig
 }
 
 // getOTLPGRPCExporterConfig returns the OTel settings for the OTLP gRPC
@@ -1168,7 +1285,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(
 		"compression":       string(cfg.Compression),
 	}
 
-	// Retry on Failure settings
+	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
 			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
@@ -1179,12 +1296,15 @@ func (a *Actuator) getOTLPGRPCExporterConfig(
 		}
 	}
 
-	// TLS settings
+	// TLS settings.
 	if tls := cfg.TLS; tls != nil {
-		exporter["tls"] = a.getExporterTLSConfig(tls, signalVolumeMountPathTLS(sig, i, transportGRPC))
+		exporter["tls"] = a.getExporterTLSConfig(
+			tls,
+			signalVolumeMountPathTLS(sig, i, transportGRPC),
+		)
 	}
 
-	// Bearer Token Authentication settings
+	// Bearer Token Authentication settings.
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
 			"authenticator": signalBearerTokenAuthName(sig, i, transportGRPC),
@@ -1194,12 +1314,42 @@ func (a *Actuator) getOTLPGRPCExporterConfig(
 	return exporter
 }
 
+// getExporterTLSConfig renders the TLS block for an exporter, resolving the
+// CA/cert/key file paths against the given per-signal mount path.
+func (a *Actuator) getExporterTLSConfig(
+	tls *config.TLSConfig,
+	mountPath string,
+) map[string]any {
+	tlsConfig := map[string]any{}
+	if tls.InsecureSkipVerify != nil {
+		tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+	}
+	if tls.CA != nil {
+		tlsConfig["ca_file"] = filepath.Join(
+			mountPath,
+			tls.CA.ResourceRef.DataKey,
+		)
+	}
+	if tls.Cert != nil {
+		tlsConfig["cert_file"] = filepath.Join(
+			mountPath,
+			tls.Cert.ResourceRef.DataKey,
+		)
+	}
+	if tls.Key != nil {
+		tlsConfig["key_file"] = filepath.Join(
+			mountPath,
+			tls.Key.ResourceRef.DataKey,
+		)
+	}
+
+	tlsConfig["reload_interval"] = tls.ReloadInterval.String()
+
+	return tlsConfig
+}
+
 // getOtelExporters returns the OpenTelemetry exporters based on the given
-// [config.CollectorConfig] spec, along with the exporter component names keyed
-// by signal and target index so pipelines can reference them. A target may
-// enable several transports at once, so each (target, signal) pair yields one
-// exporter component per enabled transport and its pipeline fans out to all of
-// them.
+// [config.CollectorConfig] spec and a map containing exporter names per signal.
 func (a *Actuator) getOtelExporters(
 	cfg config.CollectorConfig,
 ) (map[string]any, map[config.SignalType]map[int][]string) {
@@ -1241,7 +1391,9 @@ func (a *Actuator) getOtelExporters(
 // gardener.project.name and gardener.shoot.name respectively.
 // For namespaces that do not follow the pattern, projectName and shootName are
 // returned as empty strings.
-func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, shootName string) {
+func parseShootNamespaceAttributes(
+	namespace string,
+) (clusterName, projectName, shootName string) {
 	clusterName = namespace
 	parts := strings.SplitN(namespace, "--", 3)
 	if len(parts) == 3 {
@@ -1256,11 +1408,17 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 // cfg. Each target produces one pipeline per signal it serves, wired to that
 // target's own exporter and filter processor instances.
 //
-// The processor chain is: resource, memory_limiter, (transform/events for the
-// events signal), the target's own filter processors for that signal, and
-// finally batch. The filter processors are inserted after memory_limiter and
-// before batch so unwanted telemetry is dropped before batching.
-func buildPipelines(cfg config.CollectorConfig, exporterNames map[config.SignalType]map[int][]string) map[string]*otelv1beta1.Pipeline {
+// The processor chain is:
+//   - resource
+//   - memory_limiter
+//   - transform/events (for the "events" signal)
+//   - target's own filter processors for that signal (filter processors are inserted
+//     after memory_limiter and before batch so unwanted telemetry is dropped before batching)
+//   - batch
+func buildPipelines(
+	cfg config.CollectorConfig,
+	exporterNames map[config.SignalType]map[int][]string,
+) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
 	for i, target := range cfg.Spec.Targets {
