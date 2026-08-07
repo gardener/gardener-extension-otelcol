@@ -45,7 +45,7 @@ cluster](https://gardener.cloud/docs/glossary/_index#gardener-glossary) by
 updating the `.spec.extensions` of your shoot manifest.
 
 The following example shoot manifest snippet enables the extension and
-configures the OpenTelemetry Collector to emit the signal for the shoot
+configures the OpenTelemetry Collector to emit the signals for the shoot
 control-plane components via the
 [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter).
 The configuration is exporter-oriented: `spec.targets` is a list of exporter
