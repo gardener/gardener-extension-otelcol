@@ -37,8 +37,8 @@ func filterTarget(body string, signals ...config.SignalType) config.Target {
 // exporterNamesFor builds the exporter-name map keyed by signal and target
 // index for the given (signal -> target indices) mapping, using the default
 // HTTP transport.
-func exporterNamesFor(m map[config.SignalType][]int) map[config.SignalType]map[int][]string {
-	out := map[config.SignalType]map[int][]string{}
+func exporterNamesFor(m map[config.SignalType][]int) exporterNamesBySignal {
+	out := exporterNamesBySignal{}
 	for sig, idxs := range m {
 		out[sig] = map[int][]string{}
 		for _, i := range idxs {
@@ -61,7 +61,11 @@ var _ = Describe("filter processor", func() {
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Targets: []config.Target{
-						target([]config.SignalType{config.SignalMetrics, config.SignalLogs, config.SignalEvents}),
+						target([]config.SignalType{
+							config.SignalMetrics,
+							config.SignalLogs,
+							config.SignalEvents,
+						}),
 					},
 				},
 			}

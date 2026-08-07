@@ -59,14 +59,19 @@ func Validate(cfg config.CollectorConfig) error {
 }
 
 // validateSignals validates a target's signal list: every entry must be a known
-// signal type and must not be duplicated. It returns the set of valid signals
-// found. The map does double duty: an entry only exists for known signals, and
-// its value counts how many times we have already seen that signal.
+// signal type and must not be duplicated. An empty list is valid and means all
+// signals are enabled (see [config.Target.EffectiveSignals]). It returns the set
+// of enabled signals. The map does double duty: an entry only exists for known
+// signals, and its value counts how many times we have already seen that signal.
 func validateSignals(signals []config.SignalType, path *field.Path, allErrs *field.ErrorList) map[config.SignalType]bool {
 	if len(signals) == 0 {
-		*allErrs = append(*allErrs, field.Required(path, "a target must serve at least one signal"))
+		// An empty list enables all signals.
+		enabled := map[config.SignalType]bool{}
+		for _, s := range config.AllSignals() {
+			enabled[s] = true
+		}
 
-		return nil
+		return enabled
 	}
 
 	seenSignals := map[config.SignalType]int{

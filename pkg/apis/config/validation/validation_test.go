@@ -52,13 +52,11 @@ var _ = Describe("Validate", func() {
 		Expect(err.Error()).To(ContainSubstring("at least one target must be defined"))
 	})
 
-	It("rejects a target that serves no signal", func() {
+	It("accepts a target with no signals set, enabling all signals", func() {
 		cfg := baseConfig()
 		cfg.Spec.Targets[0].Signals = nil
 
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].signals"))
+		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
 	})
 
 	It("rejects an unknown signal", func() {

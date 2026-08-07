@@ -300,6 +300,17 @@ func AllSignals() []SignalType {
 	return []SignalType{SignalMetrics, SignalLogs, SignalEvents}
 }
 
+// EffectiveSignals returns the signals the target serves. An explicitly
+// configured signal list is returned as-is; an empty list means all signals
+// are enabled and expands to [AllSignals].
+func (t Target) EffectiveSignals() []SignalType {
+	if len(t.Signals) == 0 {
+		return AllSignals()
+	}
+
+	return t.Signals
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CollectorConfig provides the OpenTelemetry Collector API configuration.

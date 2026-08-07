@@ -79,6 +79,16 @@ var _ = Describe("signal selection", func() {
 				signalPipelineName(config.SignalEvents, 0),
 			},
 		),
+		Entry("a target with no signals set defaults to all signals",
+			config.CollectorConfig{Spec: config.CollectorConfigSpec{
+				Targets: []config.Target{{Signals: nil}},
+			}},
+			[]string{
+				signalPipelineName(config.SignalMetrics, 0),
+				signalPipelineName(config.SignalLogs, 0),
+				signalPipelineName(config.SignalEvents, 0),
+			},
+		),
 	)
 
 	It("wires the served receivers and per-target exporters into each pipeline", func() {

@@ -1361,7 +1361,7 @@ func (a *Actuator) getOtelExporters(
 	exporterNames := make(exporterNamesBySignal)
 
 	for i, target := range cfg.Spec.Targets {
-		for _, sig := range target.Signals {
+		for _, sig := range target.EffectiveSignals() {
 			if exporterNames[sig] == nil {
 				exporterNames[sig] = make(map[int][]string)
 			}
@@ -1426,7 +1426,7 @@ func buildPipelines(
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
 	for i, target := range cfg.Spec.Targets {
-		for _, sig := range target.Signals {
+		for _, sig := range target.EffectiveSignals() {
 			processors := []string{
 				resourceProcessorName,
 				memoryLimiterProcessorName,
@@ -1689,7 +1689,7 @@ func (a *Actuator) getOtelCollector(
 		// processor only acts on the sections relevant to each pipeline's signal.
 		filterConfig, _ := filterrender.FilterProcessorConfig(target)
 
-		for _, sig := range target.Signals {
+		for _, sig := range target.EffectiveSignals() {
 			if len(filterConfig) > 0 {
 				obj.Spec.Config.Processors.Object[signalFilterName(sig, i)] = filterConfig
 			}
