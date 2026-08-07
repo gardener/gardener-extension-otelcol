@@ -1427,7 +1427,10 @@ func buildPipelines(
 
 	for i, target := range cfg.Spec.Targets {
 		for _, sig := range target.Signals {
-			processors := []string{resourceProcessorName, memoryLimiterProcessorName}
+			processors := []string{
+				resourceProcessorName,
+				memoryLimiterProcessorName,
+			}
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
 			}
@@ -1472,7 +1475,7 @@ func (a *Actuator) getOtelCollector(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
 	)
-
+	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      otelCollectorName,
@@ -1482,7 +1485,7 @@ func (a *Actuator) getOtelCollector(
 				a.getAnnotations(),
 				map[string]string{
 					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "pod-label-selector-namespace-alias": "all-shoots",
-					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`,
+					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                annotationNetworkPolicyNamespaceSelector,
 				}),
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -1501,14 +1504,44 @@ func (a *Actuator) getOtelCollector(
 				Image:    image.String(),
 				Replicas: new(otelCollectorReplicas),
 				VolumeMounts: []corev1.VolumeMount{
-					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
-					{Name: volumeNameClientCertificate, MountPath: volumeMountPathClientCertificate, ReadOnly: true},
-					{Name: volumeNameShootKubeconfig, MountPath: gardenerutils.VolumeMountPathGenericKubeconfig, ReadOnly: true},
+					{
+						Name:      volumeNameCACertificate,
+						MountPath: volumeMountPathCACertificate,
+						ReadOnly:  true,
+					},
+					{
+						Name:      volumeNameClientCertificate,
+						MountPath: volumeMountPathClientCertificate,
+						ReadOnly:  true,
+					},
+					{
+						Name:      volumeNameShootKubeconfig,
+						MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,
+						ReadOnly:  true,
+					},
 				},
 				Volumes: []corev1.Volume{
-					{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
-					{Name: volumeNameClientCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: clientSecret.Name}}},
-					gardenerutils.GenerateGenericKubeconfigVolume(shootKubeconfigSecretName, accessSecretName, volumeNameShootKubeconfig),
+					{
+						Name: volumeNameCACertificate,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: caSecret.Name,
+							},
+						},
+					},
+					{
+						Name: volumeNameClientCertificate,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: clientSecret.Name,
+							},
+						},
+					},
+					gardenerutils.GenerateGenericKubeconfigVolume(
+						shootKubeconfigSecretName,
+						accessSecretName,
+						volumeNameShootKubeconfig,
+					),
 				},
 				Env: []corev1.EnvVar{{
 					Name:  "KUBECONFIG",
@@ -1544,9 +1577,18 @@ func (a *Actuator) getOtelCollector(
 								configKeyEndpoint: "https://" + targetAllocatorHTTPSServiceName,
 								"interval":        "30s",
 								"tls": map[string]any{
-									"ca_file":   filepath.Join(volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
-									"cert_file": filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyCertificate),
-									"key_file":  filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyPrivateKey),
+									"ca_file": filepath.Join(
+										volumeMountPathCACertificate,
+										secretsutils.DataKeyCertificateBundle,
+									),
+									"cert_file": filepath.Join(
+										volumeMountPathClientCertificate,
+										secretsutils.DataKeyCertificate,
+									),
+									"key_file": filepath.Join(
+										volumeMountPathClientCertificate,
+										secretsutils.DataKeyPrivateKey,
+									),
 								},
 							},
 							"config": map[string]any{
@@ -1654,13 +1696,31 @@ func (a *Actuator) getOtelCollector(
 
 			// Configure TLS and bearer token volumes per enabled transport. The
 			// debug exporter has no endpoint, TLS or token, so it is skipped.
-			// See the bearertokenauth extension for more details:
+			//
+			// See the link below for more details about bearertokenauth extension.
+			//
 			// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
 			if e := target.Exporter.OTLPHTTPExporter; e != nil {
-				a.configureExporterVolumes(obj, e.TLS, e.Token, sig, i, transportHTTP, resources)
+				a.configureExporterVolumes(
+					obj,
+					e.TLS,
+					e.Token,
+					sig,
+					i,
+					transportHTTP,
+					resources,
+				)
 			}
 			if e := target.Exporter.OTLPGRPCExporter; e != nil {
-				a.configureExporterVolumes(obj, e.TLS, e.Token, sig, i, transportGRPC, resources)
+				a.configureExporterVolumes(
+					obj,
+					e.TLS,
+					e.Token,
+					sig,
+					i,
+					transportGRPC,
+					resources,
+				)
 			}
 		}
 	}
@@ -1717,7 +1777,9 @@ func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
 // getEventsClusterRoleBinding returns the [rbacv1.ClusterRoleBinding] that
 // binds the events ClusterRole to the OTel Collector's service account in the
 // shoot cluster's kube-system namespace.
-func (a *Actuator) getEventsClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (a *Actuator) getEventsClusterRoleBinding(
+	serviceAccountName string,
+) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: otelCollectorName,
@@ -1735,10 +1797,14 @@ func (a *Actuator) getEventsClusterRoleBinding(serviceAccountName string) *rbacv
 	}
 }
 
-func secretNameForResource(resourceName string, resources []gardencorev1beta1.NamedResourceReference) string {
+func secretNameForResource(
+	resourceName string,
+	resources []gardencorev1beta1.NamedResourceReference,
+) string {
 	for _, r := range resources {
 		if r.Name == resourceName &&
-			r.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && r.ResourceRef.Kind == "Secret" {
+			r.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			r.ResourceRef.Kind == "Secret" {
 			return v1beta1constants.ReferencedResourcesPrefix + r.ResourceRef.Name
 		}
 	}
@@ -1774,7 +1840,12 @@ func (a *Actuator) configureVolumeForTLS(
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: secretNameForResource(resourceRef.Name, resources),
 					},
-					Items: []corev1.KeyToPath{{Key: resourceRef.DataKey, Path: resourceRef.DataKey}},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  resourceRef.DataKey,
+							Path: resourceRef.DataKey,
+						},
+					},
 				},
 			},
 		)
@@ -1827,7 +1898,10 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 		"filename": filepath.Join(tokenBasePath, ref.ResourceRef.DataKey),
 	}
 
-	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, authExtensionName)
+	obj.Spec.Config.Service.Extensions = append(
+		obj.Spec.Config.Service.Extensions,
+		authExtensionName,
+	)
 
 	obj.Spec.Volumes = append(
 		obj.Spec.Volumes,
@@ -1835,7 +1909,10 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretNameForResource(ref.ResourceRef.Name, resources),
+					SecretName: secretNameForResource(
+						ref.ResourceRef.Name,
+						resources,
+					),
 				},
 			},
 		},
