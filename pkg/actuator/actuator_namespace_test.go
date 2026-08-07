@@ -65,18 +65,18 @@ var _ = Describe("signal selection", func() {
 		),
 		Entry("metrics only",
 			configWithSignals(config.SignalMetrics),
-			[]string{signalPipelineName(config.SignalMetrics, 0)},
+			[]string{"metrics/0"},
 		),
 		Entry("logs and events only",
 			configWithSignals(config.SignalLogs, config.SignalEvents),
-			[]string{signalPipelineName(config.SignalLogs, 0), signalPipelineName(config.SignalEvents, 0)},
+			[]string{"logs/0", "logs/events/0"},
 		),
 		Entry("all signals",
 			configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents),
 			[]string{
-				signalPipelineName(config.SignalMetrics, 0),
-				signalPipelineName(config.SignalLogs, 0),
-				signalPipelineName(config.SignalEvents, 0),
+				"metrics/0",
+				"logs/0",
+				"logs/events/0",
 			},
 		),
 		Entry("a target with no signals set defaults to all signals",
@@ -84,9 +84,9 @@ var _ = Describe("signal selection", func() {
 				Targets: []config.Target{{Signals: nil}},
 			}},
 			[]string{
-				signalPipelineName(config.SignalMetrics, 0),
-				signalPipelineName(config.SignalLogs, 0),
-				signalPipelineName(config.SignalEvents, 0),
+				"metrics/0",
+				"logs/0",
+				"logs/events/0",
 			},
 		),
 	)
@@ -101,12 +101,12 @@ var _ = Describe("signal selection", func() {
 
 		pipelines := buildPipelines(cfg, exporterNames)
 
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).To(Equal([]string{otlpReceiverName}))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{eventsReceiverName}))
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{prometheusReceiverName}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).To(Equal([]string{"otlp"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).To(Equal([]string{"k8sobjects/events"}))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Receivers).To(Equal([]string{"prometheus"}))
 
-		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal(exporterNames[config.SignalMetrics][0]))
-		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal(exporterNames[config.SignalLogs][0]))
-		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal(exporterNames[config.SignalEvents][0]))
+		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).To(Equal([]string{"otlphttp/metrics/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).To(Equal([]string{"otlphttp/logs/0"}))
+		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).To(Equal([]string{"otlphttp/events/0"}))
 	})
 })

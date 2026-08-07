@@ -16,19 +16,19 @@ var _ = Describe("Target", func() {
 		It("returns all signals when none are configured", func() {
 			target := config.Target{}
 
-			Expect(target.EffectiveSignals()).To(ConsistOf(config.AllSignals()))
+			Expect(target.EffectiveSignals()).To(ConsistOf([]config.SignalType{"metrics", "logs", "events"}))
 		})
 
 		It("returns all signals for an empty (non-nil) signal list", func() {
 			target := config.Target{Signals: []config.SignalType{}}
 
-			Expect(target.EffectiveSignals()).To(ConsistOf(config.AllSignals()))
+			Expect(target.EffectiveSignals()).To(ConsistOf([]config.SignalType{"metrics", "logs", "events"}))
 		})
 
 		It("returns the configured signals as-is", func() {
 			target := config.Target{Signals: []config.SignalType{config.SignalLogs}}
 
-			Expect(target.EffectiveSignals()).To(Equal([]config.SignalType{config.SignalLogs}))
+			Expect(target.EffectiveSignals()).To(Equal([]config.SignalType{"logs"}))
 		})
 	})
 })

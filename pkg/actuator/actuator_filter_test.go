@@ -156,9 +156,9 @@ var _ = Describe("filter processor", func() {
 
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
 				To(Equal([]string{
-					resourceProcessorName,
-					memoryLimiterProcessorName,
-					batchProcessorName,
+					"resource",
+					"memory_limiter",
+					"batch",
 				}))
 		})
 
@@ -181,18 +181,18 @@ var _ = Describe("filter processor", func() {
 
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
 				To(Equal([]string{
-					resourceProcessorName,
-					memoryLimiterProcessorName,
-					signalFilterName(config.SignalMetrics, 0),
-					batchProcessorName,
+					"resource",
+					"memory_limiter",
+					"filter/metrics/0",
+					"batch",
 				}))
 			Expect(pipelines[signalPipelineName(config.SignalEvents, 1)].Processors).
 				To(Equal([]string{
-					resourceProcessorName,
-					memoryLimiterProcessorName,
-					transformEventsProcessorName,
-					signalFilterName(config.SignalEvents, 1),
-					batchProcessorName,
+					"resource",
+					"memory_limiter",
+					"transform/events",
+					"filter/events/1",
+					"batch",
 				}))
 		})
 
@@ -212,9 +212,9 @@ var _ = Describe("filter processor", func() {
 			}))
 
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
-				To(ContainElement(signalFilterName(config.SignalMetrics, 0)))
+				To(ContainElement("filter/metrics/0"))
 			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
-				To(ContainElement(signalFilterName(config.SignalLogs, 0)))
+				To(ContainElement("filter/logs/0"))
 		})
 
 		It("does not wire a filter processor when the filter body is empty", func() {
@@ -234,7 +234,7 @@ var _ = Describe("filter processor", func() {
 			}))
 
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).To(Equal(
-				[]string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName}))
+				[]string{"resource", "memory_limiter", "batch"}))
 		})
 	})
 
@@ -259,13 +259,13 @@ var _ = Describe("filter processor", func() {
 
 			Expect(exporterNames[config.SignalMetrics][0]).
 				To(Equal([]string{
-					signalExporterName(config.SignalMetrics, 0, transportHTTP),
-					signalExporterName(config.SignalMetrics, 0, transportGRPC),
+					"otlphttp/metrics/0",
+					"otlp/metrics/0",
 				}))
 			Expect(exporters).
-				To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportHTTP)))
+				To(HaveKey("otlphttp/metrics/0"))
 			Expect(exporters).
-				To(HaveKey(signalExporterName(config.SignalMetrics, 0, transportGRPC)))
+				To(HaveKey("otlp/metrics/0"))
 
 			pipelines := buildPipelines(cfg, exporterNames)
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).

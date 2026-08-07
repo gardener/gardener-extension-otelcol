@@ -174,9 +174,9 @@ var _ = Describe("Actuator", Ordered, func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(act).NotTo(BeNil())
-		Expect(act.Name()).To(Equal(actuator.Name))
-		Expect(act.ExtensionType()).To(Equal(actuator.ExtensionType))
-		Expect(act.FinalizerSuffix()).To(Equal(actuator.FinalizerSuffix))
+		Expect(act.Name()).To(Equal("otelcol"))
+		Expect(act.ExtensionType()).To(Equal("otelcol"))
+		Expect(act.FinalizerSuffix()).To(Equal("gardener-extension-otelcol"))
 		Expect(act.ExtensionClass()).To(Equal(extensionsv1alpha1.ExtensionClassShoot))
 	})
 
