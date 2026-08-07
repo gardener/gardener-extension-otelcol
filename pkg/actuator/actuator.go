@@ -139,13 +139,13 @@ const (
 	// projected into the OTel Collector pod for the k8sobjects/events receiver.
 	volumeNameShootKubeconfig = "shoot-kubeconfig"
 
-	// bearertokenauthextension base name used to derive per-signal names.
+	// bearertokenauthextension names used by the exporters.
 	baseBearerTokenAuthName = "bearertokenauth"
 
-	// TLS volume base name used to derive per-signal volume names.
+	// TLS volume names for the exporters.
 	baseVolumeNameTLS = "tls"
 
-	// TLS volume mount base path used to derive per-signal mount paths.
+	// TLS volume mounts for the exporters.
 	baseVolumeMountPathTLS = "/etc/ssl/tls"
 
 	// batchProcessorName is the name of the OpenTelemetry Batch processor.
@@ -162,8 +162,7 @@ const (
 	// processor, used to derive per-signal and global filter processor names.
 	filterProcessorBaseName = "filter"
 
-	// otlpReceiverName is the name of the OTLP receiver. It feeds the logs
-	// signal.
+	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
 
 	// eventsReceiverName is the name of the k8sobjects receiver for events.
@@ -172,16 +171,13 @@ const (
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
 
-	// otlpExporterBaseName is the base name of the OTLP exporter, used to
-	// derive per-signal debug exporter names.
+	// otlpExporterBaseName is the base name of the OTLP exporter.
 	otlpExporterBaseName = "otlp"
 
-	// otlphttpExporterBaseName is the base name of the OTLPHTTP exporter, used
-	// to derive per-signal debug exporter names.
+	// otlphttpExporterBaseName is the base name of the OTLPHTTP exporter.
 	otlphttpExporterBaseName = "otlphttp"
 
-	// debugExporterBaseName is the base name of the debug exporter, used to
-	// derive per-signal debug exporter names.
+	// debugExporterName is the base name of the debug exporter.
 	debugExporterBaseName = "debug"
 
 	// logsPipelineName is the name of the logs pipeline.
