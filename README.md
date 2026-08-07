@@ -84,8 +84,7 @@ The following configuration snippet enables the extension for a shoot and
 configures it to forward the signals of the control-plane components to a remote
 collector. A single target can serve several signals at once via its `signals`
 list. Here the target uses the
-[OTLP HTTP exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter)
-(the `otlp_http` transport).
+[OTLP HTTP exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter).
 
 ``` yaml
 ...
@@ -198,8 +197,8 @@ please make sure to check the
 
 ### Fan a signal out to multiple destinations
 
-Because a signal is enabled by listing it in a target's `signals`, the same
-signal can appear in several targets and thus be exported to several
+Because a signal is enabled by listing it in a target's `signals` section,
+the same signal can appear in several targets and thus be exported to several
 destinations at once, each with an independent exporter and filter chain. A
 single target can also fan out to several transports at once — list more than
 one of `otlp_http`/`otlp_grpc`/`debug` under its `exporter`. This example sends
@@ -218,12 +217,46 @@ additionally mirrors them to a debug exporter.
             - exporter:
                 otlp_http:
                   endpoint: "https://opentelemetry-receiver.example.org"
+                  token:
+                    resourceRef:
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
               signals: [metrics]
             # Secondary: a different collector over gRPC, additionally mirrored
             # to the collector's own logs via the debug transport.
             - exporter:
                 otlp_grpc:
                   endpoint: "https://backup-receiver.example.org:4317"
+                  token:
+                    resourceRef:
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
                 debug:
                   verbosity: basic
               signals: [metrics]
@@ -277,8 +310,7 @@ does not redefine the filter schema but validates the body against the upstream
 This means the full filterprocessor surface is available — `metrics`
 (`metric`, `datapoint`, `resource`, `include`/`exclude`), `logs` (`log_record`,
 `resource`, `include`/`exclude`), `metric_conditions`/`log_conditions`, and
-`error_mode` — and new upstream capabilities become available on a dependency
-upgrade without changes to this extension. For the full set of options see the
+`error_mode`. For the full set of options see the
 [filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
 
 ``` yaml
