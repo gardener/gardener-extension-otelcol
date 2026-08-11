@@ -287,13 +287,6 @@ func signalFilterName(sig config.SignalType, i int) string {
 	return fmt.Sprintf("%s/%s/%d", filterProcessorBaseName, sig, i)
 }
 
-// targetHasFilter reports whether the target carries a non-empty filter configuration.
-func targetHasFilter(target config.Target) bool {
-	rendered, err := filterrender.FilterProcessorConfig(target)
-
-	return err == nil && len(rendered) > 0
-}
-
 // signalBearerTokenAuthName returns the bearertokenauth extension name for the
 // i-th target of a signal and transport, e.g. "bearertokenauth/http/metrics/0".
 func signalBearerTokenAuthName(sig config.SignalType, i int, t transport) string {
@@ -1416,8 +1409,9 @@ func parseShootNamespaceAttributes(
 //   - resource
 //   - memory_limiter
 //   - transform/events (for the "events" signal)
-//   - target's own filter processors for that signal (filter processors are inserted
-//     after memory_limiter and before batch so unwanted telemetry is dropped before batching)
+//   - target's own filter processor for that signal, wired only when the target's
+//     filter body targets that signal (filter processors are inserted after
+//     memory_limiter and before batch so unwanted telemetry is dropped before batching)
 //   - batch
 func buildPipelines(
 	cfg config.CollectorConfig,
@@ -1426,6 +1420,16 @@ func buildPipelines(
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
 	for i, target := range cfg.Spec.Targets {
+		// filterCfgs holds a filter config only for the signals the target's
+		// filter body actually targets, so a metrics-only filter on a target
+		// serving both logs and metrics does not add a dead filter to the logs
+		// pipeline. The body was validated during reconcile, so any parse error
+		// here is treated as "no filter".
+		filterCfgs, _ := filterrender.FilterProcessorConfigsForSignals(
+			target,
+			target.EffectiveSignals(),
+		)
+
 		for _, sig := range target.EffectiveSignals() {
 			processors := []string{
 				resourceProcessorName,
@@ -1434,7 +1438,7 @@ func buildPipelines(
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
 			}
-			if targetHasFilter(target) {
+			if _, ok := filterCfgs[sig]; ok {
 				processors = append(processors, signalFilterName(sig, i))
 			}
 			processors = append(processors, batchProcessorName)
@@ -1684,14 +1688,18 @@ func (a *Actuator) getOtelCollector(
 	// transport) so a target enabling several transports does not collide.
 	for i, target := range cfg.Spec.Targets {
 		// The filter body was already validated as parseable JSON during
-		// reconcile (see validation.Validate), so this decode succeeds. The same
-		// rendered config is registered for every signal the target serves; the
-		// processor only acts on the sections relevant to each pipeline's signal.
-		filterConfig, _ := filterrender.FilterProcessorConfig(target)
+		// reconcile (see validation.Validate). It is registered only for the
+		// signals the filter body actually targets, so a metrics-only filter on a
+		// target serving both logs and metrics does not register a dead
+		// filter/logs/<i> processor.
+		filterCfgs, _ := filterrender.FilterProcessorConfigsForSignals(
+			target,
+			target.EffectiveSignals(),
+		)
 
 		for _, sig := range target.EffectiveSignals() {
-			if len(filterConfig) > 0 {
-				obj.Spec.Config.Processors.Object[signalFilterName(sig, i)] = filterConfig
+			if filterCfg, ok := filterCfgs[sig]; ok {
+				obj.Spec.Config.Processors.Object[signalFilterName(sig, i)] = filterCfg
 			}
 
 			// Configure TLS and bearer token volumes per enabled transport. The

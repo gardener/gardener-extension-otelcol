@@ -196,9 +196,10 @@ var _ = Describe("filter processor", func() {
 				}))
 		})
 
-		It("wires the target filter into every signal the target serves", func() {
-			// A target serving both logs and metrics: its single filter is wired
-			// into both pipelines.
+		It("wires the target filter only into signals its body targets", func() {
+			// A target serving both logs and metrics with a metrics-only filter:
+			// the filter is wired into the metrics pipeline only, and the logs
+			// pipeline stays free of a dead filter reference.
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Targets: []config.Target{
@@ -214,7 +215,33 @@ var _ = Describe("filter processor", func() {
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
 				To(ContainElement("filter/metrics/0"))
 			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
+				NotTo(ContainElement("filter/logs/0"))
+			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", "batch"}))
+		})
+
+		It("wires a logs-only filter into the logs pipeline only", func() {
+			// The mirror of the metrics-only case: a logs-only filter on a target
+			// serving both logs and metrics wires filter/logs/0 into the logs
+			// pipeline and leaves the metrics pipeline untouched.
+			cfg := config.CollectorConfig{
+				Spec: config.CollectorConfigSpec{
+					Targets: []config.Target{
+						filterTarget(logFilterBody, config.SignalLogs, config.SignalMetrics),
+					},
+				},
+			}
+			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
+				config.SignalLogs:    {0},
+				config.SignalMetrics: {0},
+			}))
+
+			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
 				To(ContainElement("filter/logs/0"))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				NotTo(ContainElement("filter/metrics/0"))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", "batch"}))
 		})
 
 		It("does not wire a filter processor when the filter body is empty", func() {
