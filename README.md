@@ -453,14 +453,19 @@ The provided example shoot references secrets from the project namespace, which
 are used to configure the TLS settings between the exporter and a local dev
 receiver, running in the `default` namespace.
 
-The following commands will create the TLS secrets, a dev OpenTelemetry receiver
-in the `default` namespace, and a dev shoot, configured with the extension.
+The following commands will create the TLS secrets and a dev shoot, configured with the extension.
 
 ``` shell
-kubectl --kubeconfig $KUBECONFIG_RUNTIME apply -f examples/opentelemetry-receiver.yaml
 kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/secret-tls.yaml
 kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/secret-bearer-token.yaml
 kubectl --kubeconfig $KUBECONFIG_VIRTUAL apply -f examples/shoot.yaml
+```
+
+After the dev shoot cluster is created, use the following command to create a
+dev OpenTelemetry receiver in the `default` namespace.
+
+``` shell
+kubectl --kubeconfig $KUBECONFIG_RUNTIME apply -f examples/opentelemetry-receiver.yaml
 ```
 
 If you have an already existing and running shoot, for which you want to enable
