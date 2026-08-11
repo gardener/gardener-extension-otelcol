@@ -8,6 +8,7 @@ package filterrender
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/confmap"
@@ -49,9 +50,11 @@ func FilterProcessorConfigsForSignals(
 		return out, nil
 	}
 
-	cfg := filterprocessor.
-		NewFactory().
-		CreateDefaultConfig().(*filterprocessor.Config)
+	defaultCfg := filterprocessor.NewFactory().CreateDefaultConfig()
+	cfg, ok := defaultCfg.(*filterprocessor.Config)
+	if !ok {
+		return nil, fmt.Errorf("unexpected filter processor config type %T", defaultCfg)
+	}
 	if err := confmap.NewFromStringMap(rendered).Unmarshal(cfg); err != nil {
 		return nil, err
 	}
@@ -78,6 +81,8 @@ func FilterProcessorConfigsForSignals(
 				len(cfg.LogConditions) > 0 {
 				out[sig] = rendered
 			}
+		default:
+			// Other signals (e.g. traces, profiles) are not supported for filtering and are ignored.
 		}
 	}
 
