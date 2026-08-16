@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
 	github.com/prometheus/client_golang v1.23.3-0.20260716094704-78262a77b899
-	github.com/urfave/cli/v3 v3.10.1
+	github.com/urfave/cli/v3 v3.11.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.156.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.156.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
