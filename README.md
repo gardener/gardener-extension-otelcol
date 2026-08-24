@@ -51,6 +51,11 @@ control-plane components via the
 The configuration is exporter-oriented: `spec.targets` is a list of exporter
 destinations. Each target pairs a self-contained exporter with the signals it
 receives (`metrics`, `logs` and/or `events`).
+When we talk about `events` we mean **Kubernetes Events**. Technically an event
+is a log signal — from OpenTelemetry's point of view it travels through a logs
+pipeline, so the configured backend must be capable of receiving logs. Gardener
+exposes it as a separate signal for convenience, so events can be routed and
+filtered independently of other logs.
 Each `(target, signal)` pair becomes one collector pipeline, so a target can
 fan out several signals to one destination, and a signal can fan out to several
 targets. A signal is enabled if at least one target lists it. An exporter
