@@ -58,7 +58,7 @@ spec:
             # Third destination: ship Kubernetes events over gRPC.
             - exporter:
                 otlp_grpc:
-                  endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
+                  endpoint: "http://opentelemetry-receiver.default.svc.cluster.local:4317"
                   token:
                     resourceRef:
                       name: otelcol-bearer-token
