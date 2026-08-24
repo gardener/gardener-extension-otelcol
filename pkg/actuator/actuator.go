@@ -51,7 +51,6 @@ import (
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config/validation"
-	"github.com/gardener/gardener-extension-otelcol/pkg/filterrender"
 	"github.com/gardener/gardener-extension-otelcol/pkg/imagevector"
 )
 
@@ -156,9 +155,6 @@ const (
 
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
-
-	// filterProcessorBaseName is the base name of the OpenTelemetry Filter processor.
-	filterProcessorBaseName = "filter"
 
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
@@ -279,12 +275,6 @@ func signalExporterName(sig config.SignalType, i int, t transport) string {
 	}
 
 	return fmt.Sprintf("%s/%s/%d", base, sig, i)
-}
-
-// signalFilterName returns the filter processor component name for a signal's
-// i-th target, e.g. "filter/metrics/0".
-func signalFilterName(sig config.SignalType, i int) string {
-	return fmt.Sprintf("%s/%s/%d", filterProcessorBaseName, sig, i)
 }
 
 // signalBearerTokenAuthName returns the bearertokenauth extension name for the
@@ -1403,15 +1393,12 @@ func parseShootNamespaceAttributes(
 
 // buildPipelines returns the collector service pipelines for the targets in
 // cfg. Each target produces one pipeline per signal it serves, wired to that
-// target's own exporter and filter processor instances.
+// target's own exporter instances.
 //
 // The processor chain is:
 //   - resource
 //   - memory_limiter
 //   - transform/events (for the "events" signal)
-//   - target's own filter processor for that signal, wired only when the target's
-//     filter body targets that signal (filter processors are inserted after
-//     memory_limiter and before batch so unwanted telemetry is dropped before batching)
 //   - batch
 func buildPipelines(
 	cfg config.CollectorConfig,
@@ -1420,16 +1407,6 @@ func buildPipelines(
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
 	for i, target := range cfg.Spec.Targets {
-		// filterCfgs holds a filter config only for the signals the target's
-		// filter body actually targets, so a metrics-only filter on a target
-		// serving both logs and metrics does not add a dead filter to the logs
-		// pipeline. The body was validated during reconcile, so any parse error
-		// here is treated as "no filter".
-		filterCfgs, _ := filterrender.FilterProcessorConfigsForSignals(
-			target,
-			target.EffectiveSignals(),
-		)
-
 		for _, sig := range target.EffectiveSignals() {
 			processors := []string{
 				resourceProcessorName,
@@ -1437,9 +1414,6 @@ func buildPipelines(
 			}
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
-			}
-			if _, ok := filterCfgs[sig]; ok {
-				processors = append(processors, signalFilterName(sig, i))
 			}
 			processors = append(processors, batchProcessorName)
 
@@ -1682,26 +1656,11 @@ func (a *Actuator) getOtelCollector(
 		},
 	}
 
-	// Register the per-target filter processors and configure the per-transport
-	// exporter TLS and bearer token authentication volumes. The filter is keyed
-	// per (target, signal); TLS/token volumes are keyed per (target, signal,
-	// transport) so a target enabling several transports does not collide.
+	// Configure the per-transport exporter TLS and bearer token authentication
+	// volumes. TLS/token volumes are keyed per (target, signal, transport) so a
+	// target enabling several transports does not collide.
 	for i, target := range cfg.Spec.Targets {
-		// The filter body was already validated as parseable JSON during
-		// reconcile (see validation.Validate). It is registered only for the
-		// signals the filter body actually targets, so a metrics-only filter on a
-		// target serving both logs and metrics does not register a dead
-		// filter/logs/<i> processor.
-		filterCfgs, _ := filterrender.FilterProcessorConfigsForSignals(
-			target,
-			target.EffectiveSignals(),
-		)
-
 		for _, sig := range target.EffectiveSignals() {
-			if filterCfg, ok := filterCfgs[sig]; ok {
-				obj.Spec.Config.Processors.Object[signalFilterName(sig, i)] = filterCfg
-			}
-
 			// Configure TLS and bearer token volumes per enabled transport. The
 			// debug exporter has no endpoint, TLS or token, so it is skipped.
 			//

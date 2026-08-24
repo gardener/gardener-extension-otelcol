@@ -7,7 +7,6 @@ package validation_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config/validation"
@@ -16,11 +15,6 @@ import (
 const (
 	testEndpoint = "https://example.com:4318"
 )
-
-// filterBody returns a RawExtension wrapping the given raw filterprocessor body.
-func filterBody(body string) runtime.RawExtension {
-	return runtime.RawExtension{Raw: []byte(body)}
-}
 
 var _ = Describe("Validate", func() {
 	// baseConfig returns a config with a single target serving the logs signal
@@ -152,130 +146,5 @@ var _ = Describe("Validate", func() {
 		err := validation.Validate(cfg)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("spec.targets[0].exporter.otlp_http.token"))
-	})
-
-	It("accepts a metrics filter body on a target serving the metrics signal", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metrics":{"metric":["metric.name == \"foo\""],"datapoint":["value_int == 0"]}}`,
-		)
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("accepts a logs filter body on a target serving the events signal", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalEvents,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"logs":{"log_record":["true"]}}`,
-		)
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("accepts an empty filter body", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Filters = runtime.RawExtension{}
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("accepts a filter body covering multiple signals of the target", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalLogs,
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metrics":{"metric":["metric.name == \"foo\""]},"logs":{"log_record":["true"]}}`,
-		)
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("rejects a filter with an invalid OTTL condition", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metrics":{"metric":["this is ~~ not ottl"]}}`,
-		)
-
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].filters"))
-	})
-
-	It("rejects a filter with an unknown severity number", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"logs":{"include":{"match_type":"strict","severity_number":{"min":"NOTASEV"}}}}`,
-		)
-
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].filters"))
-	})
-
-	It("rejects a filter with an unknown top-level key", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Filters = filterBody(`{"totally_unknown_key":true}`)
-
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].filters"))
-	})
-
-	It("rejects a filter with a malformed JSON body", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Filters = filterBody(`{not json`)
-
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].filters"))
-	})
-
-	It("accepts basic-style context-inferred conditions", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metric_conditions":["metric.name == \"foo\""]}`,
-		)
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("accepts advanced-style context-inferred conditions", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metric_conditions":[{"context":"metric","conditions":["metric.name == \"foo\""]}]}`,
-		)
-
-		Expect(validation.Validate(cfg)).NotTo(HaveOccurred())
-	})
-
-	It("rejects mixing basic and advanced condition styles", func() {
-		cfg := baseConfig()
-		cfg.Spec.Targets[0].Signals = []config.SignalType{
-			config.SignalMetrics,
-		}
-		cfg.Spec.Targets[0].Filters = filterBody(
-			`{"metric_conditions":["metric.name == \"a\"",{"context":"metric","conditions":["metric.name == \"b\""]}]}`,
-		)
-
-		err := validation.Validate(cfg)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.targets[0].filters"))
 	})
 })

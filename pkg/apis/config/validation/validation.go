@@ -8,12 +8,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-	"go.opentelemetry.io/collector/confmap"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
-	"github.com/gardener/gardener-extension-otelcol/pkg/filterrender"
 )
 
 // Validate validates the given [config.CollectorConfig]
@@ -48,12 +45,6 @@ func Validate(cfg config.CollectorConfig) error {
 		if len(enabledSignals) > 0 {
 			anyEnabled = true
 		}
-
-		// Validate the target's opaque filter configuration, if any.
-		allErrs = append(
-			allErrs,
-			validateTargetFilter(target, targetPath.Child("filters"))...,
-		)
 
 		// Validate the target's exporters.
 		allErrs = append(
@@ -279,38 +270,6 @@ func validateResourceReference(
 				"name or dataKey is empty",
 			),
 		}
-	}
-
-	return nil
-}
-
-// validateTargetFilter validates a target's opaque filter configuration. The
-// body is decoded and round-tripped through a factory-created
-// [filterprocessor.Config] (parse + Validate), which checks OTTL condition
-// syntax, match properties and severities, and rejects unknown keys. This
-// delegates the filter semantics to the upstream processor, so new upstream
-// validation is inherited on a dependency version bump.
-//
-// See the link below for more details about configuration validation logic at
-// filterprocessor processor.
-//
-// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/e86757b2340ac9765c9dd42b26509550943ef368/processor/filterprocessor/config.go#L411
-func validateTargetFilter(target config.Target, path *field.Path) field.ErrorList {
-	rendered, err := filterrender.FilterProcessorConfig(target)
-	if err != nil {
-		return field.ErrorList{field.Invalid(path, "", err.Error())}
-	}
-	if len(rendered) == 0 {
-		return nil
-	}
-
-	base := filterprocessor.NewFactory().CreateDefaultConfig()
-	conf := confmap.NewFromStringMap(rendered)
-	if err := conf.Unmarshal(base); err != nil {
-		return field.ErrorList{field.Invalid(path, "", err.Error())}
-	}
-	if err := base.(*filterprocessor.Config).Validate(); err != nil {
-		return field.ErrorList{field.Invalid(path, "", err.Error())}
 	}
 
 	return nil
