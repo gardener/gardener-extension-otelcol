@@ -10,10 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"path/filepath"
-	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -62,12 +59,12 @@ import (
 var ErrInvalidActuator = errors.New("invalid actuator")
 
 const (
-	// Name is the name of the actuator
+	// Name is the name of the actuator.
 	Name = "otelcol"
 	// ExtensionType is the type of the extension resources, which the
 	// actuator reconciles.
 	ExtensionType = "otelcol"
-	// FinalizerSuffix is the finalizer suffix used by the actuator
+	// FinalizerSuffix is the finalizer suffix used by the actuator.
 	FinalizerSuffix = "gardener-extension-otelcol"
 
 	// baseResourceName is the base name for resources.
@@ -141,19 +138,13 @@ const (
 	volumeNameShootKubeconfig = "shoot-kubeconfig"
 
 	// bearertokenauthextension names used by the exporters.
-	baseBearerTokenAuthName         = "bearertokenauth"
-	httpExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-http"
-	grpcExporterBearerTokenAuthName = baseBearerTokenAuthName + "/exporter-otlp-grpc"
+	baseBearerTokenAuthName = "bearertokenauth"
 
 	// TLS volume names for the exporters.
-	baseVolumeNameTLS         = "tls"
-	httpExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-http"
-	grpcExporterVolumeNameTLS = baseVolumeNameTLS + "-exporter-otlp-grpc"
+	baseVolumeNameTLS = "tls"
 
 	// TLS volume mounts for the exporters.
-	baseVolumeMountPathTLS         = "/etc/ssl/tls"
-	httpExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-http"
-	grpcExporterVolumeMountPathTLS = baseVolumeMountPathTLS + "-exporter-otlp-grpc"
+	baseVolumeMountPathTLS = "/etc/ssl/tls"
 
 	// batchProcessorName is the name of the OpenTelemetry Batch processor.
 	batchProcessorName = "batch"
@@ -174,8 +165,14 @@ const (
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
 
-	// debugExporterName is the name of the debug exporter.
-	debugExporterName = "debug"
+	// otlpExporterBaseName is the base name of the OTLP exporter.
+	otlpExporterBaseName = "otlp"
+
+	// otlphttpExporterBaseName is the base name of the OTLPHTTP exporter.
+	otlphttpExporterBaseName = "otlphttp"
+
+	// debugExporterName is the base name of the debug exporter.
+	debugExporterBaseName = "debug"
 
 	// logsPipelineName is the name of the logs pipeline.
 	logsPipelineName = "logs"
@@ -202,6 +199,9 @@ const (
 	configKeyEnabled    = "enabled"
 	configKeyEndpoint   = "endpoint"
 	configKeyPrometheus = "prometheus"
+	configKeyKey        = "key"
+	configKeyValue      = "value"
+	configKeyAction     = "action"
 	// labelValuePrometheusShoot is the value used for the `prometheus` label on
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
@@ -210,13 +210,110 @@ const (
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
 var readVerbs = []string{"get", "list", "watch"}
 
+// signalPipelineName returns the collector service pipeline name for the i-th
+// target of a signal, e.g. "metrics/0".
+func signalPipelineName(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s/%d", signalPipelineBaseName(sig), i)
+}
+
+// signalPipelineBaseName returns the base pipeline name for a signal. Because
+// the collector infers the pipeline signal type from this prefix, the events
+// signal (collected as logs) maps to the "logs" base.
+func signalPipelineBaseName(sig config.SignalType) string {
+	switch sig {
+	case config.SignalMetrics:
+		return metricsPipelineName
+	case config.SignalLogs:
+		return logsPipelineName
+	case config.SignalEvents:
+		return eventsPipelineName
+	default:
+		return string(sig)
+	}
+}
+
+// signalReceiverName returns the receiver feeding a signal's pipeline.
+func signalReceiverName(sig config.SignalType) string {
+	switch sig {
+	case config.SignalMetrics:
+		return prometheusReceiverName
+	case config.SignalEvents:
+		return eventsReceiverName
+	default:
+		// Logs are received via OTLP.
+		return otlpReceiverName
+	}
+}
+
+// transport identifies an OTLP exporter transport. It is an internal
+// counterpart to the per-transport exporter structs, used to derive component,
+// volume and authenticator names.
+type transport string
+
+const (
+	transportHTTP  transport = "http"
+	transportGRPC  transport = "grpc"
+	transportDebug transport = "debug"
+)
+
+// exporterNamesBySignal maps each signal type to its target index to the list
+// of exporter component names configured for that target and signal.
+type exporterNamesBySignal = map[config.SignalType]map[int][]string
+
+// signalExporterName returns the exporter component name for the i-th target of
+// a signal and the given transport, e.g. "otlphttp/metrics/0", "otlp/events/0"
+// or "debug/metrics/2".
+func signalExporterName(sig config.SignalType, i int, t transport) string {
+	base := otlphttpExporterBaseName
+	switch t {
+	case transportGRPC:
+		base = otlpExporterBaseName
+	case transportDebug:
+		base = debugExporterBaseName
+	default:
+		// HTTP keeps the otlphttp base.
+	}
+
+	return fmt.Sprintf("%s/%s/%d", base, sig, i)
+}
+
+// signalBearerTokenAuthName returns the bearertokenauth extension name for the
+// i-th target of a signal and transport, e.g. "bearertokenauth/http/metrics/0".
+func signalBearerTokenAuthName(sig config.SignalType, i int, t transport) string {
+	return fmt.Sprintf("%s/%s/%s/%d", baseBearerTokenAuthName, t, sig, i)
+}
+
+// signalVolumeNameTLS returns the TLS volume name for the i-th target of a
+// signal and transport, e.g. "tls-http-metrics-0".
+func signalVolumeNameTLS(sig config.SignalType, i int, t transport) string {
+	return fmt.Sprintf("%s-%s-%s-%d", baseVolumeNameTLS, t, sig, i)
+}
+
+// signalVolumeMountPathTLS returns the TLS volume mount path for the i-th
+// target of a signal and transport, e.g. "/etc/ssl/tls-http-metrics-0".
+func signalVolumeMountPathTLS(sig config.SignalType, i int, t transport) string {
+	return fmt.Sprintf("%s-%s-%s-%d", baseVolumeMountPathTLS, t, sig, i)
+}
+
+// signalVolumeNameBearerToken returns the bearer token volume name for the i-th
+// target of a signal and transport, e.g. "bearer-token-auth-http-metrics-0".
+func signalVolumeNameBearerToken(sig config.SignalType, i int, t transport) string {
+	return fmt.Sprintf("bearer-token-auth-%s-%s-%d", t, sig, i)
+}
+
+// signalVolumeMountPathBearerToken returns the bearer token mount path for the
+// i-th target of a signal and transport, e.g. "/etc/auth/bearer-http-metrics-0".
+func signalVolumeMountPathBearerToken(sig config.SignalType, i int, t transport) string {
+	return fmt.Sprintf("/etc/auth/bearer-%s-%s-%d", t, sig, i)
+}
+
 // upsertAttribute returns an OTel resourceprocessor `attributes` entry that
 // adds (or overwrites) the given key/value on the resource.
 func upsertAttribute(key string, value any) map[string]any {
 	return map[string]any{
-		"key":    key,
-		"value":  value,
-		"action": "upsert",
+		configKeyKey:    key,
+		configKeyValue:  value,
+		configKeyAction: "upsert",
 	}
 }
 
@@ -274,7 +371,10 @@ func New(c client.Client, opts ...Option) (*Actuator, error) {
 	}
 
 	if act.decoder == nil {
-		act.decoder = serializer.NewCodecFactory(c.Scheme(), serializer.EnableStrict).UniversalDecoder()
+		act.decoder = serializer.NewCodecFactory(
+			c.Scheme(),
+			serializer.EnableStrict,
+		).UniversalDecoder()
 	}
 
 	return act, nil
@@ -329,8 +429,6 @@ func WithMemoryLimiterProcessorConfig(cfg *memorylimiterprocessor.Config) Option
 			return errors.New("invalid memory limiter configuration specified")
 		}
 
-		// https://github.com/open-telemetry/opentelemetry-collector/blob/168030d61d7db2a15176f3e52ab4fd1e96012f15/internal/memorylimiter/config.go#L61
-		cfg.MinGCIntervalWhenSoftLimited = 10 * time.Second
 		a.memoryLimiterConfig = cfg
 
 		return cfg.Validate()
@@ -386,7 +484,11 @@ func (a *Actuator) ExtensionClass() extensionsv1alpha1.ExtensionClass {
 // Reconcile reconciles the [extensionsv1alpha1.Extension] resource by taking
 // care of any resources managed by the [Actuator]. This method implements the
 // [extension.Actuator] interface.
-func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Reconcile(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	otelcolFeature, ok := a.gardenletFeatureGates[gardenerfeatures.OpenTelemetryCollector]
 	if !ok || !otelcolFeature {
 		logger.Info("gardenlet feature gate OpenTelemetryCollector is either missing or disabled")
@@ -415,7 +517,7 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return nil
 	}
 
-	// Parse and validate the provider config
+	// Parse and validate the provider config.
 	if ex.Spec.ProviderConfig == nil {
 		return errors.New("no provider config specified")
 	}
@@ -429,34 +531,50 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	// Generate CA and server certificate for Target Allocator
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       secretNameCACertificate,
-		CommonName: Name,
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
+	// Generate CA and server certificate for Target Allocator.
+	if _, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:       secretNameCACertificate,
+			CommonName: Name,
+			CertType:   secretsutils.CACert,
+			Validity:   ptr.To(30 * 24 * time.Hour),
+		},
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+		secretsmanager.IgnoreOldSecretsAfter(24*time.Hour),
+	); err != nil {
 		return fmt.Errorf("failed generating CA certificate secret: %w", err)
 	}
 	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
 
-	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameServerCertificate,
-		CommonName:                  targetAllocatorHTTPSServiceName,
-		DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
-		CertType:                    secretsutils.ServerCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(secretNameCACertificate), secretsmanager.Rotate(secretsmanager.InPlace))
+	serverSecret, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        secretNameServerCertificate,
+			CommonName:                  targetAllocatorHTTPSServiceName,
+			DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
+			CertType:                    secretsutils.ServerCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(secretNameCACertificate),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+	)
 	if err != nil {
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
 
-	clientSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameClientCertificate,
-		CommonName:                  secretNameClientCertificate,
-		CertType:                    secretsutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(secretNameCACertificate), secretsmanager.Rotate(secretsmanager.InPlace))
+	// Generate client certificate for Collector.
+	clientSecret, err := secretsManager.Generate(
+		ctx,
+		&secretsutils.CertificateSecretConfig{
+			Name:                        secretNameClientCertificate,
+			CommonName:                  secretNameClientCertificate,
+			CertType:                    secretsutils.ClientCert,
+			SkipPublishingCACertificate: true,
+		},
+		secretsmanager.SignedByCA(secretNameCACertificate),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+	)
 	if err != nil {
 		return fmt.Errorf("failed generating server certificate secret for target allocator: %w", err)
 	}
@@ -509,7 +627,6 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 			collectorImage,
 		),
 	)
-
 	if err != nil {
 		return err
 	}
@@ -528,7 +645,15 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 		return err
 	}
 
-	if err := managedresources.CreateForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName, Name, false, shootData); err != nil {
+	if err := managedresources.CreateForShoot(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+		Name,
+		false,
+		shootData,
+	); err != nil {
 		return fmt.Errorf("failed creating shoot managed resource: %w", err)
 	}
 
@@ -544,7 +669,11 @@ func (a *Actuator) Reconcile(ctx context.Context, logger logr.Logger, ex *extens
 
 // Delete deletes any resources managed by the [Actuator]. This method
 // implements the [extension.Actuator] interface.
-func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Delete(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	secretsManager, err := a.newSecretsManager(ctx, logger, ex.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed creating a new secrets manager: %w", err)
@@ -556,25 +685,56 @@ func (a *Actuator) Delete(ctx context.Context, logger logr.Logger, ex *extension
 		return fmt.Errorf("failed cleaning up secrets managed by secrets manager: %w", err)
 	}
 
-	if err := client.IgnoreNotFound(managedresources.DeleteForShoot(ctx, a.client, ex.Namespace, shootManagedResourceName)); err != nil {
+	if err := client.IgnoreNotFound(
+		managedresources.DeleteForShoot(
+			ctx,
+			a.client,
+			ex.Namespace,
+			shootManagedResourceName,
+		),
+	); err != nil {
 		return fmt.Errorf("failed deleting shoot managed resource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilDeleted(ctx, a.client, ex.Namespace, shootManagedResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+	); err != nil {
 		return fmt.Errorf("failed waiting for shoot managed resource to be deleted: %w", err)
 	}
 
-	if err := client.IgnoreNotFound(a.client.Delete(ctx, gardenerutils.NewShootAccessSecret(shootAccessSecretName, ex.Namespace).Secret)); err != nil {
+	if err := client.IgnoreNotFound(
+		a.client.Delete(
+			ctx,
+			gardenerutils.NewShootAccessSecret(
+				shootAccessSecretName,
+				ex.Namespace,
+			).Secret,
+		),
+	); err != nil {
 		return fmt.Errorf("failed deleting shoot access secret: %w", err)
 	}
 
-	return client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, a.client, ex.Namespace, managedResourceName))
+	return client.IgnoreNotFound(
+		managedresources.DeleteForSeed(
+			ctx,
+			a.client,
+			ex.Namespace,
+			managedResourceName,
+		),
+	)
 }
 
 // ForceDelete signals the [Actuator] to delete any resources managed by it,
 // because of a force-delete event of the shoot cluster. This method implements
 // the [extension.Actuator] interface.
-func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) ForceDelete(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	logger.Info("shoot has been force-deleted, deleting resources managed by extension")
 
 	return a.Delete(ctx, logger, ex)
@@ -582,7 +742,11 @@ func (a *Actuator) ForceDelete(ctx context.Context, logger logr.Logger, ex *exte
 
 // Restore restores the resources managed by the extension [Actuator]. This
 // method implements the [extension.Actuator] interface.
-func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *Actuator) Restore(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
 	return a.Reconcile(ctx, logger, ex)
 }
 
@@ -594,15 +758,29 @@ func (a *Actuator) Restore(ctx context.Context, logger logr.Logger, ex *extensio
 // target seed can pick them up after migration. SetKeepObjects prevents the
 // ManagedResource controller from deleting them when the ManagedResource is
 // removed from the old seed.
-func (a *Actuator) Migrate(ctx context.Context, logger logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	if err := managedresources.SetKeepObjects(ctx, a.client, ex.Namespace, shootManagedResourceName, true); err != nil {
+func (a *Actuator) Migrate(
+	ctx context.Context,
+	logger logr.Logger,
+	ex *extensionsv1alpha1.Extension,
+) error {
+	if err := managedresources.SetKeepObjects(
+		ctx,
+		a.client,
+		ex.Namespace,
+		shootManagedResourceName,
+		true,
+	); err != nil {
 		return fmt.Errorf("failed setting keep-objects on shoot managed resource: %w", err)
 	}
 
 	return a.Delete(ctx, logger, ex)
 }
 
-func (a *Actuator) newSecretsManager(ctx context.Context, log logr.Logger, namespace string) (secretsmanager.Interface, error) {
+func (a *Actuator) newSecretsManager(
+	ctx context.Context,
+	log logr.Logger,
+	namespace string,
+) (secretsmanager.Interface, error) {
 	return secretsmanager.New(
 		ctx,
 		log,
@@ -630,14 +808,24 @@ func (a *Actuator) getCommonLabels() map[string]string {
 // Policies.
 func (a *Actuator) getNetworkLabels() map[string]string {
 	// The `networking.resources.gardener.cloud/to-all-scrape-targets' label
-	toAllScrapeTargetsLabel := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets
+	toAllScrapeTargetsLabel := fmt.Sprintf(
+		"%sto-%s",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+		v1beta1constants.LabelNetworkPolicyScrapeTargets,
+	)
 
+	taNetworkLabel := fmt.Sprintf(
+		"%sto-%s-tcp-%d",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+		targetAllocatorHTTPSServiceName,
+		targetAllocatorHTTPSPort,
+	)
 	items := map[string]string{
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "to-" + targetAllocatorHTTPSServiceName + "-tcp-" + strconv.Itoa(targetAllocatorHTTPSPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		taNetworkLabel:          v1beta1constants.LabelNetworkPolicyAllowed,
 		toAllScrapeTargetsLabel: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
@@ -647,11 +835,16 @@ func (a *Actuator) getNetworkLabels() map[string]string {
 // getAnnotations returns the common set of annotations for the Collector and
 // Target Allocator resources.
 func (a *Actuator) getAnnotations() map[string]string {
-	// The `networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports' annotation
-	fromAllScrapeTargetsAnnotation := resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "from-all-scrape-targets-allowed-ports"
-
+	fromAllScrapeTargetsAnnotation := fmt.Sprintf(
+		"%sfrom-all-scrape-targets-allowed-ports",
+		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
+	)
 	items := map[string]string{
-		fromAllScrapeTargetsAnnotation: fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, otelCollectorMetricsPort, otelCollectorGRPCReceiverPort),
+		fromAllScrapeTargetsAnnotation: fmt.Sprintf(
+			`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`,
+			otelCollectorMetricsPort,
+			otelCollectorGRPCReceiverPort,
+		),
 	}
 
 	return items
@@ -659,7 +852,9 @@ func (a *Actuator) getAnnotations() map[string]string {
 
 // getTargetAllocatorServiceAccount returns the [corev1.ServiceAccount] for the
 // Target Allocator.
-func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.ServiceAccount {
+func (a *Actuator) getTargetAllocatorServiceAccount(
+	namespace string,
+) *corev1.ServiceAccount {
 	obj := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorServiceAccountName,
@@ -674,7 +869,9 @@ func (a *Actuator) getTargetAllocatorServiceAccount(namespace string) *corev1.Se
 
 // getTargetAllocatorHTTPSService returns the [corev1.Service] for the
 // HTTPS communication of the Target Allocator.
-func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Service {
+func (a *Actuator) getTargetAllocatorHTTPSService(
+	namespace string,
+) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorHTTPSServiceName,
@@ -697,7 +894,9 @@ func (a *Actuator) getTargetAllocatorHTTPSService(namespace string) *corev1.Serv
 
 // getTargetAllocatorConfigMap returns the [corev1.ConfigMap] for the Target
 // Allocator.
-func (a *Actuator) getTargetAllocatorConfigMap(namespace string) (*corev1.ConfigMap, error) {
+func (a *Actuator) getTargetAllocatorConfigMap(
+	namespace string,
+) (*corev1.ConfigMap, error) {
 	taConfig := map[string]any{
 		"allocation_strategy":              otelv1alpha1.OpenTelemetryTargetAllocatorAllocationStrategyConsistentHashing,
 		"collector_not_ready_grace_period": 30 * time.Second,
@@ -777,7 +976,9 @@ func (a *Actuator) getTargetAllocatorRole(namespace string) *rbacv1.Role {
 
 // getTargetAllocatorRoleBinding returns the [rbacv1.RoleBinding] for the Target
 // Allocator.
-func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleBinding {
+func (a *Actuator) getTargetAllocatorRoleBinding(
+	namespace string,
+) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorRoleName,
@@ -829,7 +1030,12 @@ func (a *Actuator) getTargetAllocatorRoleBinding(namespace string) *rbacv1.RoleB
 // - Deployment for the TargetAllocator (getTargetAllocatorDeployment)
 // - ConfigMap for the TargetAllocator (getTargetAllocatorConfigMap)
 // - HTTPS Service for the Target Allocator (getTargetAllocatorHTTPSService)
-func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serverSecret *corev1.Secret, image *imagevectorutils.Image) *appsv1.Deployment {
+func (a *Actuator) getTargetAllocatorDeployment(
+	namespace string,
+	caSecret,
+	serverSecret *corev1.Secret,
+	image *imagevectorutils.Image,
+) *appsv1.Deployment {
 	const (
 		volumeNameCACertificate      = "ca-cert"
 		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
@@ -868,6 +1074,7 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 				Spec: corev1.PodSpec{
 					PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
 					ServiceAccountName: targetAllocatorServiceAccountName,
+					// 65532 is the UID of the nonroot user in distroless images.
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
@@ -880,10 +1087,25 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 							Image: image.String(),
 							Args: []string{
 								"--enable-https-server=true",
-								fmt.Sprintf("--config-file=%s/targetallocator.yaml", volumeMountTargetAllocatorConfig),
-								fmt.Sprintf("--https-ca-file=%s/%s", volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
-								fmt.Sprintf("--https-tls-cert-file=%s/%s", volumeMountPathServerCertificate, secretsutils.DataKeyCertificate),
-								fmt.Sprintf("--https-tls-key-file=%s/%s", volumeMountPathServerCertificate, secretsutils.DataKeyPrivateKey),
+								fmt.Sprintf(
+									"--config-file=%s/targetallocator.yaml",
+									volumeMountTargetAllocatorConfig,
+								),
+								fmt.Sprintf(
+									"--https-ca-file=%s/%s",
+									volumeMountPathCACertificate,
+									secretsutils.DataKeyCertificateBundle,
+								),
+								fmt.Sprintf(
+									"--https-tls-cert-file=%s/%s",
+									volumeMountPathServerCertificate,
+									secretsutils.DataKeyCertificate,
+								),
+								fmt.Sprintf(
+									"--https-tls-key-file=%s/%s",
+									volumeMountPathServerCertificate,
+									secretsutils.DataKeyPrivateKey,
+								),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -892,9 +1114,21 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
-								{Name: volumeNameServerCertificate, MountPath: volumeMountPathServerCertificate, ReadOnly: true},
-								{Name: volumeNameTargetAllocatorConfig, MountPath: volumeMountTargetAllocatorConfig, ReadOnly: true},
+								{
+									Name:      volumeNameCACertificate,
+									MountPath: volumeMountPathCACertificate,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameServerCertificate,
+									MountPath: volumeMountPathServerCertificate,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameTargetAllocatorConfig,
+									MountPath: volumeMountTargetAllocatorConfig,
+									ReadOnly:  true,
+								},
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: new(false),
@@ -902,9 +1136,32 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 						},
 					},
 					Volumes: []corev1.Volume{
-						{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
-						{Name: volumeNameServerCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: serverSecret.Name}}},
-						{Name: volumeNameTargetAllocatorConfig, VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: targetAllocatorConfigMapName}}}},
+						{
+							Name: volumeNameCACertificate,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: caSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameServerCertificate,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: serverSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameTargetAllocatorConfig,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: targetAllocatorConfigMapName,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -914,7 +1171,9 @@ func (a *Actuator) getTargetAllocatorDeployment(namespace string, caSecret, serv
 
 // getOtelCollectorServiceAccount returns the [corev1.ServiceAccount] for the
 // the OTel Collector.
-func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.ServiceAccount {
+func (a *Actuator) getOtelCollectorServiceAccount(
+	namespace string,
+) *corev1.ServiceAccount {
 	obj := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      otelCollectorServiceAccountName,
@@ -928,7 +1187,9 @@ func (a *Actuator) getOtelCollectorServiceAccount(namespace string) *corev1.Serv
 }
 
 // getDebugExporterConfig returns the OTel settings for the debug exporter.
-func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[string]any {
+func (a *Actuator) getDebugExporterConfig(
+	cfg *config.DebugExporterConfig,
+) map[string]any {
 	// See the link below for more details about each config setting for the
 	// debug exporter.
 	//
@@ -940,9 +1201,13 @@ func (a *Actuator) getDebugExporterConfig(cfg config.DebugExporterConfig) map[st
 	return exporter
 }
 
-// getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP
-// exporter.
-func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) map[string]any {
+// getOTLPHTTPExporterConfig returns the OTel settings for the OTLP HTTP exporter
+// of the given signal's i-th target.
+func (a *Actuator) getOTLPHTTPExporterConfig(
+	cfg *config.OTLPHTTPExporterConfig,
+	sig config.SignalType,
+	i int,
+) map[string]any {
 	exporter := map[string]any{}
 
 	// See the link below for more details about each config setting of the
@@ -953,29 +1218,13 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 		exporter[configKeyEndpoint] = cfg.Endpoint
 	}
 
-	if cfg.TracesEndpoint != "" {
-		exporter["traces_endpoint"] = cfg.TracesEndpoint
-	}
-
-	if cfg.MetricsEndpoint != "" {
-		exporter["metrics_endpoint"] = cfg.MetricsEndpoint
-	}
-
-	if cfg.LogsEndpoint != "" {
-		exporter["logs_endpoint"] = cfg.LogsEndpoint
-	}
-
-	if cfg.ProfilesEndpoint != "" {
-		exporter["profiles_endpoint"] = cfg.ProfilesEndpoint
-	}
-
 	exporter["read_buffer_size"] = cfg.ReadBufferSize
 	exporter["write_buffer_size"] = cfg.WriteBufferSize
 	exporter["timeout"] = cfg.Timeout.String()
 	exporter["compression"] = string(cfg.Compression)
 	exporter["encoding"] = string(cfg.Encoding)
 
-	// Retry on Failure settings
+	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
 			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
@@ -986,31 +1235,18 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 		}
 	}
 
-	// TLS settings
+	// TLS settings.
 	if tls := cfg.TLS; tls != nil {
-		tlsConfig := map[string]any{}
-		if tls.InsecureSkipVerify != nil {
-			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-		}
-		if tls.CA != nil {
-			tlsConfig["ca_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
-		}
-		if tls.Cert != nil {
-			tlsConfig["cert_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
-		}
-		if tls.Key != nil {
-			tlsConfig["key_file"] = filepath.Join(httpExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
-		}
-
-		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
-
-		exporter["tls"] = tlsConfig
+		exporter["tls"] = a.getExporterTLSConfig(
+			tls,
+			signalVolumeMountPathTLS(sig, i, transportHTTP),
+		)
 	}
 
-	// Bearer Token Authentication settings
+	// Bearer Token Authentication settings.
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
-			"authenticator": httpExporterBearerTokenAuthName,
+			"authenticator": signalBearerTokenAuthName(sig, i, transportHTTP),
 		}
 	}
 
@@ -1018,8 +1254,12 @@ func (a *Actuator) getOTLPHTTPExporterConfig(cfg config.OTLPHTTPExporterConfig) 
 }
 
 // getOTLPGRPCExporterConfig returns the OTel settings for the OTLP gRPC
-// exporter.
-func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) map[string]any {
+// exporter of the given signal's i-th target.
+func (a *Actuator) getOTLPGRPCExporterConfig(
+	cfg *config.OTLPGRPCExporterConfig,
+	sig config.SignalType,
+	i int,
+) map[string]any {
 	// See the link below for more details about each config setting of the
 	// OTLP gRPC exporter.
 	//
@@ -1032,7 +1272,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 		"compression":       string(cfg.Compression),
 	}
 
-	// Retry on Failure settings
+	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
 			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
@@ -1043,55 +1283,93 @@ func (a *Actuator) getOTLPGRPCExporterConfig(cfg config.OTLPGRPCExporterConfig) 
 		}
 	}
 
-	// TLS settings
+	// TLS settings.
 	if tls := cfg.TLS; tls != nil {
-		tlsConfig := map[string]any{}
-		if tls.InsecureSkipVerify != nil {
-			tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
-		}
-		if tls.CA != nil {
-			tlsConfig["ca_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.CA.ResourceRef.DataKey)
-		}
-		if tls.Cert != nil {
-			tlsConfig["cert_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Cert.ResourceRef.DataKey)
-		}
-		if tls.Key != nil {
-			tlsConfig["key_file"] = filepath.Join(grpcExporterVolumeMountPathTLS, tls.Key.ResourceRef.DataKey)
-		}
-
-		tlsConfig["reload_interval"] = tls.ReloadInterval.String()
-
-		exporter["tls"] = tlsConfig
+		exporter["tls"] = a.getExporterTLSConfig(
+			tls,
+			signalVolumeMountPathTLS(sig, i, transportGRPC),
+		)
 	}
 
-	// Bearer Token Authentication settings
+	// Bearer Token Authentication settings.
 	if cfg.Token != nil {
 		exporter["auth"] = map[string]any{
-			"authenticator": grpcExporterBearerTokenAuthName,
+			"authenticator": signalBearerTokenAuthName(sig, i, transportGRPC),
 		}
 	}
 
 	return exporter
 }
 
+// getExporterTLSConfig renders the TLS block for an exporter, resolving the
+// CA/cert/key file paths against the given per-signal mount path.
+func (a *Actuator) getExporterTLSConfig(
+	tls *config.TLSConfig,
+	mountPath string,
+) map[string]any {
+	tlsConfig := map[string]any{}
+	if tls.InsecureSkipVerify != nil {
+		tlsConfig["insecure_skip_verify"] = *tls.InsecureSkipVerify
+	}
+	if tls.CA != nil {
+		tlsConfig["ca_file"] = filepath.Join(
+			mountPath,
+			tls.CA.ResourceRef.DataKey,
+		)
+	}
+	if tls.Cert != nil {
+		tlsConfig["cert_file"] = filepath.Join(
+			mountPath,
+			tls.Cert.ResourceRef.DataKey,
+		)
+	}
+	if tls.Key != nil {
+		tlsConfig["key_file"] = filepath.Join(
+			mountPath,
+			tls.Key.ResourceRef.DataKey,
+		)
+	}
+
+	tlsConfig["reload_interval"] = tls.ReloadInterval.String()
+
+	return tlsConfig
+}
+
 // getOtelExporters returns the OpenTelemetry exporters based on the given
-// [config.CollectorConfig] spec.
-func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
+// [config.CollectorConfig] spec and a map containing exporter names per signal.
+func (a *Actuator) getOtelExporters(
+	cfg config.CollectorConfig,
+) (map[string]any, exporterNamesBySignal) {
 	exporters := make(map[string]any)
+	exporterNames := make(exporterNamesBySignal)
 
-	if cfg.Spec.Exporters.DebugExporter.IsEnabled() {
-		exporters[debugExporterName] = a.getDebugExporterConfig(cfg.Spec.Exporters.DebugExporter)
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.EffectiveSignals() {
+			if exporterNames[sig] == nil {
+				exporterNames[sig] = make(map[int][]string)
+			}
+
+			// Iterate transports in a fixed order (HTTP, gRPC, debug) so the
+			// exporter lists are deterministic.
+			if e := target.Exporter.OTLPHTTPExporter; e != nil {
+				name := signalExporterName(sig, i, transportHTTP)
+				exporters[name] = a.getOTLPHTTPExporterConfig(e, sig, i)
+				exporterNames[sig][i] = append(exporterNames[sig][i], name)
+			}
+			if e := target.Exporter.OTLPGRPCExporter; e != nil {
+				name := signalExporterName(sig, i, transportGRPC)
+				exporters[name] = a.getOTLPGRPCExporterConfig(e, sig, i)
+				exporterNames[sig][i] = append(exporterNames[sig][i], name)
+			}
+			if e := target.Exporter.DebugExporter; e != nil {
+				name := signalExporterName(sig, i, transportDebug)
+				exporters[name] = a.getDebugExporterConfig(e)
+				exporterNames[sig][i] = append(exporterNames[sig][i], name)
+			}
+		}
 	}
 
-	if cfg.Spec.Exporters.OTLPHTTPExporter.IsEnabled() {
-		exporters["otlp_http"] = a.getOTLPHTTPExporterConfig(cfg.Spec.Exporters.OTLPHTTPExporter)
-	}
-
-	if cfg.Spec.Exporters.OTLPGRPCExporter.IsEnabled() {
-		exporters["otlp_grpc"] = a.getOTLPGRPCExporterConfig(cfg.Spec.Exporters.OTLPGRPCExporter)
-	}
-
-	return exporters
+	return exporters, exporterNames
 }
 
 // parseShootNamespaceAttributes extracts OTel resource attributes from a shoot
@@ -1100,7 +1378,9 @@ func (a *Actuator) getOtelExporters(cfg config.CollectorConfig) map[string]any {
 // gardener.project.name and gardener.shoot.name respectively.
 // For namespaces that do not follow the pattern, projectName and shootName are
 // returned as empty strings.
-func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, shootName string) {
+func parseShootNamespaceAttributes(
+	namespace string,
+) (clusterName, projectName, shootName string) {
 	clusterName = namespace
 	parts := strings.SplitN(namespace, "--", 3)
 	if len(parts) == 3 {
@@ -1111,41 +1391,37 @@ func parseShootNamespaceAttributes(namespace string) (clusterName, projectName, 
 	return clusterName, projectName, shootName
 }
 
-// buildPipelines returns the collector service pipelines for the signals
-// enabled by cfg. Receivers are always defined (see [Actuator.getOtelCollector]);
-// only the pipelines are gated here.
-func buildPipelines(cfg config.CollectorConfig, exporterNames []string) map[string]*otelv1beta1.Pipeline {
-	signals := cfg.Spec.Signals
-	if len(signals) == 0 {
-		signals = []config.SignalType{
-			config.SignalLogs,
-			config.SignalEvents,
-			config.SignalMetrics,
-		}
-	}
+// buildPipelines returns the collector service pipelines for the targets in
+// cfg. Each target produces one pipeline per signal it serves, wired to that
+// target's own exporter instances.
+//
+// The processor chain is:
+//   - resource
+//   - memory_limiter
+//   - transform/events (for the "events" signal)
+//   - batch
+func buildPipelines(
+	cfg config.CollectorConfig,
+	exporterNames exporterNamesBySignal,
+) map[string]*otelv1beta1.Pipeline {
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
-	if slices.Contains(signals, config.SignalLogs) {
-		pipelines[logsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{otlpReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-			Exporters:  exporterNames,
-		}
-	}
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.EffectiveSignals() {
+			processors := []string{
+				resourceProcessorName,
+				memoryLimiterProcessorName,
+			}
+			if sig == config.SignalEvents {
+				processors = append(processors, transformEventsProcessorName)
+			}
+			processors = append(processors, batchProcessorName)
 
-	if slices.Contains(signals, config.SignalEvents) {
-		pipelines[eventsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{eventsReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, transformEventsProcessorName, batchProcessorName},
-			Exporters:  exporterNames,
-		}
-	}
-
-	if slices.Contains(signals, config.SignalMetrics) {
-		pipelines[metricsPipelineName] = &otelv1beta1.Pipeline{
-			Receivers:  []string{prometheusReceiverName},
-			Processors: []string{resourceProcessorName, memoryLimiterProcessorName, batchProcessorName},
-			Exporters:  exporterNames,
+			pipelines[signalPipelineName(sig, i)] = &otelv1beta1.Pipeline{
+				Receivers:  []string{signalReceiverName(sig)},
+				Processors: processors,
+				Exporters:  exporterNames[sig][i],
+			}
 		}
 	}
 
@@ -1169,24 +1445,15 @@ func (a *Actuator) getOtelCollector(
 
 		volumeNameClientCertificate      = "client-cert"
 		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
-
-		baseVolumeNameBearerToken         = "bearer-token-auth"                               // #nosec: G101
-		httpExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-http" // #nosec: G101
-		grpcExporterVolumeNameBearerToken = baseVolumeNameBearerToken + "-exporter-otlp-grpc" // #nosec: G101
-
-		baseVolumeMountPathBearerTokenFile         = "/etc/auth/bearer"                                         // #nosec: G101
-		httpExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-http" // #nosec: G101
-		grpcExporterVolumeMountPathBearerTokenFile = baseVolumeMountPathBearerTokenFile + "-exporter-otlp-grpc" // #nosec: G101
 	)
 
-	exporters := a.getOtelExporters(cfg)
-	exporterNames := slices.Sorted(maps.Keys(exporters))
+	exporters, perSignalExporterNames := a.getOtelExporters(cfg)
 	clusterName, projectName, shootName := parseShootNamespaceAttributes(namespace)
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
 	)
-
+	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      otelCollectorName,
@@ -1196,7 +1463,7 @@ func (a *Actuator) getOtelCollector(
 				a.getAnnotations(),
 				map[string]string{
 					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "pod-label-selector-namespace-alias": "all-shoots",
-					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`,
+					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                annotationNetworkPolicyNamespaceSelector,
 				}),
 		},
 		Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -1215,14 +1482,44 @@ func (a *Actuator) getOtelCollector(
 				Image:    image.String(),
 				Replicas: new(otelCollectorReplicas),
 				VolumeMounts: []corev1.VolumeMount{
-					{Name: volumeNameCACertificate, MountPath: volumeMountPathCACertificate, ReadOnly: true},
-					{Name: volumeNameClientCertificate, MountPath: volumeMountPathClientCertificate, ReadOnly: true},
-					{Name: volumeNameShootKubeconfig, MountPath: gardenerutils.VolumeMountPathGenericKubeconfig, ReadOnly: true},
+					{
+						Name:      volumeNameCACertificate,
+						MountPath: volumeMountPathCACertificate,
+						ReadOnly:  true,
+					},
+					{
+						Name:      volumeNameClientCertificate,
+						MountPath: volumeMountPathClientCertificate,
+						ReadOnly:  true,
+					},
+					{
+						Name:      volumeNameShootKubeconfig,
+						MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,
+						ReadOnly:  true,
+					},
 				},
 				Volumes: []corev1.Volume{
-					{Name: volumeNameCACertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: caSecret.Name}}},
-					{Name: volumeNameClientCertificate, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: clientSecret.Name}}},
-					gardenerutils.GenerateGenericKubeconfigVolume(shootKubeconfigSecretName, accessSecretName, volumeNameShootKubeconfig),
+					{
+						Name: volumeNameCACertificate,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: caSecret.Name,
+							},
+						},
+					},
+					{
+						Name: volumeNameClientCertificate,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: clientSecret.Name,
+							},
+						},
+					},
+					gardenerutils.GenerateGenericKubeconfigVolume(
+						shootKubeconfigSecretName,
+						accessSecretName,
+						volumeNameShootKubeconfig,
+					),
 				},
 				Env: []corev1.EnvVar{{
 					Name:  "KUBECONFIG",
@@ -1258,9 +1555,18 @@ func (a *Actuator) getOtelCollector(
 								configKeyEndpoint: "https://" + targetAllocatorHTTPSServiceName,
 								"interval":        "30s",
 								"tls": map[string]any{
-									"ca_file":   filepath.Join(volumeMountPathCACertificate, secretsutils.DataKeyCertificateBundle),
-									"cert_file": filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyCertificate),
-									"key_file":  filepath.Join(volumeMountPathClientCertificate, secretsutils.DataKeyPrivateKey),
+									"ca_file": filepath.Join(
+										volumeMountPathCACertificate,
+										secretsutils.DataKeyCertificateBundle,
+									),
+									"cert_file": filepath.Join(
+										volumeMountPathClientCertificate,
+										secretsutils.DataKeyCertificate,
+									),
+									"key_file": filepath.Join(
+										volumeMountPathClientCertificate,
+										secretsutils.DataKeyPrivateKey,
+									),
 								},
 							},
 							"config": map[string]any{
@@ -1344,55 +1650,79 @@ func (a *Actuator) getOtelCollector(
 							},
 						},
 					},
-					Pipelines: buildPipelines(cfg, exporterNames),
+					Pipelines: buildPipelines(cfg, perSignalExporterNames),
 				},
 			},
 		},
 	}
 
-	// OTLP HTTP exporter TLS settings
-	a.configureVolumeForTLS(
-		obj,
-		cfg.Spec.Exporters.OTLPHTTPExporter.TLS,
-		httpExporterVolumeNameTLS,
-		httpExporterVolumeMountPathTLS,
-		resources,
-	)
-
-	// OTLP HTTP exporter Bearer Token Authentication settings
-	//
-	// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
-	a.configureVolumeForBearerTokenAuthExtension(
-		obj,
-		cfg.Spec.Exporters.OTLPHTTPExporter.Token,
-		httpExporterBearerTokenAuthName,
-		httpExporterVolumeMountPathBearerTokenFile,
-		httpExporterVolumeNameBearerToken,
-		httpExporterVolumeMountPathBearerTokenFile,
-		resources,
-	)
-
-	// OTLP gRPC exporter TLS settings
-	a.configureVolumeForTLS(
-		obj,
-		cfg.Spec.Exporters.OTLPGRPCExporter.TLS,
-		grpcExporterVolumeNameTLS,
-		grpcExporterVolumeMountPathTLS,
-		resources,
-	)
-
-	// OTLP gRPC exporter Bearer Token Authentication settings
-	a.configureVolumeForBearerTokenAuthExtension(
-		obj,
-		cfg.Spec.Exporters.OTLPGRPCExporter.Token,
-		grpcExporterBearerTokenAuthName,
-		grpcExporterVolumeMountPathBearerTokenFile,
-		grpcExporterVolumeNameBearerToken,
-		grpcExporterVolumeMountPathBearerTokenFile,
-		resources,
-	)
+	// Configure the per-transport exporter TLS and bearer token authentication
+	// volumes. TLS/token volumes are keyed per (target, signal, transport) so a
+	// target enabling several transports does not collide.
+	for i, target := range cfg.Spec.Targets {
+		for _, sig := range target.EffectiveSignals() {
+			// Configure TLS and bearer token volumes per enabled transport. The
+			// debug exporter has no endpoint, TLS or token, so it is skipped.
+			//
+			// See the link below for more details about bearertokenauth extension.
+			//
+			// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/bearertokenauthextension
+			if e := target.Exporter.OTLPHTTPExporter; e != nil {
+				a.configureExporterVolumes(
+					obj,
+					e.TLS,
+					e.Token,
+					sig,
+					i,
+					transportHTTP,
+					resources,
+				)
+			}
+			if e := target.Exporter.OTLPGRPCExporter; e != nil {
+				a.configureExporterVolumes(
+					obj,
+					e.TLS,
+					e.Token,
+					sig,
+					i,
+					transportGRPC,
+					resources,
+				)
+			}
+		}
+	}
 
 	return obj
+}
+
+// configureExporterVolumes configures the TLS and bearer token authentication
+// volumes for a single (target, signal, transport) exporter.
+func (a *Actuator) configureExporterVolumes(
+	obj *otelv1beta1.OpenTelemetryCollector,
+	tls *config.TLSConfig,
+	token *config.ResourceReference,
+	sig config.SignalType,
+	i int,
+	t transport,
+	resources []gardencorev1beta1.NamedResourceReference,
+) {
+	a.configureVolumeForTLS(
+		obj,
+		tls,
+		signalVolumeNameTLS(sig, i, t),
+		signalVolumeMountPathTLS(sig, i, t),
+		resources,
+	)
+
+	a.configureVolumeForBearerTokenAuthExtension(
+		obj,
+		token,
+		signalBearerTokenAuthName(sig, i, t),
+		signalVolumeMountPathBearerToken(sig, i, t),
+		signalVolumeNameBearerToken(sig, i, t),
+		signalVolumeMountPathBearerToken(sig, i, t),
+		resources,
+	)
 }
 
 // getEventsClusterRole returns the [rbacv1.ClusterRole] granting the OTel
@@ -1414,7 +1744,9 @@ func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
 // getEventsClusterRoleBinding returns the [rbacv1.ClusterRoleBinding] that
 // binds the events ClusterRole to the OTel Collector's service account in the
 // shoot cluster's kube-system namespace.
-func (a *Actuator) getEventsClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (a *Actuator) getEventsClusterRoleBinding(
+	serviceAccountName string,
+) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: otelCollectorName,
@@ -1432,10 +1764,14 @@ func (a *Actuator) getEventsClusterRoleBinding(serviceAccountName string) *rbacv
 	}
 }
 
-func secretNameForResource(resourceName string, resources []gardencorev1beta1.NamedResourceReference) string {
+func secretNameForResource(
+	resourceName string,
+	resources []gardencorev1beta1.NamedResourceReference,
+) string {
 	for _, r := range resources {
 		if r.Name == resourceName &&
-			r.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() && r.ResourceRef.Kind == "Secret" {
+			r.ResourceRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			r.ResourceRef.Kind == "Secret" {
 			return v1beta1constants.ReferencedResourcesPrefix + r.ResourceRef.Name
 		}
 	}
@@ -1471,7 +1807,12 @@ func (a *Actuator) configureVolumeForTLS(
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: secretNameForResource(resourceRef.Name, resources),
 					},
-					Items: []corev1.KeyToPath{{Key: resourceRef.DataKey, Path: resourceRef.DataKey}},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  resourceRef.DataKey,
+							Path: resourceRef.DataKey,
+						},
+					},
 				},
 			},
 		)
@@ -1524,7 +1865,10 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 		"filename": filepath.Join(tokenBasePath, ref.ResourceRef.DataKey),
 	}
 
-	obj.Spec.Config.Service.Extensions = append(obj.Spec.Config.Service.Extensions, authExtensionName)
+	obj.Spec.Config.Service.Extensions = append(
+		obj.Spec.Config.Service.Extensions,
+		authExtensionName,
+	)
 
 	obj.Spec.Volumes = append(
 		obj.Spec.Volumes,
@@ -1532,7 +1876,10 @@ func (a *Actuator) configureVolumeForBearerTokenAuthExtension(
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretNameForResource(ref.ResourceRef.Name, resources),
+					SecretName: secretNameForResource(
+						ref.ResourceRef.Name,
+						resources,
+					),
 				},
 			},
 		},

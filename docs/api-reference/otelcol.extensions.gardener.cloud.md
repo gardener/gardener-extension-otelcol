@@ -25,10 +25,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporters` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
+| `targets` _[Target](#target) array_ | Targets is a list of collector destinations. Each target consists of a<br />self-contained exporter and the signals it receives. |  | Optional: \{\} <br /> |
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
-| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled.<br />When a signal is omitted, its pipeline is not created. The corresponding<br />receiver is still defined, which the collector reports as an unused<br />component in its logs; this is expected and harmless. |  | Optional: \{\} <br /> |
 
 
 #### CollectorExportersConfig
@@ -40,12 +39,12 @@ CollectorExportersConfig provides the OTLP exporter settings.
 
 
 _Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
+- [Target](#target)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `otlp_grpc` _[OTLPGRPCExporterConfig](#otlpgrpcexporterconfig)_ | OTLPGRPCExporter provides the OTLP gRPC Exporter settings. |  | Optional: \{\} <br /> |
-| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | HTTPExporter provides the OTLP HTTP Exporter settings. |  | Optional: \{\} <br /> |
+| `otlp_http` _[OTLPHTTPExporterConfig](#otlphttpexporterconfig)_ | OTLPHTTPExporter provides the OTLP HTTP Exporter settings. |  | Optional: \{\} <br /> |
 | `debug` _[DebugExporterConfig](#debugexporterconfig)_ | DebugExporter provides the settings for the debug exporter. |  | Optional: \{\} <br /> |
 
 
@@ -124,7 +123,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the debug exporter is enabled or not. | false | Optional: \{\} <br /> |
 | `verbosity` _[DebugExporterVerbosity](#debugexporterverbosity)_ | Verbosity specifies the verbosity level for the debug exporter. | <nil> | Optional: \{\} <br /> |
 
 
@@ -248,7 +246,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP gRPC exporter is enabled or not. | false | Optional: \{\} <br /> |
 | `endpoint` _string_ | Endpoint specifies the gRPC endpoint to which signals will be exported.<br />Check the link below for more details about the format of this field.<br />https://github.com/grpc/grpc/blob/master/doc/naming.md |  | Required: \{\} <br /> |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
 | `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  |  |
@@ -276,12 +273,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled specifies whether the OTLP HTTP exporter is enabled or not. | false | Optional: \{\} <br /> |
-| `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for traces "/v1/traces" will appended, for metrics<br />"/v1/metrics" will be appended, for logs "/v1/logs" will be appended. |  | Optional: \{\} <br /> |
-| `traces_endpoint` _string_ | TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.<br />When this setting is present the base endpoint setting is ignored for<br />traces. |  | Optional: \{\} <br /> |
-| `metrics_endpoint` _string_ | MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.<br />When this setting is present the base endpoint setting is ignored for<br />metrics. |  | Optional: \{\} <br /> |
-| `logs_endpoint` _string_ | LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs<br />When this setting is present the base endpoint setting is ignored for<br />logs. |  | Optional: \{\} <br /> |
-| `profiles_endpoint` _string_ | ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.<br />When this setting is present the endpoint setting is ignored for<br />profile data. |  | Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318<br />To send each signal a corresponding path will be added to this base<br />URL, i.e. for metrics "/v1/metrics" will be appended, for logs "/v1/logs"<br />will be appended. |  | Optional: \{\} <br /> |
 | `tls` _[TLSConfig](#tlsconfig)_ | TLS specifies the TLS configuration settings for the exporter. |  | Optional: \{\} <br /> |
 | `token` _[ResourceReference](#resourcereference)_ | Token references a bearer token for authentication. |  | Optional: \{\} <br /> |
 | `timeout` _[Duration](#duration)_ | Timeout specifies the HTTP request time limit. Default value is<br />[DefaultHTTPExporterClientTimeout]. | <nil> | Optional: \{\} <br /> |
@@ -358,7 +350,7 @@ export.
 
 
 _Appears in:_
-- [CollectorConfigSpec](#collectorconfigspec)
+- [Target](#target)
 
 | Field | Description |
 | --- | --- |
@@ -386,5 +378,22 @@ _Appears in:_
 | `cert` _[ResourceReference](#resourcereference)_ | Cert references the client certificate to use for TLS required connections. |  | Optional: \{\} <br /> |
 | `key` _[ResourceReference](#resourcereference)_ | Key references the client key to use for TLS required connections. |  | Optional: \{\} <br /> |
 | `reloadInterval` _[Duration](#duration)_ | ReloadInterval specifies mTLS key and cert reload interval<br />from mounted secret volume | <nil> | Optional: \{\} <br /> |
+
+
+#### Target
+
+
+
+Target consists of exporter configurations for signals.
+
+
+
+_Appears in:_
+- [CollectorConfigSpec](#collectorconfigspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Optional: \{\} <br /> |
+| `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled. |  | Optional: \{\} <br /> |
 
 

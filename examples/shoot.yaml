@@ -13,72 +13,79 @@ spec:
         apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
         kind: CollectorConfig
         spec:
-          # Signals to collect and export. Valid values: logs, events, metrics.
-          # If omitted (or empty), all signals are enabled.
-          # signals:
-          #   - logs
-          #   - events
-          #   - metrics
+          # Exporter-oriented configuration. Each entry in `targets` pairs a
+          # self-contained exporter with the signals it receives ("logs",
+          # "metrics" and/or "events").
+          #
+          # An exporter enables one or more transports (`otlp_http`, `otlp_grpc`,
+          # `debug`); a target's signal pipelines fan out to all enabled
+          # transports. Each OTLP transport must set an endpoint.
+          targets:
+            # First destination: a remote collector over HTTP receiving both
+            # logs and metrics.
+            - exporter:
+                otlp_http:
+                  endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
+                  compression: gzip  # gzip, zstd, snappy or none
+                  encoding: proto  # proto or json
+                  token:
+                    resourceRef:
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
+              signals: [logs, metrics]
 
-          # Collector log settings
+            # Second destination: a debug exporter writing to the collector logs.
+            # The debug transport ignores endpoint/tls/token; only verbosity is
+            # considered.
+            - exporter:
+                debug:
+                  verbosity: basic  # basic, normal or detailed
+              signals: [logs]
+
+            # Third destination: ship Kubernetes events over gRPC.
+            - exporter:
+                otlp_grpc:
+                  endpoint: "http://opentelemetry-receiver.default.svc.cluster.local:4317"
+                  token:
+                    resourceRef:
+                      name: otelcol-bearer-token
+                      dataKey: token
+                  tls:
+                    ca:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: ca.crt
+                    cert:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.crt
+                    key:
+                      resourceRef:
+                        name: otelcol-tls
+                        dataKey: client.key
+              signals: [events]
+
+          # Collector's own internal log settings.
           logs:
             level: INFO  # INFO, WARN, ERROR or DEBUG
             encoding: console  # console or json
 
-          # Internal collector metrics settings
+          # Collector's own internal metrics settings.
           metrics:
             level: normal  # none, basic, normal or detailed
-
-          # Exporters settings
-          exporters:
-            # OTLP debug exporter
-            debug:
-              enabled: true
-              verbosity: basic  # basic, normal or detailed
-
-            # OTLP HTTP exporter settings
-            otlp_http:
-              enabled: true
-              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4318"
-              token:
-                resourceRef:
-                  name: otelcol-bearer-token
-                  dataKey: token
-              tls:
-                ca:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: ca.crt
-                cert:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.crt
-                key:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.key
-
-            # OTLP gRPC exporter settings
-            otlp_grpc:
-              enabled: true
-              endpoint: "https://opentelemetry-receiver.default.svc.cluster.local:4317"
-              token:
-                resourceRef:
-                  name: otelcol-bearer-token
-                  dataKey: token
-              tls:
-                ca:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: ca.crt
-                cert:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.crt
-                key:
-                  resourceRef:
-                    name: otelcol-tls
-                    dataKey: client.key
   resources:
   - name: otelcol-bearer-token
     resourceRef:
