@@ -66,18 +66,18 @@ var _ = Describe("signal selection", func() {
 		),
 		Entry("metrics only",
 			configWithSignals(config.SignalMetrics),
-			[]string{"metrics/0"},
+			[]string{"metrics_0"},
 		),
 		Entry("logs and events only",
 			configWithSignals(config.SignalLogs, config.SignalEvents),
-			[]string{"logs/0", "logs/events_0"},
+			[]string{"logs_0", "logs_events_0"},
 		),
 		Entry("all signals",
 			configWithSignals(config.SignalMetrics, config.SignalLogs, config.SignalEvents),
 			[]string{
-				"metrics/0",
-				"logs/0",
-				"logs/events_0",
+				"metrics_0",
+				"logs_0",
+				"logs_events_0",
 			},
 		),
 		Entry("a target with no signals set defaults to all signals",
@@ -85,9 +85,9 @@ var _ = Describe("signal selection", func() {
 				Targets: []config.Target{{Signals: nil}},
 			}},
 			[]string{
-				"metrics/0",
-				"logs/0",
-				"logs/events_0",
+				"metrics_0",
+				"logs_0",
+				"logs_events_0",
 			},
 		),
 	)
@@ -110,10 +110,10 @@ var _ = Describe("signal selection", func() {
 			To(Equal([]string{"prometheus"}))
 
 		Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Exporters).
-			To(Equal([]string{"otlphttp/metrics_0"}))
+			To(Equal([]string{"otlphttp_metrics_0"}))
 		Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Exporters).
-			To(Equal([]string{"otlphttp/logs_0"}))
+			To(Equal([]string{"otlphttp_logs_0"}))
 		Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Exporters).
-			To(Equal([]string{"otlphttp/events_0"}))
+			To(Equal([]string{"otlphttp_events_0"}))
 	})
 })
