@@ -211,9 +211,21 @@ const (
 var readVerbs = []string{"get", "list", "watch"}
 
 // signalPipelineName returns the collector service pipeline name for the i-th
-// target of a signal, e.g. "metrics/0".
+// target of a signal, e.g. "metrics/0" or "logs/events_0".
+//
+// A collector component name has at most one "/" separating the component type
+// from its name (see https://github.com/open-telemetry/opentelemetry-collector/issues/9208).
+// When the base already carries a name suffix (e.g. the events pipeline
+// "logs/events"), the per-target index is appended with "_" to keep the name a
+// single valid identifier.
 func signalPipelineName(sig config.SignalType, i int) string {
-	return fmt.Sprintf("%s/%d", signalPipelineBaseName(sig), i)
+	base := signalPipelineBaseName(sig)
+	sep := "/"
+	if strings.Contains(base, "/") {
+		sep = "_"
+	}
+
+	return fmt.Sprintf("%s%s%d", base, sep, i)
 }
 
 // signalPipelineBaseName returns the base pipeline name for a signal. Because
@@ -261,8 +273,12 @@ const (
 type exporterNamesBySignal = map[config.SignalType]map[int][]string
 
 // signalExporterName returns the exporter component name for the i-th target of
-// a signal and the given transport, e.g. "otlphttp/metrics/0", "otlp/events/0"
-// or "debug/metrics/2".
+// a signal and the given transport, e.g. "otlphttp/metrics_0", "otlp/events_0"
+// or "debug/metrics_2".
+//
+// The single "/" separates the component type from its name; the name part uses
+// "_" so the identifier stays compliant with the collector's naming rules (see
+// https://github.com/open-telemetry/opentelemetry-collector/issues/9208).
 func signalExporterName(sig config.SignalType, i int, t transport) string {
 	base := otlphttpExporterBaseName
 	switch t {
@@ -274,13 +290,17 @@ func signalExporterName(sig config.SignalType, i int, t transport) string {
 		// HTTP keeps the otlphttp base.
 	}
 
-	return fmt.Sprintf("%s/%s/%d", base, sig, i)
+	return fmt.Sprintf("%s/%s_%d", base, sig, i)
 }
 
 // signalBearerTokenAuthName returns the bearertokenauth extension name for the
-// i-th target of a signal and transport, e.g. "bearertokenauth/http/metrics/0".
+// i-th target of a signal and transport, e.g. "bearertokenauth/http_metrics_0".
+//
+// The single "/" separates the component type from its name; the name part uses
+// "_" so the identifier stays compliant with the collector's naming rules (see
+// https://github.com/open-telemetry/opentelemetry-collector/issues/9208).
 func signalBearerTokenAuthName(sig config.SignalType, i int, t transport) string {
-	return fmt.Sprintf("%s/%s/%s/%d", baseBearerTokenAuthName, t, sig, i)
+	return fmt.Sprintf("%s/%s_%s_%d", baseBearerTokenAuthName, t, sig, i)
 }
 
 // signalVolumeNameTLS returns the TLS volume name for the i-th target of a
