@@ -480,7 +480,7 @@ type ResourceReferenceDetails struct {
 type Target struct {
 	// Exporters specifies the exporters configuration of the collector.
 	//
-	// +k8s:optional
+	// +k8s:required
 	Exporter CollectorExportersConfig `json:"exporter,omitzero"`
 
 	// Signals lists the telemetry signals the collector should collect and
