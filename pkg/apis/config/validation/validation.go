@@ -30,10 +30,7 @@ func Validate(cfg config.CollectorConfig) error {
 		return allErrs.ToAggregate()
 	}
 
-	// anyEnabled tracks whether the targets collectively enable at least one
-	// signal.
 	anyEnabled := false
-
 	for i, target := range cfg.Spec.Targets {
 		targetPath := targetsPath.Index(i)
 

@@ -25,7 +25,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `targets` _[Target](#target) array_ | Targets is a list of collector destinations. Each target consists of a<br />self-contained exporter and the signals it receives. |  | Optional: \{\} <br /> |
+| `targets` _[Target](#target) array_ | Targets is a list of collector destinations. Each target consists of a<br />self-contained exporter and the signals it receives. |  | Required: \{\} <br /> |
 | `logs` _[CollectorLogsConfig](#collectorlogsconfig)_ | Logs specifies the settings for the collector logs. |  | Optional: \{\} <br /> |
 | `metrics` _[CollectorMetricsConfig](#collectormetricsconfig)_ | Metrics specifies the settings for the internal collector metrics. |  | Optional: \{\} <br /> |
 
@@ -393,7 +393,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Optional: \{\} <br /> |
+| `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
 | `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled. |  | Optional: \{\} <br /> |
 
 
