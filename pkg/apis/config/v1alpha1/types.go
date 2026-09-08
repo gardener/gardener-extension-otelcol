@@ -402,7 +402,7 @@ type CollectorConfigSpec struct {
 	// Targets is a list of collector destinations. Each target consists of a
 	// self-contained exporter and the signals it receives.
 	//
-	// +k8s:optional
+	// +k8s:required
 	Targets []Target `json:"targets,omitempty"`
 
 	// Logs specifies the settings for the collector logs.
