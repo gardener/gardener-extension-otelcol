@@ -123,7 +123,7 @@ const (
 
 	// transformEventsProcessorName is the name of the transform processor for
 	// the k8sobjects/events pipeline.
-	transformEventsProcessorName = "transform_events"
+	transformEventsProcessorName = "transform/events"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8sobjects/events receiver to authenticate to the shoot cluster.
@@ -160,7 +160,7 @@ const (
 	otlpReceiverName = "otlp"
 
 	// eventsReceiverName is the name of the k8sobjects receiver for events.
-	eventsReceiverName = "k8sobjects_events"
+	eventsReceiverName = "k8sobjects/events"
 
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
@@ -178,7 +178,7 @@ const (
 	logsPipelineName = "logs"
 
 	// eventsPipelineName is the name of the events pipeline.
-	eventsPipelineName = "logs_events"
+	eventsPipelineName = "logs/events"
 
 	// metricsPipelineName is the name of the metrics pipeline.
 	metricsPipelineName = "metrics"
@@ -211,9 +211,15 @@ const (
 var readVerbs = []string{"get", "list", "watch"}
 
 // signalPipelineName returns the collector service pipeline name for the i-th
-// target of a signal, e.g. "metrics_0" or "logs_events_0".
+// target of a signal, e.g. "metrics/0" or "logs/events_0".
 func signalPipelineName(sig config.SignalType, i int) string {
-	return fmt.Sprintf("%s_%d", signalPipelineBaseName(sig), i)
+	base := signalPipelineBaseName(sig)
+	sep := "/"
+	if strings.Contains(base, "/") {
+		sep = "_"
+	}
+
+	return fmt.Sprintf("%s%s%d", base, sep, i)
 }
 
 // signalPipelineBaseName returns the base pipeline name for a signal. Because
@@ -261,8 +267,8 @@ const (
 type exporterNamesBySignal = map[config.SignalType]map[int][]string
 
 // signalExporterName returns the exporter component name for the i-th target of
-// a signal and the given transport, e.g. "otlphttp_metrics_0", "otlp_events_0"
-// or "debug_metrics_2".
+// a signal and the given transport, e.g. "otlphttp/metrics_0", "otlp/events_0"
+// or "debug/metrics_2".
 func signalExporterName(sig config.SignalType, i int, t transport) string {
 	base := otlphttpExporterBaseName
 	switch t {
@@ -274,13 +280,13 @@ func signalExporterName(sig config.SignalType, i int, t transport) string {
 		// HTTP keeps the otlphttp base.
 	}
 
-	return fmt.Sprintf("%s_%s_%d", base, sig, i)
+	return fmt.Sprintf("%s/%s_%d", base, sig, i)
 }
 
 // signalBearerTokenAuthName returns the bearertokenauth extension name for the
-// i-th target of a signal and transport, e.g. "bearertokenauth_http_metrics_0".
+// i-th target of a signal and transport, e.g. "bearertokenauth/http_metrics_0".
 func signalBearerTokenAuthName(sig config.SignalType, i int, t transport) string {
-	return fmt.Sprintf("%s_%s_%s_%d", baseBearerTokenAuthName, t, sig, i)
+	return fmt.Sprintf("%s/%s_%s_%d", baseBearerTokenAuthName, t, sig, i)
 }
 
 // signalVolumeNameTLS returns the TLS volume name for the i-th target of a
