@@ -20,97 +20,94 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
-	if in.Spec.Exporters.OTLPGRPCExporter.Enabled == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.OTLPGRPCExporter.Enabled = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.TLS != nil {
-		if in.Spec.Exporters.OTLPGRPCExporter.TLS.InsecureSkipVerify == nil {
-			var ptrVar1 bool = false
-			in.Spec.Exporters.OTLPGRPCExporter.TLS.InsecureSkipVerify = &ptrVar1
+	for i := range in.Spec.Targets {
+		a := &in.Spec.Targets[i]
+		if a.Exporter.OTLPGRPCExporter != nil {
+			if a.Exporter.OTLPGRPCExporter.TLS != nil {
+				if a.Exporter.OTLPGRPCExporter.TLS.InsecureSkipVerify == nil {
+					var ptrVar1 bool = false
+					a.Exporter.OTLPGRPCExporter.TLS.InsecureSkipVerify = &ptrVar1
+				}
+				if a.Exporter.OTLPGRPCExporter.TLS.ReloadInterval == 0 {
+					a.Exporter.OTLPGRPCExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
+				}
+			}
+			if a.Exporter.OTLPGRPCExporter.Timeout == 0 {
+				a.Exporter.OTLPGRPCExporter.Timeout = time.Duration(DefaultGRPCExporterClientTimeout)
+			}
+			if a.Exporter.OTLPGRPCExporter.ReadBufferSize == 0 {
+				a.Exporter.OTLPGRPCExporter.ReadBufferSize = int(DefaultGRPCExporterClientReadBufferSize)
+			}
+			if a.Exporter.OTLPGRPCExporter.WriteBufferSize == 0 {
+				a.Exporter.OTLPGRPCExporter.WriteBufferSize = int(DefaultGRPCExporterClientWriteBufferSize)
+			}
+			if a.Exporter.OTLPGRPCExporter.RetryOnFailure.Enabled == nil {
+				var ptrVar1 bool = true
+				a.Exporter.OTLPGRPCExporter.RetryOnFailure.Enabled = &ptrVar1
+			}
+			if a.Exporter.OTLPGRPCExporter.RetryOnFailure.InitialInterval == 0 {
+				a.Exporter.OTLPGRPCExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
+			}
+			if a.Exporter.OTLPGRPCExporter.RetryOnFailure.MaxInterval == 0 {
+				a.Exporter.OTLPGRPCExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
+			}
+			if a.Exporter.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime == 0 {
+				a.Exporter.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
+			}
+			if a.Exporter.OTLPGRPCExporter.RetryOnFailure.Multiplier == 0 {
+				a.Exporter.OTLPGRPCExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
+			}
+			if a.Exporter.OTLPGRPCExporter.Compression == "" {
+				a.Exporter.OTLPGRPCExporter.Compression = Compression(CompressionGzip)
+			}
 		}
-		if in.Spec.Exporters.OTLPGRPCExporter.TLS.ReloadInterval == 0 {
-			in.Spec.Exporters.OTLPGRPCExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
+		if a.Exporter.OTLPHTTPExporter != nil {
+			if a.Exporter.OTLPHTTPExporter.TLS != nil {
+				if a.Exporter.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
+					var ptrVar1 bool = false
+					a.Exporter.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+				}
+				if a.Exporter.OTLPHTTPExporter.TLS.ReloadInterval == 0 {
+					a.Exporter.OTLPHTTPExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
+				}
+			}
+			if a.Exporter.OTLPHTTPExporter.Timeout == 0 {
+				a.Exporter.OTLPHTTPExporter.Timeout = time.Duration(DefaultHTTPExporterClientTimeout)
+			}
+			if a.Exporter.OTLPHTTPExporter.ReadBufferSize == 0 {
+				a.Exporter.OTLPHTTPExporter.ReadBufferSize = int(DefaultHTTPExporterClientReadBufferSize)
+			}
+			if a.Exporter.OTLPHTTPExporter.WriteBufferSize == 0 {
+				a.Exporter.OTLPHTTPExporter.WriteBufferSize = int(DefaultHTTPExporterClientWriteBufferSize)
+			}
+			if a.Exporter.OTLPHTTPExporter.Encoding == "" {
+				a.Exporter.OTLPHTTPExporter.Encoding = MessageEncoding(MessageEncodingProto)
+			}
+			if a.Exporter.OTLPHTTPExporter.RetryOnFailure.Enabled == nil {
+				var ptrVar1 bool = true
+				a.Exporter.OTLPHTTPExporter.RetryOnFailure.Enabled = &ptrVar1
+			}
+			if a.Exporter.OTLPHTTPExporter.RetryOnFailure.InitialInterval == 0 {
+				a.Exporter.OTLPHTTPExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
+			}
+			if a.Exporter.OTLPHTTPExporter.RetryOnFailure.MaxInterval == 0 {
+				a.Exporter.OTLPHTTPExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
+			}
+			if a.Exporter.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime == 0 {
+				a.Exporter.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
+			}
+			if a.Exporter.OTLPHTTPExporter.RetryOnFailure.Multiplier == 0 {
+				a.Exporter.OTLPHTTPExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
+			}
+			if a.Exporter.OTLPHTTPExporter.Compression == "" {
+				a.Exporter.OTLPHTTPExporter.Compression = Compression(CompressionGzip)
+			}
 		}
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.Timeout == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.Timeout = time.Duration(DefaultGRPCExporterClientTimeout)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.ReadBufferSize == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.ReadBufferSize = int(DefaultGRPCExporterClientReadBufferSize)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.WriteBufferSize == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.WriteBufferSize = int(DefaultGRPCExporterClientWriteBufferSize)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Enabled == nil {
-		var ptrVar1 bool = true
-		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Enabled = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.InitialInterval == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxInterval == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Multiplier == 0 {
-		in.Spec.Exporters.OTLPGRPCExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
-	}
-	if in.Spec.Exporters.OTLPGRPCExporter.Compression == "" {
-		in.Spec.Exporters.OTLPGRPCExporter.Compression = Compression(CompressionGzip)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.Enabled == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.OTLPHTTPExporter.Enabled = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.TLS != nil {
-		if in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify == nil {
-			var ptrVar1 bool = false
-			in.Spec.Exporters.OTLPHTTPExporter.TLS.InsecureSkipVerify = &ptrVar1
+		if a.Exporter.DebugExporter != nil {
+			if a.Exporter.DebugExporter.Verbosity == "" {
+				a.Exporter.DebugExporter.Verbosity = DebugExporterVerbosity(DebugExporterVerbosityBasic)
+			}
 		}
-		if in.Spec.Exporters.OTLPHTTPExporter.TLS.ReloadInterval == 0 {
-			in.Spec.Exporters.OTLPHTTPExporter.TLS.ReloadInterval = time.Duration(DefaultTLSReloadInterval)
-		}
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.Timeout == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.Timeout = time.Duration(DefaultHTTPExporterClientTimeout)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.ReadBufferSize = int(DefaultHTTPExporterClientReadBufferSize)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.WriteBufferSize = int(DefaultHTTPExporterClientWriteBufferSize)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.Encoding == "" {
-		in.Spec.Exporters.OTLPHTTPExporter.Encoding = MessageEncoding(MessageEncodingProto)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Enabled == nil {
-		var ptrVar1 bool = true
-		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Enabled = &ptrVar1
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.InitialInterval == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.InitialInterval = time.Duration(DefaultRetryInitialInterval)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxInterval == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxInterval = time.Duration(DefaultRetryMaxInterval)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.MaxElapsedTime = time.Duration(DefaultRetryMaxElapsedTime)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Multiplier == 0 {
-		in.Spec.Exporters.OTLPHTTPExporter.RetryOnFailure.Multiplier = float64(DefaultRetryMultiplier)
-	}
-	if in.Spec.Exporters.OTLPHTTPExporter.Compression == "" {
-		in.Spec.Exporters.OTLPHTTPExporter.Compression = Compression(CompressionGzip)
-	}
-	if in.Spec.Exporters.DebugExporter.Enabled == nil {
-		var ptrVar1 bool = false
-		in.Spec.Exporters.DebugExporter.Enabled = &ptrVar1
-	}
-	if in.Spec.Exporters.DebugExporter.Verbosity == "" {
-		in.Spec.Exporters.DebugExporter.Verbosity = DebugExporterVerbosity(DebugExporterVerbosityBasic)
 	}
 	if in.Spec.Logs.Level == "" {
 		in.Spec.Logs.Level = LogLevel(LogLevelInfo)

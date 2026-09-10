@@ -133,39 +133,12 @@ type RetryOnFailureConfig struct {
 //
 // [OTLP HTTP Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
 type OTLPHTTPExporterConfig struct {
-	// Enabled specifies whether the OTLP HTTP exporter is enabled or not.
-	Enabled *bool
-
 	// Endpoint specifies the target base URL to send data to, e.g. https://example.com:4318
 	//
 	// To send each signal a corresponding path will be added to this base
-	// URL, i.e. for traces "/v1/traces" will appended, for metrics
-	// "/v1/metrics" will be appended, for logs "/v1/logs" will be appended.
+	// URL, i.e. for metrics "/v1/metrics" will be appended, for logs "/v1/logs"
+	// will be appended.
 	Endpoint string
-
-	// TracesEndpoint specifies the target URL to send trace data to, e.g. https://example.com:4318/v1/traces.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// traces.
-	TracesEndpoint string
-
-	// MetricsEndpoint specifies the target URL to send metric data to, e.g. https://example.com:4318/v1/metrics.
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// metrics.
-	MetricsEndpoint string
-
-	// LogsEndpoint specifies the target URL to send log data to, e.g. https://example.com:4318/v1/logs
-	//
-	// When this setting is present the base endpoint setting is ignored for
-	// logs.
-	LogsEndpoint string
-
-	// ProfilesEndpoint specifies the target URL to send profile data to, e.g. https://example.com:4318/v1development/profiles.
-	//
-	// When this setting is present the endpoint setting is ignored for
-	// profile data.
-	ProfilesEndpoint string
 
 	// TLS specifies the TLS configuration settings for the exporter.
 	TLS *TLSConfig
@@ -197,16 +170,6 @@ type OTLPHTTPExporterConfig struct {
 	Compression Compression
 }
 
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg OTLPHTTPExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
-	}
-
-	return false
-}
-
 // DebugExporterVerbosity specifies the verbosity level for the debug exporter.
 type DebugExporterVerbosity string
 
@@ -221,21 +184,8 @@ const (
 
 // DebugExporterConfig provides the settings for the debug exporter
 type DebugExporterConfig struct {
-	// Enabled specifies whether the debug exporter is enabled or not.
-	Enabled *bool
-
 	// Verbosity specifies the verbosity level for the debug exporter.
 	Verbosity DebugExporterVerbosity
-}
-
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg DebugExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
-	}
-
-	return false
 }
 
 // OTLPGRPCExporterConfig provides the OTLP gRPC Exporter config settings.
@@ -244,9 +194,6 @@ func (cfg DebugExporterConfig) IsEnabled() bool {
 //
 // [OTLP gRPC Exporter]: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
 type OTLPGRPCExporterConfig struct {
-	// Enabled specifies whether the OTLP gRPC exporter is enabled or not.
-	Enabled *bool
-
 	// Endpoint specifies the gRPC endpoint to which signals will be exported.
 	//
 	// Check the link below for more details about the format of this field.
@@ -280,26 +227,16 @@ type OTLPGRPCExporterConfig struct {
 	Compression Compression
 }
 
-// IsEnabled is a predicate which returns whether the exporter is enabled or
-// not.
-func (cfg OTLPGRPCExporterConfig) IsEnabled() bool {
-	if cfg.Enabled != nil {
-		return *cfg.Enabled
-	}
-
-	return false
-}
-
 // CollectorExportersConfig provides the OTLP exporter settings.
 type CollectorExportersConfig struct {
 	// OTLPGRPCExporter provides the OTLP gRPC Exporter settings.
-	OTLPGRPCExporter OTLPGRPCExporterConfig
+	OTLPGRPCExporter *OTLPGRPCExporterConfig
 
-	// HTTPExporter provides the OTLP HTTP Exporter settings.
-	OTLPHTTPExporter OTLPHTTPExporterConfig
+	// OTLPHTTPExporter provides the OTLP HTTP Exporter settings.
+	OTLPHTTPExporter *OTLPHTTPExporterConfig
 
 	// DebugExporter provides the settings for the debug exporter.
-	DebugExporter DebugExporterConfig
+	DebugExporter *DebugExporterConfig
 }
 
 // CollectorLogsConfig provides the settings for the collector internal logs.
@@ -326,21 +263,44 @@ type CollectorMetricsConfig struct {
 	Level MetricsVerbosityLevel
 }
 
+// Target consists of exporter configurations for signals.
+type Target struct {
+	// Exporters specifies the exporters configuration of the collector.
+	Exporter CollectorExportersConfig
+
+	// Signals lists the telemetry signals the collector should collect and
+	// export. Valid values are "logs", "events" and "metrics". If empty, all
+	// signals are enabled.
+	Signals []SignalType
+}
+
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
-	// Exporters specifies the exporters configuration of the collector.
-	Exporters CollectorExportersConfig
+	// Targets is a list of collector destinations. Each target consists of a
+	// self-contained exporter and the signals it receives.
+	Targets []Target
 
 	// Logs specifies the settings for the collector logs.
 	Logs CollectorLogsConfig
 
 	// Metrics specifies the settings for the internal collector metrics.
 	Metrics CollectorMetricsConfig
+}
 
-	// Signals lists the telemetry signals the collector should collect and
-	// export. Valid values are "logs", "events" and "metrics". If empty, all
-	// signals are enabled.
-	Signals []SignalType
+// AllSignals lists all supported signals.
+func AllSignals() []SignalType {
+	return []SignalType{SignalMetrics, SignalLogs, SignalEvents}
+}
+
+// EffectiveSignals returns the signals the target serves. An explicitly
+// configured signal list is returned as-is; an empty list means all signals
+// are enabled and expands to [AllSignals].
+func (t Target) EffectiveSignals() []SignalType {
+	if len(t.Signals) == 0 {
+		return AllSignals()
+	}
+
+	return t.Signals
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -367,8 +327,8 @@ type TLSConfig struct {
 	Cert *ResourceReference
 	// Key references the client key to use for TLS required connections.
 	Key *ResourceReference
-	// ReloadInterval specifies the duration after which the certificate will be reloaded.
-	// If not set, it will never be reloaded
+	// ReloadInterval specifies the duration after which the certificate will be
+	// reloaded. If not set, it will never be reloaded.
 	ReloadInterval time.Duration
 }
 
