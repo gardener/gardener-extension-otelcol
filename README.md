@@ -50,7 +50,7 @@ control-plane components via the
 [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter).
 The configuration is exporter-oriented: `spec.targets` is a list of exporter
 destinations. Each target pairs a self-contained exporter with the signals it
-receives (`metrics`, `logs` and/or `events`).
+receives (`metrics`, `logs` and/or `events`) and an optional list of filters.
 When we talk about `events` we mean **Kubernetes Events**. Technically an event
 is a log signal — from OpenTelemetry's point of view it travels through a logs
 pipeline, so the configured backend must be capable of receiving logs. Gardener
@@ -204,7 +204,7 @@ please make sure to check the
 
 Because a signal is enabled by listing it in a target's `signals` section,
 the same signal can appear in several targets and thus be exported to several
-destinations at once, each with an independent exporter. A
+destinations at once, each with an independent exporter and filter chain. A
 single target can also fan out to several transports at once — list more than
 one of `otlp_http`/`otlp_grpc`/`debug` under its `exporter`. This example sends
 metrics to a primary HTTP collector, a secondary gRPC collector, and
@@ -267,10 +267,14 @@ additionally mirrors them to a debug exporter.
               signals: [metrics]
 ```
 
-## Selecting signals
+## Filtering signals
 
-The extension can restrict which telemetry the collector processes by enabling
-or disabling whole signals through the targets' `signals`.
+The extension can restrict which telemetry the collector processes at two
+levels:
+- Enabling or disabling whole signals by listing (or omitting) them in the
+targets' `signals`.
+- Filtering individual records with OTTL filtration based on OpenTelemetry
+[filterprocessor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor).
 
 ### Select which signals are collected
 
@@ -294,6 +298,47 @@ spec:
               signals: [metrics]
 ```
 
+### Drop individual records with the filter processor
+
+Each target’s `filters` field configures the OpenTelemetry filterprocessor for
+its pipelines, dropping metrics, logs, or events that match the specified
+[OTTL](https://opentelemetry.io/docs/collector/transforming-telemetry) conditions
+or properties. The processor only acts on the sections relevant to each
+pipeline’s signal (a `metrics` section affects the metrics pipeline, a `logs`
+section the logs and events pipelines). Filters are target-specific, so targets
+serving the same signal can filter independently.
+
+The `filters` value is the filterprocessor configuration: the extension doesn’t
+redefine the filter schema but validates the body against the upstream
+[filterprocessor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor).
+This means the full filterprocessor surface is available — `metrics`
+(`metric`, `datapoint`, `resource`, `include`/`exclude`), `logs` (`log_record`,
+`resource`, `include`/`exclude`), `metric_conditions`/`log_conditions`, and
+`error_mode`. For the full set of options see the
+[filterprocessor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md).
+
+``` yaml
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          targets:
+            - exporter:
+                otlp_http:
+                  endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics, logs]
+              # Applied to both pipelines; only the metrics section matches here.
+              filters:
+                error_mode: ignore  # ignore, silent or propagate
+                metrics:
+                  metric:
+                    - metric.name == "some.unwanted.metric"
+                  datapoint:
+                    - value_int == 0
+```
 
 # Development
 

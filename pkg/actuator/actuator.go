@@ -8,6 +8,7 @@ package actuator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -33,6 +34,8 @@ import (
 	otelv1alpha1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	"github.com/go-logr/logr"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.yaml.in/yaml/v4"
@@ -155,6 +158,9 @@ const (
 
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
+
+	// filterProcessorBaseName is the base name of the OpenTelemetry Filter processor.
+	filterProcessorBaseName = "filter"
 
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
@@ -281,6 +287,12 @@ func signalExporterName(sig config.SignalType, i int, t transport) string {
 	}
 
 	return fmt.Sprintf("%s/%s_%d", base, sig, i)
+}
+
+// signalFilterName returns the filter processor component name for a signal's
+// i-th target, e.g. "filter/metrics_0".
+func signalFilterName(sig config.SignalType, i int) string {
+	return fmt.Sprintf("%s/%s_%d", filterProcessorBaseName, sig, i)
 }
 
 // signalBearerTokenAuthName returns the bearertokenauth extension name for the
@@ -1397,14 +1409,84 @@ func parseShootNamespaceAttributes(
 	return clusterName, projectName, shootName
 }
 
+// filterProcessorConfigsPerSignals renders the target's filter and returns the
+// filter config only for the wanted signals. Only metrics and logs are considered.
+// Events are collected as logs and run in log-type pipelines, so they use the
+// filter's log section.
+func filterProcessorConfigsPerSignals(
+	target config.Target,
+	signals []config.SignalType,
+) (map[config.SignalType]map[string]any, error) {
+	rendered, err := unmarshalFilterConfig(target)
+	if err != nil {
+		return nil, err
+	}
+	out := map[config.SignalType]map[string]any{}
+	if len(rendered) == 0 {
+		return out, nil
+	}
+
+	defaultCfg := filterprocessor.NewFactory().CreateDefaultConfig()
+	cfg, ok := defaultCfg.(*filterprocessor.Config)
+	if !ok {
+		return nil, fmt.Errorf("unexpected filter processor config type %T", defaultCfg)
+	}
+	if err := confmap.NewFromStringMap(rendered).Unmarshal(cfg); err != nil {
+		return nil, err
+	}
+
+	for _, sig := range signals {
+		switch sig {
+		case config.SignalMetrics:
+			m := cfg.Metrics //nolint:staticcheck // deprecated block still supported as valid input
+			if m.Include != nil ||
+				m.Exclude != nil ||
+				m.RegexpConfig != nil ||
+				len(m.ResourceConditions) > 0 ||
+				len(m.MetricConditions) > 0 ||
+				len(m.DataPointConditions) > 0 ||
+				len(cfg.MetricConditions) > 0 {
+				out[sig] = rendered
+			}
+		case config.SignalLogs, config.SignalEvents:
+			l := cfg.Logs //nolint:staticcheck // deprecated block still supported as valid input
+			if l.Include != nil ||
+				l.Exclude != nil ||
+				len(l.ResourceConditions) > 0 ||
+				len(l.LogConditions) > 0 ||
+				len(cfg.LogConditions) > 0 {
+				out[sig] = rendered
+			}
+		default:
+			// Other signals (e.g. traces, profiles) are not supported for filtering and are ignored.
+		}
+	}
+
+	return out, nil
+}
+
+func unmarshalFilterConfig(target config.Target) (map[string]any, error) {
+	if len(target.Filters.Raw) == 0 {
+		return map[string]any{}, nil
+	}
+
+	out := map[string]any{}
+	if err := json.Unmarshal(target.Filters.Raw, &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 // buildPipelines returns the collector service pipelines for the targets in
 // cfg. Each target produces one pipeline per signal it serves, wired to that
-// target's own exporter instances.
+// target's own exporter and filter processor instances.
 //
 // The processor chain is:
 //   - resource
 //   - memory_limiter
 //   - transform/events (for the "events" signal)
+//   - filter (optional)
 //   - batch
 func buildPipelines(
 	cfg config.CollectorConfig,
@@ -1413,6 +1495,11 @@ func buildPipelines(
 	pipelines := map[string]*otelv1beta1.Pipeline{}
 
 	for i, target := range cfg.Spec.Targets {
+		filterCfgs, _ := filterProcessorConfigsPerSignals(
+			target,
+			target.EffectiveSignals(),
+		)
+
 		for _, sig := range target.EffectiveSignals() {
 			processors := []string{
 				resourceProcessorName,
@@ -1420,6 +1507,9 @@ func buildPipelines(
 			}
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
+			}
+			if _, ok := filterCfgs[sig]; ok {
+				processors = append(processors, signalFilterName(sig, i))
 			}
 			processors = append(processors, batchProcessorName)
 
@@ -1662,11 +1752,18 @@ func (a *Actuator) getOtelCollector(
 		},
 	}
 
-	// Configure the per-transport exporter TLS and bearer token authentication
-	// volumes. TLS/token volumes are keyed per (target, signal, transport) so a
-	// target enabling several transports does not collide.
+	// Register the per-target filter processors and configure the per-transport
+	// exporter TLS and bearer token authentication volumes.
 	for i, target := range cfg.Spec.Targets {
+		filterCfgs, _ := filterProcessorConfigsPerSignals(
+			target,
+			target.EffectiveSignals(),
+		)
 		for _, sig := range target.EffectiveSignals() {
+			if filterCfg, ok := filterCfgs[sig]; ok {
+				obj.Spec.Config.Processors.Object[signalFilterName(sig, i)] = filterCfg
+			}
+
 			// Configure TLS and bearer token volumes per enabled transport. The
 			// debug exporter has no endpoint, TLS or token, so it is skipped.
 			//

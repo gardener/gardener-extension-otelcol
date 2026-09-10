@@ -481,6 +481,7 @@ func autoConvert_v1alpha1_Target_To_config_Target(in *Target, out *config.Target
 		return err
 	}
 	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
+	out.Filters = in.Filters
 	return nil
 }
 
@@ -494,6 +495,7 @@ func autoConvert_config_Target_To_v1alpha1_Target(in *config.Target, out *Target
 		return err
 	}
 	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
+	out.Filters = in.Filters
 	return nil
 }
 
