@@ -30,5 +30,16 @@
       ],
       enabled: false,
     },
+    {
+      groupName: 'gardener',
+      groupSlug: 'gardener',
+      matchManagers: [
+        'gomod',
+      ],
+      matchDepNames: [
+        'github.com/gardener/gardener',
+        'github.com/gardener/gardener/pkg/apis',
+      ],
+    }
   ],
 }
