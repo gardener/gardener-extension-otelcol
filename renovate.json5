@@ -9,6 +9,15 @@
   postUpdateOptions: [
     'gomodTidy',
   ],
+  postUpgradeTasks: {
+    commands: [
+      'make generate',
+    ],
+    fileFilters: [
+      '**/*',
+    ],
+    executionMode: 'update',
+  },
   customManagers: [
     {
       customType: 'regex',
