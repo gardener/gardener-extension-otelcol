@@ -9,15 +9,29 @@
   postUpdateOptions: [
     'gomodTidy',
   ],
+  customManagers: [
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^pkg/imagevector/images\\.yaml$/',
+      ],
+      matchStrings: [
+        'repository:\\s*(?<depName>[^\\s]+)\\s+tag:\\s*"(?<currentValue>[^"]+)"',
+      ],
+      datasourceTemplate: 'docker',
+    },
+  ],
   packageRules: [
     {
       groupName: 'otel-collector',
       groupSlug: 'otel-collector',
       matchManagers: [
         'gomod',
+        'custom.regex',
       ],
       matchPackageNames: [
         'go.opentelemetry.io/collector/{/,}**',
+        'europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-collector-releases/opentelemetry-collector-contrib',
       ],
     },
     {
