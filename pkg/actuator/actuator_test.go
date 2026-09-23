@@ -153,7 +153,7 @@ var _ = Describe("Actuator", Ordered, func() {
 				CloudProfile: runtime.RawExtension{
 					Raw: cloudProfileData,
 				},
-				Seed: runtime.RawExtension{
+				Seed: &runtime.RawExtension{
 					Raw: seedData,
 				},
 				Shoot: runtime.RawExtension{
