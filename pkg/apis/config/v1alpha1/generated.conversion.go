@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	time "time"
 	unsafe "unsafe"
 
 	config "github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
@@ -179,13 +178,7 @@ func Convert_config_CollectorConfig_To_v1alpha1_CollectorConfig(in *config.Colle
 }
 
 func autoConvert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *CollectorConfigSpec, out *config.CollectorConfigSpec, s conversion.Scope) error {
-	out.Targets = *(*[]config.Target)(unsafe.Pointer(&in.Targets))
-	if err := Convert_v1alpha1_CollectorLogsConfig_To_config_CollectorLogsConfig(&in.Logs, &out.Logs, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_CollectorMetricsConfig_To_config_CollectorMetricsConfig(&in.Metrics, &out.Metrics, s); err != nil {
-		return err
-	}
+	*out = *(*config.CollectorConfigSpec)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -195,13 +188,7 @@ func Convert_v1alpha1_CollectorConfigSpec_To_config_CollectorConfigSpec(in *Coll
 }
 
 func autoConvert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *config.CollectorConfigSpec, out *CollectorConfigSpec, s conversion.Scope) error {
-	out.Targets = *(*[]Target)(unsafe.Pointer(&in.Targets))
-	if err := Convert_config_CollectorLogsConfig_To_v1alpha1_CollectorLogsConfig(&in.Logs, &out.Logs, s); err != nil {
-		return err
-	}
-	if err := Convert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(&in.Metrics, &out.Metrics, s); err != nil {
-		return err
-	}
+	*out = *(*CollectorConfigSpec)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -211,9 +198,7 @@ func Convert_config_CollectorConfigSpec_To_v1alpha1_CollectorConfigSpec(in *conf
 }
 
 func autoConvert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(in *CollectorExportersConfig, out *config.CollectorExportersConfig, s conversion.Scope) error {
-	out.OTLPGRPCExporter = (*config.OTLPGRPCExporterConfig)(unsafe.Pointer(in.OTLPGRPCExporter))
-	out.OTLPHTTPExporter = (*config.OTLPHTTPExporterConfig)(unsafe.Pointer(in.OTLPHTTPExporter))
-	out.DebugExporter = (*config.DebugExporterConfig)(unsafe.Pointer(in.DebugExporter))
+	*out = *(*config.CollectorExportersConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -223,9 +208,7 @@ func Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfi
 }
 
 func autoConvert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(in *config.CollectorExportersConfig, out *CollectorExportersConfig, s conversion.Scope) error {
-	out.OTLPGRPCExporter = (*OTLPGRPCExporterConfig)(unsafe.Pointer(in.OTLPGRPCExporter))
-	out.OTLPHTTPExporter = (*OTLPHTTPExporterConfig)(unsafe.Pointer(in.OTLPHTTPExporter))
-	out.DebugExporter = (*DebugExporterConfig)(unsafe.Pointer(in.DebugExporter))
+	*out = *(*CollectorExportersConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -235,8 +218,7 @@ func Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfi
 }
 
 func autoConvert_v1alpha1_CollectorLogsConfig_To_config_CollectorLogsConfig(in *CollectorLogsConfig, out *config.CollectorLogsConfig, s conversion.Scope) error {
-	out.Level = config.LogLevel(in.Level)
-	out.Encoding = config.LogEncoding(in.Encoding)
+	*out = *(*config.CollectorLogsConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -246,8 +228,7 @@ func Convert_v1alpha1_CollectorLogsConfig_To_config_CollectorLogsConfig(in *Coll
 }
 
 func autoConvert_config_CollectorLogsConfig_To_v1alpha1_CollectorLogsConfig(in *config.CollectorLogsConfig, out *CollectorLogsConfig, s conversion.Scope) error {
-	out.Level = LogLevel(in.Level)
-	out.Encoding = LogEncoding(in.Encoding)
+	*out = *(*CollectorLogsConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -257,7 +238,7 @@ func Convert_config_CollectorLogsConfig_To_v1alpha1_CollectorLogsConfig(in *conf
 }
 
 func autoConvert_v1alpha1_CollectorMetricsConfig_To_config_CollectorMetricsConfig(in *CollectorMetricsConfig, out *config.CollectorMetricsConfig, s conversion.Scope) error {
-	out.Level = config.MetricsVerbosityLevel(in.Level)
+	*out = *(*config.CollectorMetricsConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -267,7 +248,7 @@ func Convert_v1alpha1_CollectorMetricsConfig_To_config_CollectorMetricsConfig(in
 }
 
 func autoConvert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(in *config.CollectorMetricsConfig, out *CollectorMetricsConfig, s conversion.Scope) error {
-	out.Level = MetricsVerbosityLevel(in.Level)
+	*out = *(*CollectorMetricsConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -277,7 +258,7 @@ func Convert_config_CollectorMetricsConfig_To_v1alpha1_CollectorMetricsConfig(in
 }
 
 func autoConvert_v1alpha1_DebugExporterConfig_To_config_DebugExporterConfig(in *DebugExporterConfig, out *config.DebugExporterConfig, s conversion.Scope) error {
-	out.Verbosity = config.DebugExporterVerbosity(in.Verbosity)
+	*out = *(*config.DebugExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -287,7 +268,7 @@ func Convert_v1alpha1_DebugExporterConfig_To_config_DebugExporterConfig(in *Debu
 }
 
 func autoConvert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in *config.DebugExporterConfig, out *DebugExporterConfig, s conversion.Scope) error {
-	out.Verbosity = DebugExporterVerbosity(in.Verbosity)
+	*out = *(*DebugExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -297,16 +278,7 @@ func Convert_config_DebugExporterConfig_To_v1alpha1_DebugExporterConfig(in *conf
 }
 
 func autoConvert_v1alpha1_OTLPGRPCExporterConfig_To_config_OTLPGRPCExporterConfig(in *OTLPGRPCExporterConfig, out *config.OTLPGRPCExporterConfig, s conversion.Scope) error {
-	out.Endpoint = in.Endpoint
-	out.TLS = (*config.TLSConfig)(unsafe.Pointer(in.TLS))
-	out.Token = (*config.ResourceReference)(unsafe.Pointer(in.Token))
-	out.Timeout = time.Duration(in.Timeout)
-	out.ReadBufferSize = in.ReadBufferSize
-	out.WriteBufferSize = in.WriteBufferSize
-	if err := Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
-		return err
-	}
-	out.Compression = config.Compression(in.Compression)
+	*out = *(*config.OTLPGRPCExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -316,16 +288,7 @@ func Convert_v1alpha1_OTLPGRPCExporterConfig_To_config_OTLPGRPCExporterConfig(in
 }
 
 func autoConvert_config_OTLPGRPCExporterConfig_To_v1alpha1_OTLPGRPCExporterConfig(in *config.OTLPGRPCExporterConfig, out *OTLPGRPCExporterConfig, s conversion.Scope) error {
-	out.Endpoint = in.Endpoint
-	out.TLS = (*TLSConfig)(unsafe.Pointer(in.TLS))
-	out.Token = (*ResourceReference)(unsafe.Pointer(in.Token))
-	out.Timeout = time.Duration(in.Timeout)
-	out.ReadBufferSize = in.ReadBufferSize
-	out.WriteBufferSize = in.WriteBufferSize
-	if err := Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
-		return err
-	}
-	out.Compression = Compression(in.Compression)
+	*out = *(*OTLPGRPCExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -335,17 +298,7 @@ func Convert_config_OTLPGRPCExporterConfig_To_v1alpha1_OTLPGRPCExporterConfig(in
 }
 
 func autoConvert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in *OTLPHTTPExporterConfig, out *config.OTLPHTTPExporterConfig, s conversion.Scope) error {
-	out.Endpoint = in.Endpoint
-	out.TLS = (*config.TLSConfig)(unsafe.Pointer(in.TLS))
-	out.Token = (*config.ResourceReference)(unsafe.Pointer(in.Token))
-	out.Timeout = time.Duration(in.Timeout)
-	out.ReadBufferSize = in.ReadBufferSize
-	out.WriteBufferSize = in.WriteBufferSize
-	out.Encoding = config.MessageEncoding(in.Encoding)
-	if err := Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
-		return err
-	}
-	out.Compression = config.Compression(in.Compression)
+	*out = *(*config.OTLPHTTPExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -355,17 +308,7 @@ func Convert_v1alpha1_OTLPHTTPExporterConfig_To_config_OTLPHTTPExporterConfig(in
 }
 
 func autoConvert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in *config.OTLPHTTPExporterConfig, out *OTLPHTTPExporterConfig, s conversion.Scope) error {
-	out.Endpoint = in.Endpoint
-	out.TLS = (*TLSConfig)(unsafe.Pointer(in.TLS))
-	out.Token = (*ResourceReference)(unsafe.Pointer(in.Token))
-	out.Timeout = time.Duration(in.Timeout)
-	out.ReadBufferSize = in.ReadBufferSize
-	out.WriteBufferSize = in.WriteBufferSize
-	out.Encoding = MessageEncoding(in.Encoding)
-	if err := Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(&in.RetryOnFailure, &out.RetryOnFailure, s); err != nil {
-		return err
-	}
-	out.Compression = Compression(in.Compression)
+	*out = *(*OTLPHTTPExporterConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -375,9 +318,7 @@ func Convert_config_OTLPHTTPExporterConfig_To_v1alpha1_OTLPHTTPExporterConfig(in
 }
 
 func autoConvert_v1alpha1_ResourceReference_To_config_ResourceReference(in *ResourceReference, out *config.ResourceReference, s conversion.Scope) error {
-	if err := Convert_v1alpha1_ResourceReferenceDetails_To_config_ResourceReferenceDetails(&in.ResourceRef, &out.ResourceRef, s); err != nil {
-		return err
-	}
+	*out = *(*config.ResourceReference)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -387,9 +328,7 @@ func Convert_v1alpha1_ResourceReference_To_config_ResourceReference(in *Resource
 }
 
 func autoConvert_config_ResourceReference_To_v1alpha1_ResourceReference(in *config.ResourceReference, out *ResourceReference, s conversion.Scope) error {
-	if err := Convert_config_ResourceReferenceDetails_To_v1alpha1_ResourceReferenceDetails(&in.ResourceRef, &out.ResourceRef, s); err != nil {
-		return err
-	}
+	*out = *(*ResourceReference)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -399,8 +338,7 @@ func Convert_config_ResourceReference_To_v1alpha1_ResourceReference(in *config.R
 }
 
 func autoConvert_v1alpha1_ResourceReferenceDetails_To_config_ResourceReferenceDetails(in *ResourceReferenceDetails, out *config.ResourceReferenceDetails, s conversion.Scope) error {
-	out.Name = in.Name
-	out.DataKey = in.DataKey
+	*out = *(*config.ResourceReferenceDetails)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -410,8 +348,7 @@ func Convert_v1alpha1_ResourceReferenceDetails_To_config_ResourceReferenceDetail
 }
 
 func autoConvert_config_ResourceReferenceDetails_To_v1alpha1_ResourceReferenceDetails(in *config.ResourceReferenceDetails, out *ResourceReferenceDetails, s conversion.Scope) error {
-	out.Name = in.Name
-	out.DataKey = in.DataKey
+	*out = *(*ResourceReferenceDetails)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -421,11 +358,7 @@ func Convert_config_ResourceReferenceDetails_To_v1alpha1_ResourceReferenceDetail
 }
 
 func autoConvert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(in *RetryOnFailureConfig, out *config.RetryOnFailureConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	out.InitialInterval = time.Duration(in.InitialInterval)
-	out.MaxInterval = time.Duration(in.MaxInterval)
-	out.MaxElapsedTime = time.Duration(in.MaxElapsedTime)
-	out.Multiplier = in.Multiplier
+	*out = *(*config.RetryOnFailureConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -435,11 +368,7 @@ func Convert_v1alpha1_RetryOnFailureConfig_To_config_RetryOnFailureConfig(in *Re
 }
 
 func autoConvert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in *config.RetryOnFailureConfig, out *RetryOnFailureConfig, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	out.InitialInterval = time.Duration(in.InitialInterval)
-	out.MaxInterval = time.Duration(in.MaxInterval)
-	out.MaxElapsedTime = time.Duration(in.MaxElapsedTime)
-	out.Multiplier = in.Multiplier
+	*out = *(*RetryOnFailureConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -449,11 +378,7 @@ func Convert_config_RetryOnFailureConfig_To_v1alpha1_RetryOnFailureConfig(in *co
 }
 
 func autoConvert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *config.TLSConfig, s conversion.Scope) error {
-	out.InsecureSkipVerify = (*bool)(unsafe.Pointer(in.InsecureSkipVerify))
-	out.CA = (*config.ResourceReference)(unsafe.Pointer(in.CA))
-	out.Cert = (*config.ResourceReference)(unsafe.Pointer(in.Cert))
-	out.Key = (*config.ResourceReference)(unsafe.Pointer(in.Key))
-	out.ReloadInterval = time.Duration(in.ReloadInterval)
+	*out = *(*config.TLSConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -463,11 +388,7 @@ func Convert_v1alpha1_TLSConfig_To_config_TLSConfig(in *TLSConfig, out *config.T
 }
 
 func autoConvert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, out *TLSConfig, s conversion.Scope) error {
-	out.InsecureSkipVerify = (*bool)(unsafe.Pointer(in.InsecureSkipVerify))
-	out.CA = (*ResourceReference)(unsafe.Pointer(in.CA))
-	out.Cert = (*ResourceReference)(unsafe.Pointer(in.Cert))
-	out.Key = (*ResourceReference)(unsafe.Pointer(in.Key))
-	out.ReloadInterval = time.Duration(in.ReloadInterval)
+	*out = *(*TLSConfig)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -477,11 +398,7 @@ func Convert_config_TLSConfig_To_v1alpha1_TLSConfig(in *config.TLSConfig, out *T
 }
 
 func autoConvert_v1alpha1_Target_To_config_Target(in *Target, out *config.Target, s conversion.Scope) error {
-	if err := Convert_v1alpha1_CollectorExportersConfig_To_config_CollectorExportersConfig(&in.Exporter, &out.Exporter, s); err != nil {
-		return err
-	}
-	out.Signals = *(*[]config.SignalType)(unsafe.Pointer(&in.Signals))
-	out.Filters = in.Filters
+	*out = *(*config.Target)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -491,11 +408,7 @@ func Convert_v1alpha1_Target_To_config_Target(in *Target, out *config.Target, s 
 }
 
 func autoConvert_config_Target_To_v1alpha1_Target(in *config.Target, out *Target, s conversion.Scope) error {
-	if err := Convert_config_CollectorExportersConfig_To_v1alpha1_CollectorExportersConfig(&in.Exporter, &out.Exporter, s); err != nil {
-		return err
-	}
-	out.Signals = *(*[]SignalType)(unsafe.Pointer(&in.Signals))
-	out.Filters = in.Filters
+	*out = *(*Target)(unsafe.Pointer(in))
 	return nil
 }
 
