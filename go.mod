@@ -14,11 +14,11 @@ require (
 	go.opentelemetry.io/collector/processor/batchprocessor v0.161.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.161.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
-	k8s.io/api v0.37.0
-	k8s.io/apiextensions-apiserver v0.37.0
-	k8s.io/apimachinery v0.37.0
-	k8s.io/client-go v0.37.0
-	k8s.io/component-base v0.37.0
+	k8s.io/api v0.37.1
+	k8s.io/apiextensions-apiserver v0.37.1
+	k8s.io/apimachinery v0.37.1
+	k8s.io/client-go v0.37.1
+	k8s.io/component-base v0.37.1
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.25.1
 )
@@ -240,7 +240,7 @@ require (
 	helm.sh/helm/v4 v4.2.4 // indirect
 	istio.io/api v1.29.7 // indirect
 	istio.io/client-go v1.29.2 // indirect
-	k8s.io/apiserver v0.37.0 // indirect
+	k8s.io/apiserver v0.37.1 // indirect
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.7.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-aggregator v0.36.4 // indirect
@@ -248,7 +248,7 @@ require (
 	k8s.io/kubelet v0.36.4 // indirect
 	k8s.io/metrics v0.36.4 // indirect
 	k8s.io/pod-security-admission v0.36.4 // indirect
-	k8s.io/streaming v0.37.0 // indirect
+	k8s.io/streaming v0.37.1 // indirect
 	sigs.k8s.io/gateway-api v1.6.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
