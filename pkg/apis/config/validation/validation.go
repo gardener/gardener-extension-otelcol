@@ -5,9 +5,12 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
+	"go.opentelemetry.io/collector/confmap"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener-extension-otelcol/pkg/apis/config"
@@ -47,6 +50,12 @@ func Validate(cfg config.CollectorConfig) error {
 		allErrs = append(
 			allErrs,
 			validateExporters(target.Exporter, targetPath.Child("exporter"))...,
+		)
+
+		// Validate the target's filter configuration, if any.
+		allErrs = append(
+			allErrs,
+			validateTargetFilter(target, targetPath.Child("filters"))...,
 		)
 	}
 
@@ -270,4 +279,45 @@ func validateResourceReference(
 	}
 
 	return nil
+}
+
+// validateTargetFilter validates a target's filter configuration. It reuses
+// validation logic from [filterprocessor.Config].
+//
+// See the link below for more details about configuration validation logic at
+// filterprocessor processor.
+//
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/e86757b2340ac9765c9dd42b26509550943ef368/processor/filterprocessor/config.go#L411
+func validateTargetFilter(target config.Target, path *field.Path) field.ErrorList {
+	rendered, err := unmarshalFilterConfig(target)
+	if err != nil {
+		return field.ErrorList{field.Invalid(path, "", err.Error())}
+	}
+	if len(rendered) == 0 {
+		return nil
+	}
+
+	base := filterprocessor.NewFactory().CreateDefaultConfig()
+	conf := confmap.NewFromStringMap(rendered)
+	if err := conf.Unmarshal(base); err != nil {
+		return field.ErrorList{field.Invalid(path, "", err.Error())}
+	}
+	if err := base.(*filterprocessor.Config).Validate(); err != nil {
+		return field.ErrorList{field.Invalid(path, "", err.Error())}
+	}
+
+	return nil
+}
+
+func unmarshalFilterConfig(target config.Target) (map[string]any, error) {
+	if len(target.Filters.Raw) == 0 {
+		return map[string]any{}, nil
+	}
+
+	out := map[string]any{}
+	if err := json.Unmarshal(target.Filters.Raw, &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

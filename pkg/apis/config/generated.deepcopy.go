@@ -292,6 +292,7 @@ func (in *Target) DeepCopyInto(out *Target) {
 		*out = make([]SignalType, len(*in))
 		copy(*out, *in)
 	}
+	in.Filters.DeepCopyInto(&out.Filters)
 	return
 }
 

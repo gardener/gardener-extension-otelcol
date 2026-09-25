@@ -8,6 +8,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // MetricsVerbosityLevel specifies the verbosity of the internal collector
@@ -400,7 +401,7 @@ type CollectorMetricsConfig struct {
 // CollectorConfigSpec specifies the desired state of [CollectorConfig]
 type CollectorConfigSpec struct {
 	// Targets is a list of collector destinations. Each target consists of a
-	// self-contained exporter and the signals it receives.
+	// self-contained exporter, the signals it receives, and its own filter rules.
 	//
 	// +k8s:required
 	Targets []Target `json:"targets,omitempty"`
@@ -476,7 +477,7 @@ type ResourceReferenceDetails struct {
 	DataKey string `json:"dataKey"`
 }
 
-// Target consists of exporter configurations for signals.
+// Target consists of exporter and filter configurations for signals.
 type Target struct {
 	// Exporters specifies the exporters configuration of the collector.
 	//
@@ -489,4 +490,13 @@ type Target struct {
 	//
 	// +k8s:optional
 	Signals []SignalType `json:"signals,omitempty"`
+
+	// Filters mirrors the filterprocessor configuration.
+	//
+	// See [Filter processor] for more details.
+	//
+	// [Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+	//
+	// +k8s:optional
+	Filters runtime.RawExtension `json:"filters,omitzero"`
 }
