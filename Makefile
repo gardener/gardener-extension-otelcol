@@ -117,6 +117,14 @@ lint:  ## Run linters.
 govulncheck:  ## Run vulnerability scan.
 	@$(GO_TOOL) govulncheck -show verbose ./...
 
+.PHONY: govulncheck-fix
+govulncheck-fix:  ## Run vulnerability scan and auto-update vulnerable modules.
+	@$(GO_TOOL) govulncheck -json ./... | \
+		jq -r 'select(.finding.trace[0].module != null) | .finding.trace[0].module' | \
+		sort -u | \
+		xargs -I{} $(GOCMD) get {}@latest
+	@$(GOCMD) mod tidy
+
 .PHONY: api-ref-docs
 api-ref-docs:  ## Generate API reference docs.
 	@mkdir -p $(API_REF_DOCS)
