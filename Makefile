@@ -114,13 +114,20 @@ lint:  ## Run linters.
 	@$(GO_TOOL) golangci-lint run --config=$(SRC_ROOT)/.golangci.yaml ./...
 
 .PHONY: govulncheck
-govulncheck:  ## Run vulnerability scan.
-	@$(GO_TOOL) govulncheck -show verbose ./...
+govulncheck:  ## Run vulnerability scan (ignores vulnerabilities with no fix available).
+	@findings=$$( $(GO_TOOL) govulncheck -json ./... | \
+		jq -r '.finding | select(.trace[0].module and .fixed_version) | "\(.osv):\(.trace[0].module)@\(.fixed_version)"' | \
+		sort -u ); \
+	if [[ -n "$$findings" ]]; then \
+		echo "Fixable vulnerabilities found:"; \
+		echo "$$findings"; \
+		exit 1; \
+	fi
 
 .PHONY: govulncheck-fix
 govulncheck-fix:  ## Run vulnerability scan and auto-update vulnerable modules.
 	@$(GO_TOOL) govulncheck -json ./... | \
-		jq -r '.finding | select(.trace[0].module) | "\(.trace[0].module)@\(.fixed_version // "latest")"' | \
+		jq -r '.finding | select(.trace[0].module and .fixed_version) | "\(.trace[0].module)@\(.fixed_version)"' | \
 		sort -u | \
 		xargs -I{} sh -c '$(GOCMD) get {} || true'
 	@$(GOCMD) mod tidy
