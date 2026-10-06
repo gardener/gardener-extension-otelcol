@@ -120,9 +120,9 @@ govulncheck:  ## Run vulnerability scan.
 .PHONY: govulncheck-fix
 govulncheck-fix:  ## Run vulnerability scan and auto-update vulnerable modules.
 	@$(GO_TOOL) govulncheck -json ./... | \
-		jq -r 'select(.finding.trace[0].module != null) | .finding.trace[0].module' | \
+		jq -r '.finding | select(.trace[0].module) | "\(.trace[0].module)@\(.fixed_version // "latest")"' | \
 		sort -u | \
-		xargs -I{} $(GOCMD) get {}@latest
+		xargs -I{} sh -c '$(GOCMD) get {} || true'
 	@$(GOCMD) mod tidy
 
 .PHONY: api-ref-docs
