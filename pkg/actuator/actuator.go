@@ -932,6 +932,8 @@ func (a *Actuator) getTargetAllocator(
 				Replicas: new(targetAllocatorReplicas),
 				// TODO(iypetrov): Add upstream support for setting RevisionHistoryLimit.
 				// Set RevisionHistoryLimit to 2.
+				//
+				// For more information see https://github.com/open-telemetry/opentelemetry-operator/pull/5726.
 				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
 				ServiceAccount:    targetAllocatorServiceAccountName,
 				// 65532 is the UID of the nonroot user in distroless images.
