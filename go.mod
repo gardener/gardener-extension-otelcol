@@ -7,7 +7,7 @@ require (
 	github.com/gardener/gardener/pkg/apis v1.151.1
 	github.com/go-logr/logr v1.4.4
 	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/gomega v1.44.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.161.0
 	github.com/open-telemetry/opentelemetry-operator/apis v0.159.0
 	github.com/prometheus/client_golang v1.24.1
