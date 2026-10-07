@@ -183,6 +183,11 @@ const (
 	// labelValuePrometheusShoot is the value used for the `prometheus` label on
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
+
+	// labelKeyTargetAllocator is the label key used by the opentelemetry-operator
+	// to associate an OpenTelemetryCollector CR with its TargetAllocator. The label
+	// value should be the name of the TargetAllocator.
+	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
@@ -1355,6 +1360,9 @@ func (a *Actuator) getOtelCollector(
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
+		map[string]string{
+			labelKeyTargetAllocator: targetAllocatorDeploymentName,
+		},
 	)
 	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
 	obj := &otelv1beta1.OpenTelemetryCollector{
