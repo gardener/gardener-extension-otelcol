@@ -934,6 +934,7 @@ func (a *Actuator) getTargetAllocator(
 		},
 		Spec: otelv1alpha1.TargetAllocatorSpec{
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
+				Image:    image.String(),
 				Replicas: new(targetAllocatorReplicas),
 				// TODO(iypetrov): Add upstream support for setting RevisionHistoryLimit.
 				// Set RevisionHistoryLimit to 2.
