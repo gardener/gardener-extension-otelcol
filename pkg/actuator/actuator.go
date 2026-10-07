@@ -984,6 +984,7 @@ func (a *Actuator) getTargetAllocator(
 					CertificateAuthorityCertificate: &otelv1beta1.CAReference{
 						Secret: &otelv1beta1.SecretKeySelector{
 							Name: caSecret.Name,
+							Key:  "bundle.crt",
 						},
 					},
 					ServerCertificate: &otelv1beta1.CertificateReference{
