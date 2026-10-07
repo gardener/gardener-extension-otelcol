@@ -116,9 +116,6 @@ const (
 	// targetAllocatorRoleName is the name of the Role and RoleBinding
 	// resource for the Target Allocator.
 	targetAllocatorRoleName = baseResourceName + "-targetallocator"
-	// targetAllocatorConfigMapName is the name of the ConfigMap for the
-	// Target Allocator.
-	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8sobjects/events receiver to authenticate to the shoot cluster.
