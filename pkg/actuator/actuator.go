@@ -539,6 +539,7 @@ func (a *Actuator) Reconcile(
 	}
 	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
 
+	// Generate client certificate for TargetAllocator.
 	serverSecret, err := secretsManager.Generate(
 		ctx,
 		&secretsutils.CertificateSecretConfig{
@@ -989,6 +990,9 @@ func (a *Actuator) getTargetAllocator(
 					},
 					ServerCertificate: &otelv1beta1.CertificateReference{
 						CertificateSecret: otelv1beta1.SecretKeySelector{
+							Name: serverSecret.Name,
+						},
+						KeySecret: otelv1beta1.SecretKeySelector{
 							Name: serverSecret.Name,
 						},
 					},
