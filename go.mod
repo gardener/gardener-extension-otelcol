@@ -15,7 +15,6 @@ require (
 	go.opentelemetry.io/collector/confmap v1.67.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.161.0
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.161.0
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	k8s.io/api v0.37.1
 	k8s.io/apiextensions-apiserver v0.37.1
 	k8s.io/apimachinery v0.37.1
@@ -243,6 +242,7 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/mod v0.41.0 // indirect

@@ -33,20 +33,17 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-	"go.opentelemetry.io/collector/confmap"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
-	"go.yaml.in/yaml/v4"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -72,7 +69,6 @@ const (
 
 	// baseResourceName is the base name for resources.
 	baseResourceName = "external-otelcol"
-
 	// managedResourceName is the name of the managed resource created by
 	// the actuator.
 	managedResourceName = baseResourceName
@@ -120,78 +116,58 @@ const (
 	// targetAllocatorRoleName is the name of the Role and RoleBinding
 	// resource for the Target Allocator.
 	targetAllocatorRoleName = baseResourceName + "-targetallocator"
-	// targetAllocatorConfigMapName is the name of the ConfigMap for the
-	// Target Allocator.
-	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
-
-	// transformEventsProcessorName is the name of the transform processor for
-	// the k8sobjects/events pipeline.
-	transformEventsProcessorName = "transform/events"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8sobjects/events receiver to authenticate to the shoot cluster.
 	shootAccessSecretName = "shoot-access-" + otelCollectorName // #nosec: G101
-
 	// shootManagedResourceName is the name of the ManagedResource that deploys
 	// RBAC into the shoot cluster for the k8sobjects/events receiver.
 	shootManagedResourceName = baseResourceName + "-shoot"
-
 	// volumeNameShootKubeconfig is the volume name for the shoot kubeconfig
 	// projected into the OTel Collector pod for the k8sobjects/events receiver.
 	volumeNameShootKubeconfig = "shoot-kubeconfig"
-
 	// bearertokenauthextension names used by the exporters.
 	baseBearerTokenAuthName = "bearertokenauth"
-
 	// TLS volume names for the exporters.
 	baseVolumeNameTLS = "tls"
-
 	// TLS volume mounts for the exporters.
 	baseVolumeMountPathTLS = "/etc/ssl/tls"
 
+	// transformEventsProcessorName is the name of the transform processor for
+	// the k8sobjects/events pipeline.
+	transformEventsProcessorName = "transform/events"
 	// batchProcessorName is the name of the OpenTelemetry Batch processor.
 	batchProcessorName = "batch"
-
 	// memoryLimiterProcessorName is the name of the OpenTelemetry Memory
 	// Limiter processor name.
 	memoryLimiterProcessorName = "memory_limiter"
-
 	// resourceProcessorName is the name of the OpenTelemetry Resource processor.
 	resourceProcessorName = "resource"
-
 	// filterProcessorBaseName is the base name of the OpenTelemetry Filter processor.
 	filterProcessorBaseName = "filter"
-
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
-
 	// eventsReceiverName is the name of the k8sobjects receiver for events.
 	eventsReceiverName = "k8sobjects/events"
-
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
 
 	// otlpExporterBaseName is the base name of the OTLP exporter.
 	otlpExporterBaseName = "otlp"
-
 	// otlphttpExporterBaseName is the base name of the OTLPHTTP exporter.
 	otlphttpExporterBaseName = "otlphttp"
-
 	// debugExporterName is the base name of the debug exporter.
 	debugExporterBaseName = "debug"
 
 	// logsPipelineName is the name of the logs pipeline.
 	logsPipelineName = "logs"
-
 	// eventsPipelineName is the name of the events pipeline.
 	eventsPipelineName = "logs/events"
-
 	// metricsPipelineName is the name of the metrics pipeline.
 	metricsPipelineName = "metrics"
 
 	// telemetryMetricsKey is the telemetry config key for metrics settings.
 	telemetryMetricsKey = "metrics"
-
 	// telemetryLogsKey is the telemetry config key for logs settings.
 	telemetryLogsKey = "logs"
 
@@ -201,16 +177,14 @@ const (
 	// Target Allocator workload.
 	labelValueTargetAllocator = "opentelemetry-targetallocator"
 
-	// keys used in OTel/Target Allocator config maps.
-	configKeyEnabled    = "enabled"
-	configKeyEndpoint   = "endpoint"
-	configKeyPrometheus = "prometheus"
-	configKeyKey        = "key"
-	configKeyValue      = "value"
-	configKeyAction     = "action"
 	// labelValuePrometheusShoot is the value used for the `prometheus` label on
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
+
+	// labelKeyTargetAllocator is the label key used by the opentelemetry-operator
+	// to associate an OpenTelemetryCollector CR with its TargetAllocator. The label
+	// value should be the name of the TargetAllocator.
+	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
@@ -329,9 +303,9 @@ func signalVolumeMountPathBearerToken(sig config.SignalType, i int, t transport)
 // adds (or overwrites) the given key/value on the resource.
 func upsertAttribute(key string, value any) map[string]any {
 	return map[string]any{
-		configKeyKey:    key,
-		configKeyValue:  value,
-		configKeyAction: "upsert",
+		"key":    key,
+		"value":  value,
+		"action": "upsert",
 	}
 }
 
@@ -565,6 +539,7 @@ func (a *Actuator) Reconcile(
 	}
 	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
 
+	// Generate client certificate for TargetAllocator.
 	serverSecret, err := secretsManager.Generate(
 		ctx,
 		&secretsutils.CertificateSecretConfig{
@@ -614,11 +589,6 @@ func (a *Actuator) Reconcile(
 		kubernetes.SeedSerializer,
 	)
 
-	taConfigMap, err := a.getTargetAllocatorConfigMap(ex.Namespace)
-	if err != nil {
-		return err
-	}
-
 	shootKubeconfigSecretName := extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
 
 	shootAccessSecret := gardenerutils.NewShootAccessSecret(shootAccessSecretName, ex.Namespace)
@@ -627,12 +597,10 @@ func (a *Actuator) Reconcile(
 	}
 
 	data, err := registry.AddAllAndSerialize(
-		taConfigMap,
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
-		a.getTargetAllocatorHTTPSService(ex.Namespace),
-		a.getTargetAllocatorDeployment(ex.Namespace, caBundleSecret, serverSecret, taImage),
+		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret, taImage),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
 		a.getOtelCollector(
 			ex.Namespace,
@@ -885,85 +853,6 @@ func (a *Actuator) getTargetAllocatorServiceAccount(
 	return obj
 }
 
-// getTargetAllocatorHTTPSService returns the [corev1.Service] for the
-// HTTPS communication of the Target Allocator.
-func (a *Actuator) getTargetAllocatorHTTPSService(
-	namespace string,
-) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetAllocatorHTTPSServiceName,
-			Namespace: namespace,
-			Labels:    a.getCommonLabels(),
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{{
-				Port:       443,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt32(targetAllocatorHTTPSPort),
-			}},
-			Selector: map[string]string{
-				labelKeyComponent: labelValueTargetAllocator,
-			},
-		},
-	}
-}
-
-// getTargetAllocatorConfigMap returns the [corev1.ConfigMap] for the Target
-// Allocator.
-func (a *Actuator) getTargetAllocatorConfigMap(
-	namespace string,
-) (*corev1.ConfigMap, error) {
-	taConfig := map[string]any{
-		"allocation_strategy":              otelv1alpha1.OpenTelemetryTargetAllocatorAllocationStrategyConsistentHashing,
-		"collector_not_ready_grace_period": 30 * time.Second,
-		"collector_namespace":              namespace,
-		"collector_selector": map[string]any{
-			"matchLabels": map[string]any{
-				labelKeyComponent:              "opentelemetry-collector",
-				"app.kubernetes.io/instance":   fmt.Sprintf("%s.%s", namespace, baseResourceName),
-				"app.kubernetes.io/managed-by": "opentelemetry-operator",
-				"app.kubernetes.io/name":       fmt.Sprintf("%s-collector", baseResourceName),
-				"app.kubernetes.io/part-of":    "opentelemetry",
-			},
-		},
-		"filter_strategy": "relabel-config",
-		"prometheus_cr": map[string]any{
-			configKeyEnabled:         true,
-			"allow_namespaces":       []string{namespace},
-			"scrape_interval":        30 * time.Second,
-			"scrape_config_selector": nil,
-			"probe_selector":         nil,
-			"pod_monitor_selector":   nil,
-			"deny_namespaces":        nil,
-			"service_monitor_selector": map[string]any{
-				"matchLabels": map[string]any{
-					configKeyPrometheus: labelValuePrometheusShoot,
-				},
-			},
-		},
-	}
-
-	data, err := yaml.Marshal(taConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetAllocatorConfigMapName,
-			Namespace: namespace,
-			Labels:    a.getCommonLabels(),
-		},
-		Data: map[string]string{
-			"targetallocator.yaml": string(data),
-		},
-	}
-
-	return configMap, nil
-}
-
 // getTargetAllocatorRole returns the [rbacv1.Role] for the Target Allocator.
 func (a *Actuator) getTargetAllocatorRole(namespace string) *rbacv1.Role {
 	return &rbacv1.Role{
@@ -1016,55 +905,17 @@ func (a *Actuator) getTargetAllocatorRoleBinding(
 	}
 }
 
-// getTargetAllocator returns the [appsv1.Deployment] resource for the Target
-// Allocator.
+// getTargetAllocator returns the [*otelv1alpha1.TargetAllocator] resource,
+// which the extension manages.
 //
-// We are creating a deployment here, instead of using the upstream OTel
-// TargetAllocator custom resource, because the OTel Operator expects that mTLS
-// between the Target Allocator and the Collector is handled via Cert Manager
-// only. However, Gardener does not use Cert Manager, so we can't configure mTLS
-// easily.
-//
-// mTLS between the TA and the Collector is required, otherwise the TA will
-// return invalid secrets for scrape targets which require authentication.
-//
-// Currently the mTLS between TA and Collector cannot be done in a generic way
-// when using the OTel Operator, because upon start up the OTel Operator looks
-// for Cert Manager. If it doesn't find Cert Manager, it will always configure
-// the communication between the TA and Collector to happen via HTTP, which in
-// turn results in invalid secrets being delivered to the Collector. As a result
-// scraping will always fail.
-//
-// The following upstream issue tracks the progress of allowing clients to
-// configure mTLS between TA and Collector without having to rely on Cert
-// Manager.
-//
-// https://github.com/open-telemetry/opentelemetry-operator/issues/3982
-//
-// Once the issue above is fixed we can drop the following resources, which we
-// are now explicitly managing, and instead use the TargetAllocator custom
-// resource only.
-//
-// - Deployment for the TargetAllocator (getTargetAllocatorDeployment)
-// - ConfigMap for the TargetAllocator (getTargetAllocatorConfigMap)
-// - HTTPS Service for the Target Allocator (getTargetAllocatorHTTPSService)
-func (a *Actuator) getTargetAllocatorDeployment(
+// Note: mTLS between the TA and the Collector is required, otherwise the TA
+// will return invalid secrets for scrape targets which require authentication.
+func (a *Actuator) getTargetAllocator(
 	namespace string,
 	caSecret,
 	serverSecret *corev1.Secret,
 	image *imagevectorutils.Image,
-) *appsv1.Deployment {
-	const (
-		volumeNameCACertificate      = "ca-cert"
-		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
-
-		volumeNameServerCertificate      = "server-cert"
-		volumeMountPathServerCertificate = "/etc/ssl/certs/server"
-
-		volumeNameTargetAllocatorConfig  = "targetallocator-config"
-		volumeMountTargetAllocatorConfig = "/app/targetallocator"
-	)
-
+) *otelv1alpha1.TargetAllocator {
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
@@ -1073,112 +924,76 @@ func (a *Actuator) getTargetAllocatorDeployment(
 		},
 	)
 
-	return &appsv1.Deployment{
+	return &otelv1alpha1.TargetAllocator{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetAllocatorDeploymentName,
 			Namespace: namespace,
-			Labels:    a.getCommonLabels(),
+			Labels:    allLabels,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas:             new(targetAllocatorReplicas),
-			RevisionHistoryLimit: ptr.To[int32](2),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: allLabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: allLabels,
+		Spec: otelv1alpha1.TargetAllocatorSpec{
+			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
+				Image:    image.String(),
+				Replicas: new(targetAllocatorReplicas),
+				// TODO(iypetrov): Add upstream support for setting RevisionHistoryLimit.
+				// Set RevisionHistoryLimit to 2.
+				//
+				// For more information see https://github.com/open-telemetry/opentelemetry-operator/pull/5726.
+				PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+				ServiceAccount:    targetAllocatorServiceAccountName,
+				// 65532 is the UID of the nonroot user in distroless images.
+				PodSecurityContext: &corev1.PodSecurityContext{
+					RunAsNonRoot: new(true),
+					RunAsUser:    ptr.To[int64](65532),
+					RunAsGroup:   ptr.To[int64](65532),
+					FSGroup:      ptr.To[int64](65532),
 				},
-				Spec: corev1.PodSpec{
-					PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
-					ServiceAccountName: targetAllocatorServiceAccountName,
-					// 65532 is the UID of the nonroot user in distroless images.
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: new(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: new(false),
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("50Mi"),
 					},
-					Containers: []corev1.Container{
-						{
-							Name:  "ta-container",
-							Image: image.String(),
-							Args: []string{
-								"--enable-https-server=true",
-								fmt.Sprintf(
-									"--config-file=%s/targetallocator.yaml",
-									volumeMountTargetAllocatorConfig,
-								),
-								fmt.Sprintf(
-									"--https-ca-file=%s/%s",
-									volumeMountPathCACertificate,
-									secretsutils.DataKeyCertificateBundle,
-								),
-								fmt.Sprintf(
-									"--https-tls-cert-file=%s/%s",
-									volumeMountPathServerCertificate,
-									secretsutils.DataKeyCertificate,
-								),
-								fmt.Sprintf(
-									"--https-tls-key-file=%s/%s",
-									volumeMountPathServerCertificate,
-									secretsutils.DataKeyPrivateKey,
-								),
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("50Mi"),
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeNameCACertificate,
-									MountPath: volumeMountPathCACertificate,
-									ReadOnly:  true,
-								},
-								{
-									Name:      volumeNameServerCertificate,
-									MountPath: volumeMountPathServerCertificate,
-									ReadOnly:  true,
-								},
-								{
-									Name:      volumeNameTargetAllocatorConfig,
-									MountPath: volumeMountTargetAllocatorConfig,
-									ReadOnly:  true,
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: new(false),
-							},
+				},
+			},
+			AllocationStrategy: otelv1beta1.TargetAllocatorAllocationStrategyConsistentHashing,
+			CollectorNotReadyGracePeriod: &metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+			FilterStrategy: new(otelv1beta1.TargetAllocatorFilterStrategyRelabelConfig),
+			PrometheusCR: otelv1beta1.TargetAllocatorPrometheusCR{
+				Enabled:         true,
+				AllowNamespaces: []string{namespace},
+				ScrapeInterval: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				ScrapeConfigSelector: nil,
+				ProbeSelector:        nil,
+				PodMonitorSelector:   nil,
+				DenyNamespaces:       nil,
+				ServiceMonitorSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"prometheus": labelValuePrometheusShoot,
+					},
+				},
+			},
+			Mtls: &otelv1beta1.TargetAllocatorMTLS{
+				Enabled:        true,
+				UseCertManager: new(false),
+				TLS: &otelv1beta1.TargetAllocatorTLS{
+					CertificateAuthorityCertificate: &otelv1beta1.CAReference{
+						Secret: &otelv1beta1.SecretKeySelector{
+							Name: caSecret.Name,
+							Key:  "bundle.crt",
 						},
 					},
-					Volumes: []corev1.Volume{
-						{
-							Name: volumeNameCACertificate,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: caSecret.Name,
-								},
-							},
+					ServerCertificate: &otelv1beta1.CertificateReference{
+						CertificateSecret: otelv1beta1.SecretKeySelector{
+							Name: serverSecret.Name,
 						},
-						{
-							Name: volumeNameServerCertificate,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: serverSecret.Name,
-								},
-							},
-						},
-						{
-							Name: volumeNameTargetAllocatorConfig,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: targetAllocatorConfigMapName,
-									},
-								},
-							},
+						KeySecret: otelv1beta1.SecretKeySelector{
+							Name: serverSecret.Name,
 						},
 					},
 				},
@@ -1233,7 +1048,7 @@ func (a *Actuator) getOTLPHTTPExporterConfig(
 	//
 	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
 	if cfg.Endpoint != "" {
-		exporter[configKeyEndpoint] = cfg.Endpoint
+		exporter["endpoint"] = cfg.Endpoint
 	}
 
 	exporter["read_buffer_size"] = cfg.ReadBufferSize
@@ -1245,7 +1060,7 @@ func (a *Actuator) getOTLPHTTPExporterConfig(
 	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
-			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
+			"enabled":          *cfg.RetryOnFailure.Enabled,
 			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
 			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
 			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
@@ -1283,7 +1098,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(
 	//
 	// https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
 	exporter := map[string]any{
-		configKeyEndpoint:   cfg.Endpoint,
+		"endpoint":          cfg.Endpoint,
 		"read_buffer_size":  cfg.ReadBufferSize,
 		"write_buffer_size": cfg.WriteBufferSize,
 		"timeout":           cfg.Timeout.String(),
@@ -1293,7 +1108,7 @@ func (a *Actuator) getOTLPGRPCExporterConfig(
 	// Retry on Failure settings.
 	if cfg.RetryOnFailure.Enabled != nil {
 		exporter["retry_on_failure"] = map[string]any{
-			configKeyEnabled:   *cfg.RetryOnFailure.Enabled,
+			"enabled":          *cfg.RetryOnFailure.Enabled,
 			"initial_interval": cfg.RetryOnFailure.InitialInterval.String(),
 			"max_interval":     cfg.RetryOnFailure.MaxInterval.String(),
 			"max_elapsed_time": cfg.RetryOnFailure.MaxElapsedTime.String(),
@@ -1548,6 +1363,9 @@ func (a *Actuator) getOtelCollector(
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
+		map[string]string{
+			labelKeyTargetAllocator: targetAllocatorDeploymentName,
+		},
 	)
 	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
 	obj := &otelv1beta1.OpenTelemetryCollector{
@@ -1641,15 +1459,15 @@ func (a *Actuator) getOtelCollector(
 						otlpReceiverName: map[string]any{
 							"protocols": map[string]any{
 								"grpc": map[string]any{
-									configKeyEndpoint: fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
+									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
 								},
 							},
 						},
-						configKeyPrometheus: map[string]any{
+						"prometheus": map[string]any{
 							"target_allocator": map[string]any{
-								"collector_id":    "${POD_NAME}",
-								configKeyEndpoint: "https://" + targetAllocatorHTTPSServiceName,
-								"interval":        "30s",
+								"collector_id": "${POD_NAME}",
+								"endpoint":     "https://" + targetAllocatorHTTPSServiceName,
+								"interval":     "30s",
 								"tls": map[string]any{
 									"ca_file": filepath.Join(
 										volumeMountPathCACertificate,
@@ -1731,7 +1549,7 @@ func (a *Actuator) getOtelCollector(
 									map[string]any{
 										"pull": map[string]any{
 											"exporter": map[string]any{
-												configKeyPrometheus: map[string]any{
+												"prometheus": map[string]any{
 													"host": "0.0.0.0",
 													"port": otelCollectorMetricsPort,
 												},
