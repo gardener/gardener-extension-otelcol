@@ -606,6 +606,7 @@ func (a *Actuator) Reconcile(
 			ex.Namespace,
 			caBundleSecret,
 			clientSecret,
+			serverSecret,
 			cfg,
 			cluster.Shoot.Spec.Resources,
 			shootKubeconfigSecretName,
@@ -1343,28 +1344,20 @@ func buildPipelines(
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(
 	namespace string,
-	caSecret, clientSecret *corev1.Secret,
+	caSecret, clientSecret, serverSecret *corev1.Secret,
 	cfg config.CollectorConfig,
 	resources []gardencorev1beta1.NamedResourceReference,
 	shootKubeconfigSecretName string,
 	accessSecretName string,
 	image *imagevectorutils.Image,
 ) *otelv1beta1.OpenTelemetryCollector {
-	const (
-		volumeNameCACertificate      = "ca-cert"
-		volumeMountPathCACertificate = "/etc/ssl/certs/ca"
-
-		volumeNameClientCertificate      = "client-cert"
-		volumeMountPathClientCertificate = "/etc/ssl/certs/client"
-	)
-
 	exporters, perSignalExporterNames := a.getOtelExporters(cfg)
 	clusterName, projectName, shootName := parseShootNamespaceAttributes(namespace)
 	allLabels := utils.MergeStringMaps(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
 		map[string]string{
-			labelKeyTargetAllocator: targetAllocatorDeploymentName,
+			labelKeyTargetAllocator: serverSecret.Name,
 		},
 	)
 	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
@@ -1397,38 +1390,12 @@ func (a *Actuator) getOtelCollector(
 				Replicas: new(otelCollectorReplicas),
 				VolumeMounts: []corev1.VolumeMount{
 					{
-						Name:      volumeNameCACertificate,
-						MountPath: volumeMountPathCACertificate,
-						ReadOnly:  true,
-					},
-					{
-						Name:      volumeNameClientCertificate,
-						MountPath: volumeMountPathClientCertificate,
-						ReadOnly:  true,
-					},
-					{
 						Name:      volumeNameShootKubeconfig,
 						MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,
 						ReadOnly:  true,
 					},
 				},
 				Volumes: []corev1.Volume{
-					{
-						Name: volumeNameCACertificate,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: caSecret.Name,
-							},
-						},
-					},
-					{
-						Name: volumeNameClientCertificate,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: clientSecret.Name,
-							},
-						},
-					},
 					gardenerutils.GenerateGenericKubeconfigVolume(
 						shootKubeconfigSecretName,
 						accessSecretName,
@@ -1468,20 +1435,20 @@ func (a *Actuator) getOtelCollector(
 								"collector_id": "${POD_NAME}",
 								"endpoint":     "https://" + targetAllocatorHTTPSServiceName,
 								"interval":     "30s",
-								"tls": map[string]any{
-									"ca_file": filepath.Join(
-										volumeMountPathCACertificate,
-										secretsutils.DataKeyCertificateBundle,
-									),
-									"cert_file": filepath.Join(
-										volumeMountPathClientCertificate,
-										secretsutils.DataKeyCertificate,
-									),
-									"key_file": filepath.Join(
-										volumeMountPathClientCertificate,
-										secretsutils.DataKeyPrivateKey,
-									),
-								},
+								// "tls": map[string]any{
+								// 	"ca_file": filepath.Join(
+								// 		volumeMountPathCACertificate,
+								// 		secretsutils.DataKeyCertificateBundle,
+								// 	),
+								// 	"cert_file": filepath.Join(
+								// 		volumeMountPathClientCertificate,
+								// 		secretsutils.DataKeyCertificate,
+								// 	),
+								// 	"key_file": filepath.Join(
+								// 		volumeMountPathClientCertificate,
+								// 		secretsutils.DataKeyPrivateKey,
+								// 	),
+								// },
 							},
 							"config": map[string]any{
 								"scrape_configs": []any{
