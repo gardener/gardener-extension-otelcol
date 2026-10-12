@@ -99,12 +99,10 @@ const (
 	// secretNameClientCertificate is the name of the server certificate of the Target Allocator.
 	secretNameClientCertificate = Name + "-collector-client"
 
-	// targetAllocatorDeploymentName is the name of the deployment for the
-	// Target Allocator.
-	targetAllocatorDeploymentName = baseResourceName + "-targetallocator"
-	// targetAllocatorHTTPSServiceName is the name of the Kubernetes service for
-	// HTTPS communication of the Target Allocator.
-	targetAllocatorHTTPSServiceName = baseResourceName + "-targetallocator-https"
+	// targetAllocatorServiceName is the Target Allocator Service name.
+	targetAllocatorServiceName = baseResourceName + "-targetallocator"
+	// targetAllocatorServiceHTTPSPort is the HTTPS Service port.
+	targetAllocatorServiceHTTPSPort = 443
 	// targetAllocatorHTTPSPort is the port on which Target Allocator's
 	// HTTPS service listens to.
 	targetAllocatorHTTPSPort = 8443
@@ -181,7 +179,7 @@ const (
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
 
-	// labelKeyTargetAllocator is the label key used by the opentelemetry-operator
+	// labelKeyTargetAllocator is the label key used by the OpenTelemetry Operator
 	// to associate an OpenTelemetryCollector CR with its TargetAllocator. The label
 	// value should be the name of the TargetAllocator.
 	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
@@ -539,13 +537,12 @@ func (a *Actuator) Reconcile(
 	}
 	caBundleSecret, _ := secretsManager.Get(secretNameCACertificate)
 
-	// Generate client certificate for TargetAllocator.
 	serverSecret, err := secretsManager.Generate(
 		ctx,
 		&secretsutils.CertificateSecretConfig{
 			Name:                        secretNameServerCertificate,
-			CommonName:                  targetAllocatorHTTPSServiceName,
-			DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorHTTPSServiceName, ex.Namespace),
+			CommonName:                  targetAllocatorServiceName,
+			DNSNames:                    kubernetesutils.DNSNamesForService(targetAllocatorServiceName, ex.Namespace),
 			CertType:                    secretsutils.ServerCert,
 			SkipPublishingCACertificate: true,
 		},
@@ -612,7 +609,6 @@ func (a *Actuator) Reconcile(
 			ex.Namespace,
 			caBundleSecret,
 			clientSecret,
-			serverSecret,
 			cfg,
 			cluster.Shoot.Spec.Resources,
 			shootKubeconfigSecretName,
@@ -810,8 +806,8 @@ func (a *Actuator) getNetworkLabels() map[string]string {
 	taNetworkLabel := fmt.Sprintf(
 		"%sto-%s-tcp-%d",
 		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
-		targetAllocatorHTTPSServiceName,
-		targetAllocatorHTTPSPort,
+		targetAllocatorServiceName,
+		targetAllocatorServiceHTTPSPort,
 	)
 	items := map[string]string{
 		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
@@ -825,22 +821,34 @@ func (a *Actuator) getNetworkLabels() map[string]string {
 	return items
 }
 
-// getAnnotations returns the common set of annotations for the Collector and
-// Target Allocator resources.
-func (a *Actuator) getAnnotations() map[string]string {
+// getCollectorAnnotations returns the annotations for the Collector resource.
+func (a *Actuator) getCollectorAnnotations() map[string]string {
 	fromAllScrapeTargetsAnnotation := fmt.Sprintf(
 		"%sfrom-all-scrape-targets-allowed-ports",
 		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
 	)
-	items := map[string]string{
+	return map[string]string{
 		fromAllScrapeTargetsAnnotation: fmt.Sprintf(
 			`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`,
 			otelCollectorMetricsPort,
 			otelCollectorGRPCReceiverPort,
 		),
 	}
+}
 
-	return items
+// getTargetAllocatorAnnotations returns the annotations for the TA resource.
+func (a *Actuator) getTargetAllocatorAnnotations() map[string]string {
+	policyID := fmt.Sprintf(
+		"%s-tcp-%d",
+		targetAllocatorServiceName,
+		targetAllocatorServiceHTTPSPort,
+	)
+	return map[string]string{
+		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + policyID + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(
+			`[{"protocol":"TCP","port":%d}]`,
+			targetAllocatorHTTPSPort,
+		),
+	}
 }
 
 // getTargetAllocatorServiceAccount returns the [corev1.ServiceAccount] for the
@@ -933,9 +941,10 @@ func (a *Actuator) getTargetAllocator(
 
 	return &otelv1alpha1.TargetAllocator{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      targetAllocatorDeploymentName,
-			Namespace: namespace,
-			Labels:    allLabels,
+			Name:        baseResourceName,
+			Namespace:   namespace,
+			Labels:      allLabels,
+			Annotations: a.getTargetAllocatorAnnotations(),
 		},
 		Spec: otelv1alpha1.TargetAllocatorSpec{
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
@@ -1362,7 +1371,7 @@ func buildPipelines(
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(
 	namespace string,
-	caSecret, clientSecret, serverSecret *corev1.Secret,
+	caSecret, clientSecret *corev1.Secret,
 	cfg config.CollectorConfig,
 	resources []gardencorev1beta1.NamedResourceReference,
 	shootKubeconfigSecretName string,
@@ -1375,7 +1384,7 @@ func (a *Actuator) getOtelCollector(
 		a.getCommonLabels(),
 		a.getNetworkLabels(),
 		map[string]string{
-			labelKeyTargetAllocator: serverSecret.Name,
+			labelKeyTargetAllocator: baseResourceName,
 		},
 	)
 	annotationNetworkPolicyNamespaceSelector := `[{"matchExpressions":[{"key":"kubernetes.io/metadata.name","operator":"In","values":["garden"]}]},{"matchExpressions":[{"key":"gardener.cloud/role","operator":"In","values":["extension"]}]}]`
@@ -1385,7 +1394,7 @@ func (a *Actuator) getOtelCollector(
 			Namespace: namespace,
 			Labels:    allLabels,
 			Annotations: utils.MergeStringMaps(
-				a.getAnnotations(),
+				a.getCollectorAnnotations(),
 				map[string]string{
 					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "pod-label-selector-namespace-alias": "all-shoots",
 					resourcesv1alpha1.NetworkPolicyLabelKeyPrefix + "namespace-selectors":                annotationNetworkPolicyNamespaceSelector,
@@ -1451,22 +1460,8 @@ func (a *Actuator) getOtelCollector(
 						"prometheus": map[string]any{
 							"target_allocator": map[string]any{
 								"collector_id": "${POD_NAME}",
-								"endpoint":     "https://" + targetAllocatorHTTPSServiceName,
+								"endpoint":     "https://" + targetAllocatorServiceName,
 								"interval":     "30s",
-								// "tls": map[string]any{
-								// 	"ca_file": filepath.Join(
-								// 		volumeMountPathCACertificate,
-								// 		secretsutils.DataKeyCertificateBundle,
-								// 	),
-								// 	"cert_file": filepath.Join(
-								// 		volumeMountPathClientCertificate,
-								// 		secretsutils.DataKeyCertificate,
-								// 	),
-								// 	"key_file": filepath.Join(
-								// 		volumeMountPathClientCertificate,
-								// 		secretsutils.DataKeyPrivateKey,
-								// 	),
-								// },
 							},
 							"config": map[string]any{
 								"scrape_configs": []any{
