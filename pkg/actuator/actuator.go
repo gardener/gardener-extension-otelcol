@@ -600,7 +600,13 @@ func (a *Actuator) Reconcile(
 		a.getTargetAllocatorServiceAccount(ex.Namespace),
 		a.getTargetAllocatorRole(ex.Namespace),
 		a.getTargetAllocatorRoleBinding(ex.Namespace),
-		a.getTargetAllocator(ex.Namespace, caBundleSecret, serverSecret, taImage),
+		a.getTargetAllocator(
+			ex.Namespace,
+			caBundleSecret,
+			serverSecret,
+			clientSecret,
+			taImage,
+		),
 		a.getOtelCollectorServiceAccount(ex.Namespace),
 		a.getOtelCollector(
 			ex.Namespace,
@@ -914,7 +920,7 @@ func (a *Actuator) getTargetAllocatorRoleBinding(
 func (a *Actuator) getTargetAllocator(
 	namespace string,
 	caSecret,
-	serverSecret *corev1.Secret,
+	serverSecret, clientSecret *corev1.Secret,
 	image *imagevectorutils.Image,
 ) *otelv1alpha1.TargetAllocator {
 	allLabels := utils.MergeStringMaps(
@@ -995,6 +1001,18 @@ func (a *Actuator) getTargetAllocator(
 						},
 						KeySecret: otelv1beta1.SecretKeySelector{
 							Name: serverSecret.Name,
+						},
+					},
+					// ClientCertificate is required to auto-inject the client
+					// certificate volumes and volume mounts into the collector
+					// pods, and to rewrite the prometheus receiver's
+					// target_allocator.tls config in the collector ConfigMap.
+					ClientCertificate: &otelv1beta1.CertificateReference{
+						CertificateSecret: otelv1beta1.SecretKeySelector{
+							Name: clientSecret.Name,
+						},
+						KeySecret: otelv1beta1.SecretKeySelector{
+							Name: clientSecret.Name,
 						},
 					},
 				},
