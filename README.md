@@ -482,9 +482,8 @@ Verify that the extension has been successfully installed by checking the
 corresponding `ControllerInstallation` resource for our extension.
 
 ``` shell
-$ kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerinstallations
-NAME                      REGISTRATION        SEED    VALID   INSTALLED   HEALTHY   PROGRESSING   AGE
-otelcol-8rvmn             otelcol             local   True    True        True      False         64s
+$ kubectl --kubeconfig $KUBECONFIG_VIRTUAL get controllerinstallations | grep -E '^otelcol-.*$'
+otelcol-tzszj             otelcol             Seed/local   True    True        True      False         50m
 ```
 
 After your shoot cluster has been successfully created and reconciled, verify
@@ -492,8 +491,8 @@ that the extension is healthy.
 
 ``` shell
 $ kubectl --kubeconfig $KUBECONFIG_RUNTIME --namespace shoot--local--local get extensions otelcol
-NAME                INSTALLED   REQUIRED RUNTIME   REQUIRED VIRTUAL   AGE
-otelcol             True        False              True               13m
+NAME      TYPE      STATUS      AGE
+otelcol   otelcol   Succeeded   52m
 ```
 
 Verify that the
@@ -621,20 +620,20 @@ done
 Next, we need to port-forward the Target Allocator service locally.
 
 ``` shell
-kubectl --namespace shoot--local--local port-forward service/external-otelcol-targetallocator-https 8443:443
+kubectl --namespace shoot--local--local port-forward service/external-otelcol-targetallocator 8443:443
 ```
 
 Now we can query the Target Allocator and review the jobs and the scrape targets
 it can dispatch to collectors.
 
 ``` shell
-curl -k --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/jobs' | jq '.'
+curl -sk --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/jobs' | jq '.'
 ```
 
 The following command will query the Target Allocator for the scrape configs.
 
 ``` shell
-curl -k --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/scrape_configs' | jq '.'
+curl -sk --cert client-cert/tls.crt --key client-cert/tls.key -X GET 'https://localhost:8443/scrape_configs' | jq '.'
 ```
 
 In addition to the API paths served by the Target Allocator you can also inspect
