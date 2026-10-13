@@ -607,8 +607,6 @@ func (a *Actuator) Reconcile(
 		a.getOtelCollectorServiceAccount(ex.Namespace),
 		a.getOtelCollector(
 			ex.Namespace,
-			caBundleSecret,
-			clientSecret,
 			cfg,
 			cluster.Shoot.Spec.Resources,
 			shootKubeconfigSecretName,
@@ -827,6 +825,7 @@ func (a *Actuator) getCollectorAnnotations() map[string]string {
 		"%sfrom-all-scrape-targets-allowed-ports",
 		resourcesv1alpha1.NetworkPolicyLabelKeyPrefix,
 	)
+
 	return map[string]string{
 		fromAllScrapeTargetsAnnotation: fmt.Sprintf(
 			`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`,
@@ -843,6 +842,7 @@ func (a *Actuator) getTargetAllocatorAnnotations() map[string]string {
 		targetAllocatorServiceName,
 		targetAllocatorServiceHTTPSPort,
 	)
+
 	return map[string]string{
 		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + policyID + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: fmt.Sprintf(
 			`[{"protocol":"TCP","port":%d}]`,
@@ -1371,7 +1371,6 @@ func buildPipelines(
 // resource, which the extension manages.
 func (a *Actuator) getOtelCollector(
 	namespace string,
-	caSecret, clientSecret *corev1.Secret,
 	cfg config.CollectorConfig,
 	resources []gardencorev1beta1.NamedResourceReference,
 	shootKubeconfigSecretName string,
