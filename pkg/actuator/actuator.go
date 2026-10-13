@@ -33,9 +33,9 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-	"go.opentelemetry.io/collector/confmap"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.yaml.in/yaml/v4"
@@ -86,7 +86,7 @@ const (
 	otelCollectorMetricsPort = 8888
 	// otelCollectorReplicas specifies the number of replicas of the OTel
 	// Collector.
-	otelCollectorReplicas int32 = 1
+	otelCollectorReplicas int32 = 2
 	// otelCollectorServiceAccountName is the name of the service account
 	// for the OTel Collector.
 	otelCollectorServiceAccountName = otelCollectorName + "-collector"
@@ -125,19 +125,19 @@ const (
 	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
 
 	// transformEventsProcessorName is the name of the transform processor for
-	// the k8sobjects/events pipeline.
+	// the k8s_events pipeline.
 	transformEventsProcessorName = "transform/events"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
-	// k8sobjects/events receiver to authenticate to the shoot cluster.
+	// k8s_events receiver to authenticate to the shoot cluster.
 	shootAccessSecretName = "shoot-access-" + otelCollectorName // #nosec: G101
 
 	// shootManagedResourceName is the name of the ManagedResource that deploys
-	// RBAC into the shoot cluster for the k8sobjects/events receiver.
+	// RBAC into the shoot cluster for the k8s_events receiver.
 	shootManagedResourceName = baseResourceName + "-shoot"
 
 	// volumeNameShootKubeconfig is the volume name for the shoot kubeconfig
-	// projected into the OTel Collector pod for the k8sobjects/events receiver.
+	// projected into the OTel Collector pod for the k8s_events receiver.
 	volumeNameShootKubeconfig = "shoot-kubeconfig"
 
 	// bearertokenauthextension names used by the exporters.
@@ -165,8 +165,8 @@ const (
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
 
-	// eventsReceiverName is the name of the k8sobjects receiver for events.
-	eventsReceiverName = "k8sobjects/events"
+	// eventsReceiverName is the name of the k8s_events receiver for events.
+	eventsReceiverName = "k8s_events"
 
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
@@ -1676,13 +1676,6 @@ func (a *Actuator) getOtelCollector(
 						},
 						eventsReceiverName: map[string]any{
 							"auth_type": "kubeConfig",
-							"objects": []any{
-								map[string]any{
-									"name":  "events",
-									"group": "events.k8s.io",
-									"mode":  "watch",
-								},
-							},
 						},
 					},
 				},
@@ -1830,17 +1823,20 @@ func (a *Actuator) configureExporterVolumes(
 
 // getEventsClusterRole returns the [rbacv1.ClusterRole] granting the OTel
 // Collector's service account in the shoot cluster permission to list and watch
-// events from the events.k8s.io API group.
+// events from both the core ("") and events.k8s.io API groups. Both are needed
+// because the k8sevents receiver watches /v1/events (core) at the cluster scope.
 func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: otelCollectorName,
 		},
-		Rules: []rbacv1.PolicyRule{{
-			APIGroups: []string{"events.k8s.io"},
-			Resources: []string{"events"},
-			Verbs:     readVerbs,
-		}},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     readVerbs,
+			},
+		},
 	}
 }
 
