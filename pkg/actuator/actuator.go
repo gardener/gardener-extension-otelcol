@@ -143,6 +143,10 @@ const (
 	// bearertokenauthextension names used by the exporters.
 	baseBearerTokenAuthName = "bearertokenauth"
 
+	// k8sLeaderElectorName is the name of extension that is used by the k8s_events
+	// receiver to ensure only one replica processes events.
+	k8sLeaderElectorName = "k8s_leader_elector"
+
 	// TLS volume names for the exporters.
 	baseVolumeNameTLS = "tls"
 
@@ -1636,6 +1640,15 @@ func (a *Actuator) getOtelCollector(
 			// Explicitly configure the Prometheus receiver to point
 			// at an existing Target Allocator.
 			Config: otelv1beta1.Config{
+				Extensions: &otelv1beta1.AnyConfig{
+					Object: map[string]any{
+						k8sLeaderElectorName: map[string]any{
+							"auth_type":       "kubeConfig",
+							"lease_name":      baseResourceName,
+							"lease_namespace": namespace,
+						},
+					},
+				},
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
 						otlpReceiverName: map[string]any{
@@ -1675,7 +1688,8 @@ func (a *Actuator) getOtelCollector(
 							},
 						},
 						eventsReceiverName: map[string]any{
-							"auth_type": "kubeConfig",
+							"auth_type":          "kubeConfig",
+							"k8s_leader_elector": k8sLeaderElectorName,
 						},
 					},
 				},
