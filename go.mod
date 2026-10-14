@@ -1,6 +1,6 @@
 module github.com/gardener/gardener-extension-otelcol
 
-go 1.26.5
+go 1.26.8
 
 require (
 	github.com/gardener/gardener v1.153.0
