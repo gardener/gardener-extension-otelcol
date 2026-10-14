@@ -1732,7 +1732,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "log",
 									"statements": []any{
-										`delete_key(body["object"]["metadata"], "managedFields")`,
+										`delete_key(body["object"]["metadata"], "managedFields") where IsMap(body)`,
 									},
 								},
 							},
