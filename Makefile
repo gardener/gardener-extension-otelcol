@@ -273,7 +273,7 @@ helm-load-chart:  ## Load helm chart to local registry.
 	@for chart in controller admission-runtime admission-virtual; do \
 		chart_name=$$( $(GO_TOOL) yq '.name' $(SRC_ROOT)/charts/$${chart}/Chart.yaml ); \
 		$(GO_TOOL) helm package $(SRC_ROOT)/charts/$${chart} --version $(VERSION); \
-		$(GO_TOOL) helm push --plain-http $${chart_name}-$(VERSION).tgz oci://$(LOCAL_REGISTRY)/helm-charts; \
+		$(GO_TOOL) helm push $${chart_name}-$(VERSION).tgz oci://$(LOCAL_REGISTRY)/helm-charts; \
 		rm -f $${chart_name}-$(VERSION).tgz; \
 	done
 
