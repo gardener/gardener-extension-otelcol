@@ -86,7 +86,7 @@ const (
 	otelCollectorMetricsPort = 8888
 	// otelCollectorReplicas specifies the number of replicas of the OTel
 	// Collector.
-	otelCollectorReplicas int32 = 2
+	otelCollectorReplicas int32 = 1
 	// otelCollectorServiceAccountName is the name of the service account
 	// for the OTel Collector.
 	otelCollectorServiceAccountName = otelCollectorName + "-collector"
