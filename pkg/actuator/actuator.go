@@ -205,6 +205,14 @@ const (
 	// Target Allocator workload.
 	labelValueTargetAllocator = "opentelemetry-targetallocator"
 
+	// otelCollectorEventsRoleName is the name of the Role and RoleBinding
+	// resource for the Collector to work with events.
+	otelCollectorEventsRoleName = baseResourceName + "-collector-events"
+
+	// otelCollectorLeasesRoleName is the name of the Role and RoleBinding
+	// resource for the Collector to work with events.
+	otelCollectorLeasesRoleName = baseResourceName + "-collector-leases"
+
 	// keys used in OTel/Target Allocator config maps.
 	configKeyEnabled    = "enabled"
 	configKeyEndpoint   = "endpoint"
@@ -219,6 +227,9 @@ const (
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
 var readVerbs = []string{"get", "list", "watch"}
+
+// crudVerbs is the canonical RBAC verb set for CRUD access to a resource.
+var crudVerbs = []string{"get", "list", "watch", "create", "update", "patch", "delete"}
 
 // signalPipelineName returns the collector service pipeline name for the i-th
 // target of a signal, e.g. "metrics/0" or "logs/events_0".
@@ -662,6 +673,8 @@ func (a *Actuator) Reconcile(
 	shootData, err := shootRegistry.AddAllAndSerialize(
 		a.getEventsClusterRole(),
 		a.getEventsClusterRoleBinding(shootAccessSecret.ServiceAccountName),
+		a.getLeaseClusterRole(),
+		a.getLeaseClusterRoleBinding(shootAccessSecret.ServiceAccountName),
 	)
 	if err != nil {
 		return err
@@ -1843,7 +1856,7 @@ func (a *Actuator) configureExporterVolumes(
 func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: otelCollectorName,
+			Name: otelCollectorEventsRoleName,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -1863,12 +1876,52 @@ func (a *Actuator) getEventsClusterRoleBinding(
 ) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: otelCollectorName,
+			Name: otelCollectorEventsRoleName,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     otelCollectorName,
+			Name:     otelCollectorEventsRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+}
+
+// getLeaseClusterRole returns the [rbacv1.ClusterRole] granting the OTel Collector's
+// service account in the shoot cluster permission to work with [coordinationv1.Lease].
+func (a *Actuator) getLeaseClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: otelCollectorLeasesRoleName,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     crudVerbs,
+			},
+		},
+	}
+}
+
+// getLeaseClusterRoleBinding returns the [rbacv1.ClusterRoleBinding] that
+// binds the leases ClusterRole to the OTel Collector's service account in the
+// shoot cluster's kube-system namespace.
+func (a *Actuator) getLeaseClusterRoleBinding(
+	serviceAccountName string,
+) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: otelCollectorLeasesRoleName,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     otelCollectorLeasesRoleName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
