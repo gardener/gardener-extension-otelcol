@@ -1658,7 +1658,7 @@ func (a *Actuator) getOtelCollector(
 						k8sLeaderElectorName: map[string]any{
 							"auth_type":       "kubeConfig",
 							"lease_name":      baseResourceName,
-							"lease_namespace": namespace,
+							"lease_namespace": metav1.NamespaceSystem,
 						},
 					},
 				},
@@ -1892,7 +1892,8 @@ func (a *Actuator) getEventsClusterRoleBinding(
 }
 
 // getLeaseClusterRole returns the [rbacv1.ClusterRole] granting the OTel Collector's
-// service account in the shoot cluster permission to work with [coordinationv1.Lease].
+// service account in the shoot cluster permission to work with [coordinationv1.Lease]
+// for leader election.
 func (a *Actuator) getLeaseClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
