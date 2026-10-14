@@ -10,15 +10,21 @@ spec:
       helm:
         ociRepository:
           ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol:v0.1.0-dev
+          caBundleSecretRef:
+            name: gardener-local-registry-ca
     admission:
       runtimeCluster:
         helm:
           ociRepository:
             ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol-admission-runtime:v0.1.0-dev
+            caBundleSecretRef:
+              name: gardener-local-registry-ca
       virtualCluster:
         helm:
           ociRepository:
             ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol-admission-virtual:v0.1.0-dev
+            caBundleSecretRef:
+              name: gardener-local-registry-ca
       values: {}
   resources:
     - kind: Extension
