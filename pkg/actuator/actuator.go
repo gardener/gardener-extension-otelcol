@@ -1730,6 +1730,7 @@ func (a *Actuator) getOtelCollector(
 					Object: exporters,
 				},
 				Service: otelv1beta1.Service{
+					Extensions: []string{k8sLeaderElectorName},
 					Telemetry: &otelv1beta1.AnyConfig{
 						Object: map[string]any{
 							telemetryMetricsKey: map[string]any{
