@@ -21,12 +21,12 @@ function _main() {
     echo "Gardener APIs dir: ${_GARDENER_APIS_DIRS}"
     while read -r _manifest_dir; do
       local _version="${_manifest_dir##*/}"
-      local _group="$( basename "$( dirname "${_manifest_dir}" )" )"
+      local _group
+      _group="$( basename "$( dirname "${_manifest_dir}" )" )"
       local _pkg_dir="${_GARDENER_APIS_DIRS}/${_group%%.*}/${_version}"
 
       echo "Updating manifests ${_group}/${_version} ..."
-      # Found float, the usage of which is highly discouraged, as support for them varies across languages.
-      # Please consider serializing your float as string instead. If you are really sure you want to use them, re-run with crd:allowDangerousTypes=true
+      # allowDangerousTypes=true is required because operator/v1alpha1 uses float fields
       _go_tool controller-gen crd:allowDangerousTypes=true \
         paths="${_pkg_dir}" \
         output:crd:dir="${_manifest_dir}"
