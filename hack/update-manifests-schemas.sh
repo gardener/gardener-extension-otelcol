@@ -25,8 +25,9 @@ function _main() {
       local _pkg_dir="${_GARDENER_APIS_DIRS}/${_group%%.*}/${_version}"
 
       echo "Updating manifests ${_group}/${_version} ..."
-      _go_tool controller-gen \
-        "crd:allowDangerousTypes=true" \
+      # Found float, the usage of which is highly discouraged, as support for them varies across languages.
+      # Please consider serializing your float as string instead. If you are really sure you want to use them, re-run with crd:allowDangerousTypes=true
+      _go_tool controller-gen crd:allowDangerousTypes=true \
         paths="${_pkg_dir}" \
         output:crd:dir="${_manifest_dir}"
 
