@@ -1,0 +1,58 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: controllerdeployments.core.gardener.cloud
+spec:
+  group: core.gardener.cloud
+  names:
+    kind: ControllerDeployment
+    listKind: ControllerDeploymentList
+    plural: controllerdeployments
+    singular: controllerdeployment
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: ControllerDeployment contains information about how this controller
+          is deployed.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          injectGardenKubeconfig:
+            description: |-
+              InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+              resources.
+            type: boolean
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          providerConfig:
+            description: ProviderConfig contains type-specific configuration. It contains
+              assets that deploy the controller.
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          type:
+            description: Type is the deployment type.
+            type: string
+        required:
+        - providerConfig
+        - type
+        type: object
+    served: true
+    storage: true
