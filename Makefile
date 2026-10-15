@@ -225,9 +225,10 @@ checklicense:  ## Check source files for license headers.
 	}
 
 .PHONY: generate
-generate:  ## Run code-generator tools.
+generate: ## Run code-generator tools.
 	@echo "Running code-generator tools ..."
 	$(foreach gen_tool,$(K8S_GEN_TOOLS),$(call run-command,$(GO_TOOL) $(gen_tool) -v=$(K8S_GEN_TOOLS_LOG_LEVEL) ./pkg/apis/...))
+	@$(HACK_DIR)/update-manifests-schemas.sh
 
 .PHONY: generate-operator-extension
 generate-operator-extension: update-version-tags  ## Generate operator extension example resources.

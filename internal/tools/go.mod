@@ -8,6 +8,7 @@ tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/google/addlicense
 	github.com/incu6us/goimports-reviser/v3
+	github.com/iypetrov/kubeconform/openapi2jsonschema-go
 	github.com/mikefarah/yq/v4
 	github.com/yannh/kubeconform/cmd/kubeconform
 	golang.org/x/vuln/cmd/govulncheck
@@ -18,6 +19,7 @@ tool (
 	k8s.io/code-generator/cmd/defaulter-gen
 	k8s.io/code-generator/cmd/register-gen
 	sigs.k8s.io/controller-runtime/tools/setup-envtest
+	sigs.k8s.io/controller-tools/cmd/controller-gen
 	sigs.k8s.io/kustomize/kustomize/v5
 )
 
@@ -189,6 +191,7 @@ require (
 	github.com/ianlancetaylor/demangle v0.0.0-20240805132620-81f5be970eca // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/incu6us/goimports-reviser/v3 v3.13.2 // indirect
+	github.com/iypetrov/kubeconform/openapi2jsonschema-go v0.0.0-20261015122633-8a1559dea262 // indirect
 	github.com/jgautheron/goconst v1.11.0 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/jjti/go-spancheck v0.6.5 // indirect

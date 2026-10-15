@@ -21,7 +21,7 @@
           "x-kubernetes-preserve-unknown-fields": true
         },
         "seed": {
-          "description": "Seed is a raw extension field that contains the seed resource referenced by the shoot that\nhas to be reconciled.",
+          "description": "Seed is a raw extension field that contains the seed resource referenced by the shoot that\nhas to be reconciled. It is not set for self-hosted shoots (see GEP-28).",
           "type": "object",
           "x-kubernetes-preserve-unknown-fields": true
         },
@@ -33,7 +33,6 @@
       },
       "required": [
         "cloudProfile",
-        "seed",
         "shoot"
       ],
       "type": "object",
