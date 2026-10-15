@@ -1449,25 +1449,13 @@ func (a *Actuator) getOtelCollector(
 			Config: otelv1beta1.Config{
 				Receivers: otelv1beta1.AnyConfig{
 					Object: map[string]any{
+						// Note: target_allocator config is injected by the
+						// OpenTelemetry Operator into this receiver.
+						prometheusReceiverName: map[string]any{},
 						otlpReceiverName: map[string]any{
 							"protocols": map[string]any{
 								"grpc": map[string]any{
 									"endpoint": fmt.Sprintf("0.0.0.0:%d", otelCollectorGRPCReceiverPort),
-								},
-							},
-						},
-						"prometheus": map[string]any{
-							"target_allocator": map[string]any{
-								"collector_id": "${POD_NAME}",
-								"endpoint":     "https://" + targetAllocatorServiceName,
-								"interval":     "30s",
-							},
-							"config": map[string]any{
-								"scrape_configs": []any{
-									map[string]any{
-										"job_name":        otelCollectorName,
-										"scrape_interval": "15s",
-									},
 								},
 							},
 						},
