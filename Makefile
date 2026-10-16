@@ -224,10 +224,15 @@ checklicense:  ## Check source files for license headers.
 		exit 1; \
 	}
 
+.PHONY: schemas
+schemas: ## Generate manifests for integration tests and schemas for validation.
+	@$(HACK_DIR)/update-manifests-schemas.sh
+
 .PHONY: generate
-generate:  ## Run code-generator tools.
+generate: ## Run code-generator tools.
 	@echo "Running code-generator tools ..."
 	$(foreach gen_tool,$(K8S_GEN_TOOLS),$(call run-command,$(GO_TOOL) $(gen_tool) -v=$(K8S_GEN_TOOLS_LOG_LEVEL) ./pkg/apis/...))
+	@$(HACK_DIR)/update-manifests-schemas.sh
 
 .PHONY: generate-operator-extension
 generate-operator-extension: update-version-tags  ## Generate operator extension example resources.
@@ -273,7 +278,7 @@ helm-load-chart:  ## Load helm chart to local registry.
 	@for chart in controller admission-runtime admission-virtual; do \
 		chart_name=$$( $(GO_TOOL) yq '.name' $(SRC_ROOT)/charts/$${chart}/Chart.yaml ); \
 		$(GO_TOOL) helm package $(SRC_ROOT)/charts/$${chart} --version $(VERSION); \
-		$(GO_TOOL) helm push --plain-http $${chart_name}-$(VERSION).tgz oci://$(LOCAL_REGISTRY)/helm-charts; \
+		$(GO_TOOL) helm push $${chart_name}-$(VERSION).tgz oci://$(LOCAL_REGISTRY)/helm-charts; \
 		rm -f $${chart_name}-$(VERSION).tgz; \
 	done
 

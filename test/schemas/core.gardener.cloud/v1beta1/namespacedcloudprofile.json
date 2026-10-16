@@ -25,16 +25,39 @@
             "versions": {
               "description": "Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.",
               "items": {
-                "description": "ExpirableVersion contains a version and an expiration date.",
+                "description": "ExpirableVersion contains a version with associated lifecycle information.",
                 "properties": {
                   "classification": {
-                    "description": "Classification defines the state of a version (preview, supported, deprecated).\nTo get the currently valid classification, use CurrentLifecycleClassification().",
+                    "description": "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
                     "type": "string"
                   },
                   "expirationDate": {
-                    "description": "ExpirationDate defines the time at which this version expires.",
+                    "description": "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
                     "format": "date-time",
                     "type": "string"
+                  },
+                  "lifecycle": {
+                    "description": "Lifecycle defines the lifecycle stages for this version.\nMutually exclusive with Classification and ExpirationDate.\nThis can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+                    "items": {
+                      "description": "LifecycleStage describes a stage in the versions lifecycle.\nEach stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)\nand the time at which this classification becomes effective.",
+                      "properties": {
+                        "classification": {
+                          "description": "Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).",
+                          "type": "string"
+                        },
+                        "startTime": {
+                          "description": "StartTime defines when this lifecycle stage becomes active.\nStartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
+                          "format": "date-time",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "classification"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "type": "array"
                   },
                   "version": {
                     "description": "Version is the version identifier.",
@@ -99,7 +122,7 @@
                       "type": "array"
                     },
                     "classification": {
-                      "description": "Classification defines the state of a version (preview, supported, deprecated).\nTo get the currently valid classification, use CurrentLifecycleClassification().",
+                      "description": "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
                       "type": "string"
                     },
                     "cri": {
@@ -144,7 +167,7 @@
                       "type": "array"
                     },
                     "expirationDate": {
-                      "description": "ExpirationDate defines the time at which this version expires.",
+                      "description": "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
                       "format": "date-time",
                       "type": "string"
                     },
@@ -169,6 +192,29 @@
                     "kubeletVersionConstraint": {
                       "description": "KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.\nIf the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.\nExamples:\n- '>= 1.26' - supports only kubelet versions greater than or equal to 1.26\n- '< 1.26' - supports only kubelet versions less than 1.26",
                       "type": "string"
+                    },
+                    "lifecycle": {
+                      "description": "Lifecycle defines the lifecycle stages for this version.\nMutually exclusive with Classification and ExpirationDate.\nThis can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+                      "items": {
+                        "description": "LifecycleStage describes a stage in the versions lifecycle.\nEach stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)\nand the time at which this classification becomes effective.",
+                        "properties": {
+                          "classification": {
+                            "description": "Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).",
+                            "type": "string"
+                          },
+                          "startTime": {
+                            "description": "StartTime defines when this lifecycle stage becomes active.\nStartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "classification"
+                        ],
+                        "type": "object",
+                        "additionalProperties": false
+                      },
+                      "type": "array"
                     },
                     "version": {
                       "description": "Version is the version identifier.",
@@ -238,6 +284,17 @@
                 "description": "GPU is the number of GPUs for this machine type.",
                 "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
                 "x-kubernetes-int-or-string": true
+              },
+              "machineControllerManager": {
+                "description": "MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.",
+                "properties": {
+                  "machineCreationTimeout": {
+                    "description": "MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "additionalProperties": false
               },
               "memory": {
                 "anyOf": [
@@ -437,22 +494,56 @@
               "description": "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.",
               "type": "string"
             },
+            "controlPlane": {
+              "description": "ControlPlane holds settings that control what control-plane-related features shoots\nusing this CloudProfile may configure.",
+              "properties": {
+                "allowZonePinning": {
+                  "description": "AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin\ntheir control plane to specific seed zones. Only set to true for providers where\nzone names are globally consistent across all users of the provider.",
+                  "type": "boolean"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
             "kubernetes": {
               "description": "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
               "properties": {
                 "versions": {
                   "description": "Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.",
                   "items": {
-                    "description": "ExpirableVersion contains a version and an expiration date.",
+                    "description": "ExpirableVersion contains a version with associated lifecycle information.",
                     "properties": {
                       "classification": {
-                        "description": "Classification defines the state of a version (preview, supported, deprecated).\nTo get the currently valid classification, use CurrentLifecycleClassification().",
+                        "description": "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
                         "type": "string"
                       },
                       "expirationDate": {
-                        "description": "ExpirationDate defines the time at which this version expires.",
+                        "description": "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
                         "format": "date-time",
                         "type": "string"
+                      },
+                      "lifecycle": {
+                        "description": "Lifecycle defines the lifecycle stages for this version.\nMutually exclusive with Classification and ExpirationDate.\nThis can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+                        "items": {
+                          "description": "LifecycleStage describes a stage in the versions lifecycle.\nEach stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)\nand the time at which this classification becomes effective.",
+                          "properties": {
+                            "classification": {
+                              "description": "Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).",
+                              "type": "string"
+                            },
+                            "startTime": {
+                              "description": "StartTime defines when this lifecycle stage becomes active.\nStartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
+                              "format": "date-time",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "classification"
+                          ],
+                          "type": "object",
+                          "additionalProperties": false
+                        },
+                        "type": "array"
                       },
                       "version": {
                         "description": "Version is the version identifier.",
@@ -542,7 +633,7 @@
                           "type": "array"
                         },
                         "classification": {
-                          "description": "Classification defines the state of a version (preview, supported, deprecated).\nTo get the currently valid classification, use CurrentLifecycleClassification().",
+                          "description": "Classification defines the state of a version (preview, supported, deprecated).\n\nDeprecated: Is replaced by Lifecycle. mutually exclusive with it.",
                           "type": "string"
                         },
                         "cri": {
@@ -587,7 +678,7 @@
                           "type": "array"
                         },
                         "expirationDate": {
-                          "description": "ExpirationDate defines the time at which this version expires.",
+                          "description": "ExpirationDate defines the time at which this version expires.\n\nDeprecated: Is replaced by Lifecycle; mutually exclusive with it.",
                           "format": "date-time",
                           "type": "string"
                         },
@@ -612,6 +703,29 @@
                         "kubeletVersionConstraint": {
                           "description": "KubeletVersionConstraint is a constraint describing the supported kubelet versions by the machine image in this version.\nIf the field is not specified, it is assumed that the machine image in this version supports all kubelet versions.\nExamples:\n- '>= 1.26' - supports only kubelet versions greater than or equal to 1.26\n- '< 1.26' - supports only kubelet versions less than 1.26",
                           "type": "string"
+                        },
+                        "lifecycle": {
+                          "description": "Lifecycle defines the lifecycle stages for this version.\nMutually exclusive with Classification and ExpirationDate.\nThis can only be used when the VersionClassificationLifecycle feature gate is enabled.",
+                          "items": {
+                            "description": "LifecycleStage describes a stage in the versions lifecycle.\nEach stage defines the classification of the version (e.g. unavailable, preview, supported, deprecated, expired)\nand the time at which this classification becomes effective.",
+                            "properties": {
+                              "classification": {
+                                "description": "Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).",
+                                "type": "string"
+                              },
+                              "startTime": {
+                                "description": "StartTime defines when this lifecycle stage becomes active.\nStartTime can be omitted for the first lifecycle stage, implying a start time in the past.",
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "classification"
+                            ],
+                            "type": "object",
+                            "additionalProperties": false
+                          },
+                          "type": "array"
                         },
                         "version": {
                           "description": "Version is the version identifier.",
@@ -681,6 +795,17 @@
                     "description": "GPU is the number of GPUs for this machine type.",
                     "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
                     "x-kubernetes-int-or-string": true
+                  },
+                  "machineControllerManager": {
+                    "description": "MachineControllerManagerSettings contains a subset of the MachineControllerManagerSettings which can be defaulted for a machine type in a CloudProfile.",
+                    "properties": {
+                      "machineCreationTimeout": {
+                        "description": "MachineCreationTimeout is the period after which creation of a machine of this machine type is declared failed.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "additionalProperties": false
                   },
                   "memory": {
                     "anyOf": [

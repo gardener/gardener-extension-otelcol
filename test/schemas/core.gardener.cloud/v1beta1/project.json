@@ -19,19 +19,19 @@
           "description": "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user\nwho created the project. This field is immutable.",
           "properties": {
             "apiGroup": {
-              "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+              "description": "apiGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
               "type": "string"
             },
             "kind": {
-              "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+              "description": "kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
               "type": "string"
             },
             "name": {
-              "description": "Name of the object being referenced.",
+              "description": "name of the object being referenced.",
               "type": "string"
             },
             "namespace": {
-              "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+              "description": "namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
               "type": "string"
             }
           },
@@ -123,19 +123,19 @@
             "description": "ProjectMember is a member of a project.",
             "properties": {
               "apiGroup": {
-                "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+                "description": "apiGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
                 "type": "string"
               },
               "kind": {
-                "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+                "description": "kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
                 "type": "string"
               },
               "name": {
-                "description": "Name of the object being referenced.",
+                "description": "name of the object being referenced.",
                 "type": "string"
               },
               "namespace": {
-                "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+                "description": "namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
                 "type": "string"
               },
               "role": {
@@ -169,19 +169,19 @@
           "description": "Owner is a subject representing a user name, an email address, or any other identifier of a user owning\nthe project.\nIMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `owner`\nrole. The only way to change the owner will be by moving the `owner` role. In this API version the only way\nto change the owner is to use this field.",
           "properties": {
             "apiGroup": {
-              "description": "APIGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+              "description": "apiGroup holds the API group of the referenced subject.\nDefaults to \"\" for ServiceAccount subjects.\nDefaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
               "type": "string"
             },
             "kind": {
-              "description": "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+              "description": "kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\".\nIf the Authorizer does not recognized the kind value, the Authorizer should report an error.",
               "type": "string"
             },
             "name": {
-              "description": "Name of the object being referenced.",
+              "description": "name of the object being referenced.",
               "type": "string"
             },
             "namespace": {
-              "description": "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
+              "description": "namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty\nthe Authorizer should report an error.",
               "type": "string"
             }
           },
@@ -255,6 +255,59 @@
     "status": {
       "description": "Most recently observed status of the Project.",
       "properties": {
+        "conditions": {
+          "description": "Conditions represents the latest available observations of a Project's current state.",
+          "items": {
+            "description": "Condition holds the information about the state of a resource based on health checks.",
+            "properties": {
+              "codes": {
+                "description": "Well-defined error codes in case the condition reports a problem.",
+                "items": {
+                  "description": "ErrorCode is a string alias.",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "lastTransitionTime": {
+                "description": "Last time the condition transitioned from one status to another.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "lastUpdateTime": {
+                "description": "Last time the condition was updated.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "description": "A human readable message indicating details about the transition.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "The reason for the condition's last transition.",
+                "type": "string"
+              },
+              "status": {
+                "description": "Status of the condition, one of True, False, Unknown.",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type of the condition.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "lastTransitionTime",
+              "lastUpdateTime",
+              "message",
+              "reason",
+              "status",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
         "lastActivityTimestamp": {
           "description": "LastActivityTimestamp contains the timestamp from the last activity performed in this project.",
           "format": "date-time",

@@ -11,6 +11,19 @@
         "ociRepository": {
           "description": "OCIRepository defines where to pull the chart.",
           "properties": {
+            "caBundleSecretRef": {
+              "description": "CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.\nThe CA bundle is used to verify the TLS certificate of the OCI registry.\nThe secret must have a data key `bundle.crt` and must be located in the `garden` namespace.\nFor usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.\nIf not provided, the system's default certificate pool is used.",
+              "properties": {
+                "name": {
+                  "default": "",
+                  "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "x-kubernetes-map-type": "atomic",
+              "additionalProperties": false
+            },
             "digest": {
               "description": "Digest of the image to pull, takes precedence over tag.\nThe value should be in the format 'sha256:<HASH>'.",
               "type": "string"
@@ -67,6 +80,49 @@
     },
     "metadata": {
       "type": "object"
+    },
+    "resources": {
+      "description": "Resources is a list of named resource references that can be referenced in the Helm chart values via Go template\nsyntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`)\nare supported. The referenced resources must reside in the garden namespace.",
+      "items": {
+        "description": "NamedResourceReference is a named reference to a resource.",
+        "properties": {
+          "name": {
+            "description": "Name of the resource reference.",
+            "type": "string"
+          },
+          "resourceRef": {
+            "description": "ResourceRef is a reference to a resource.",
+            "properties": {
+              "apiVersion": {
+                "description": "apiVersion is the API version of the referent",
+                "type": "string"
+              },
+              "kind": {
+                "description": "kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                "type": "string"
+              },
+              "name": {
+                "description": "name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "name"
+            ],
+            "type": "object",
+            "x-kubernetes-map-type": "atomic",
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "name",
+          "resourceRef"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "type": "array"
     }
   },
   "type": "object"

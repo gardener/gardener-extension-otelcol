@@ -231,6 +231,10 @@
                 "type": "object",
                 "additionalProperties": false
               },
+              "hostName": {
+                "description": "HostName contains the name of the host for host-specific configurations.\nIf HostName is not empty the corresponding file will only be rolled out to the host with the specified name.\nDuplicate paths are only allowed if HostName is specified for all of them, none is nil and all values differ.",
+                "type": "string"
+              },
               "path": {
                 "description": "Path is the path of the file system where the file should get written to.",
                 "type": "string"
@@ -411,9 +415,9 @@
           "additionalProperties": false
         },
         "conditions": {
-          "description": "Conditions represents the latest available observations of a Seed's current state.",
+          "description": "Conditions represents the latest available observations of a Seed's current state based on health checks.",
           "items": {
-            "description": "Condition holds the information about the state of a resource.",
+            "description": "Condition holds the information about the state of a resource based on health checks.",
             "properties": {
               "codes": {
                 "description": "Well-defined error codes in case the condition reports a problem.",
@@ -535,6 +539,10 @@
                 },
                 "type": "object",
                 "additionalProperties": false
+              },
+              "hostName": {
+                "description": "HostName contains the name of the host for host-specific configurations.\nIf HostName is not empty the corresponding file will only be rolled out to the host with the specified name.\nDuplicate paths are only allowed if HostName is specified for all of them, none is nil and all values differ.",
+                "type": "string"
               },
               "path": {
                 "description": "Path is the path of the file system where the file should get written to.",

@@ -8,6 +8,8 @@ spec:
       helm:
         ociRepository:
           ref: registry.local.gardener.cloud:5001/helm-charts/gardener-extension-otelcol:v0.1.0-dev
+          caBundleSecretRef:
+            name: gardener-local-registry-ca
   resources:
     - kind: Extension
       type: otelcol

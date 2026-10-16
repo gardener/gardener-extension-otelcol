@@ -112,6 +112,10 @@
                 },
                 "type": "array"
               },
+              "continuousEndpointUpdate": {
+                "description": "ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously\nupdated with healthy/valid control plane endpoints.",
+                "type": "boolean"
+              },
               "kind": {
                 "description": "Kind is the resource kind, for example \"OperatingSystemConfig\".",
                 "type": "string"
