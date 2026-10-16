@@ -9,22 +9,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 resources:
-- core.gardener.cloud/v1/core.gardener.cloud_controllerdeployments.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_backupbuckets.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_backupentries.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_cloudprofiles.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_controllerdeployments.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_controllerinstallations.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_controllerregistrations.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_exposureclasses.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_internalsecrets.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_namespacedcloudprofiles.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_projects.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_quotas.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_secretbindings.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_seeds.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_shootstates.yaml
-- core.gardener.cloud/v1beta1/core.gardener.cloud_shoots.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_backupbuckets.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_backupentries.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_bastions.yaml
@@ -36,8 +20,5 @@ resources:
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_infrastructures.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_networks.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_operatingsystemconfigs.yaml
-- extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_selfhostedshootexposures.yaml
 - extensions.gardener.cloud/v1alpha1/extensions.gardener.cloud_workers.yaml
-- operator.gardener.cloud/v1alpha1/operator.gardener.cloud_extensions.yaml
-- operator.gardener.cloud/v1alpha1/operator.gardener.cloud_gardens.yaml
 - resources.gardener.cloud/v1alpha1/resources.gardener.cloud_managedresources.yaml
