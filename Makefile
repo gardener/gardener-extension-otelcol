@@ -224,6 +224,10 @@ checklicense:  ## Check source files for license headers.
 		exit 1; \
 	}
 
+.PHONY: schemas
+schemas: ## Generate manifests for integration tests and schemas for validation.
+	@$(HACK_DIR)/update-manifests-schemas.sh
+
 .PHONY: generate
 generate: ## Run code-generator tools.
 	@echo "Running code-generator tools ..."
