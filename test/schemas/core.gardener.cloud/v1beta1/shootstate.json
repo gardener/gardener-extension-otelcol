@@ -1,0 +1,168 @@
+{
+  "description": "ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Specification of the ShootState.",
+      "properties": {
+        "extensions": {
+          "description": "Extensions holds the state of custom resources reconciled by extension controllers in the seed",
+          "items": {
+            "description": "ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's\nnamespace on the Seed cluster.",
+            "properties": {
+              "kind": {
+                "description": "Kind (type) of the extension custom resource",
+                "type": "string"
+              },
+              "name": {
+                "description": "Name of the extension custom resource",
+                "type": "string"
+              },
+              "purpose": {
+                "description": "Purpose of the extension custom resource",
+                "type": "string"
+              },
+              "resources": {
+                "description": "Resources holds a list of named resource references that can be referred to in the state by their names.",
+                "items": {
+                  "description": "NamedResourceReference is a named reference to a resource.",
+                  "properties": {
+                    "name": {
+                      "description": "Name of the resource reference.",
+                      "type": "string"
+                    },
+                    "resourceRef": {
+                      "description": "ResourceRef is a reference to a resource.",
+                      "properties": {
+                        "apiVersion": {
+                          "description": "apiVersion is the API version of the referent",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "description": "kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object",
+                      "x-kubernetes-map-type": "atomic",
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "resourceRef"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
+                "type": "array"
+              },
+              "state": {
+                "description": "State of the extension resource",
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "gardener": {
+          "description": "Gardener holds the data required to generate resources deployed by the gardenlet",
+          "items": {
+            "description": "GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.",
+            "properties": {
+              "data": {
+                "description": "Data contains the payload required to generate resources",
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "labels": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Labels are labels of the object",
+                "type": "object"
+              },
+              "name": {
+                "description": "Name of the object required to generate resources",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type of the object",
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "name",
+              "type"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          },
+          "type": "array"
+        },
+        "resources": {
+          "description": "Resources holds the data of resources referred to by extension controller states",
+          "items": {
+            "description": "ResourceData holds the data of a resource referred to by an extension controller state.",
+            "properties": {
+              "apiVersion": {
+                "description": "apiVersion is the API version of the referent",
+                "type": "string"
+              },
+              "data": {
+                "description": "Data of the resource",
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "kind": {
+                "description": "kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+                "type": "string"
+              },
+              "name": {
+                "description": "name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "kind",
+              "name"
+            ],
+            "type": "object",
+            "x-kubernetes-map-type": "atomic",
+            "additionalProperties": false
+          },
+          "type": "array"
+        }
+      },
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "type": "object"
+}
