@@ -82,7 +82,7 @@ var _ = Describe("filter processor", func() {
 			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Receivers).
 				To(Equal([]string{"otlp"}))
 			Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Receivers).
-				To(Equal([]string{"k8sobjects/events"}))
+				To(Equal([]string{"k8s_events"}))
 		})
 
 		It("builds one pipeline per target and wires each to its own exporter", func() {
