@@ -1821,7 +1821,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "log",
 									"conditions": []any{
-										`log.severity_number < SEVERITY_NUMBER_WARN`,
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
 									},
 								},
 							},
@@ -1831,7 +1831,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "log",
 									"conditions": []any{
-										`log.severity_number < SEVERITY_NUMBER_INFO`,
+										`log.severity_number < SEVERITY_NUMBER_DEBUG`,
 									},
 								},
 							},
@@ -1851,7 +1851,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "log",
 									"conditions": []any{
-										`log.severity_number < SEVERITY_NUMBER_WARN`,
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
 									},
 								},
 							},
@@ -1861,7 +1861,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "log",
 									"conditions": []any{
-										`log.severity_number < SEVERITY_NUMBER_INFO`,
+										`log.severity_number < SEVERITY_NUMBER_DEBUG`,
 									},
 								},
 							},
