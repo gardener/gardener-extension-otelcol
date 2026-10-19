@@ -128,23 +128,23 @@ const (
 	// the k8sobjects/events pipeline.
 	transformEventsProcessorName = "transform/events"
 	// noneMetricFilters is the name of the filter processor that acceptes no metrics.
-	noneMetricFilters = "filters/none_metric_filters"
+	noneMetricFilters = "filter/none_metric_filters"
 	// basicMetricFilters is the name of the filter processor that acceptes core metrics.
-	basicMetricFilters = "filters/basic_metric_filters"
+	basicMetricFilters = "filter/basic_metric_filters"
 	// normalMetricFilters is the name of the filter processor that acceptes low-overhead metrics.
-	normalMetricFilters = "filters/normal_metric_filters"
+	normalMetricFilters = "filter/normal_metric_filters"
 	// noneLogFilters is the name of the filter processor that acceptes no logs.
-	noneLogFilters = "filters/none_log_filters"
+	noneLogFilters = "filter/none_log_filters"
 	// basicLogFilters is the name of the filter processor that acceptes core logs.
-	basicLogFilters = "filters/basic_log_filters"
+	basicLogFilters = "filter/basic_log_filters"
 	// normalLogFilters is the name of the filter processor that acceptes low-overhead logs.
-	normalLogFilters = "filters/normal_log_filters"
+	normalLogFilters = "filter/normal_log_filters"
 	// noneEventFilters is the name of the filter processor that acceptes no events.
-	noneEventFilters = "filters/none_event_filters"
+	noneEventFilters = "filter/none_event_filters"
 	// basicEventFilters is the name of the filter processor that acceptes core events.
-	basicEventFilters = "filters/basic_event_filters"
+	basicEventFilters = "filter/basic_event_filters"
 	// normalEventFilters is the name of the filter processor that acceptes low-overhead events.
-	normalEventFilters = "filters/normal_event_filters"
+	normalEventFilters = "filter/normal_event_filters"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8sobjects/events receiver to authenticate to the shoot cluster.
