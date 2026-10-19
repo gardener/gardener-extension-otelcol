@@ -127,12 +127,12 @@ const (
 	// transformEventsProcessorName is the name of the transform processor for
 	// the k8sobjects/events pipeline.
 	transformEventsProcessorName = "transform/events"
-	// noneMericFilters is the name of the filter processor that acceptes no metrics.
-	noneMericFilters = "filters/none_metric_filters"
-	// basicMericFilters is the name of the filter processor that acceptes core metrics.
-	basicMericFilters = "filters/basic_metric_filters"
-	// normalMericFilters is the name of the filter processor that acceptes low-overhead metrics.
-	normalMericFilters = "filters/normal_metric_filters"
+	// noneMetricFilters is the name of the filter processor that acceptes no metrics.
+	noneMetricFilters = "filters/none_metric_filters"
+	// basicMetricFilters is the name of the filter processor that acceptes core metrics.
+	basicMetricFilters = "filters/basic_metric_filters"
+	// normalMetricFilters is the name of the filter processor that acceptes low-overhead metrics.
+	normalMetricFilters = "filters/normal_metric_filters"
 	// noneLogFilters is the name of the filter processor that acceptes no logs.
 	noneLogFilters = "filters/none_log_filters"
 	// basicLogFilters is the name of the filter processor that acceptes core logs.
@@ -1530,11 +1530,11 @@ func buildPipelines(
 			if sig == config.SignalMetrics {
 				switch target.Verbosity {
 				case config.VerbosityLevelNone:
-					processors = append(processors, noneMericFilters)
+					processors = append(processors, noneMetricFilters)
 				case config.VerbosityLevelBasic:
-					processors = append(processors, basicMericFilters)
+					processors = append(processors, basicMetricFilters)
 				case config.VerbosityLevelNormal:
-					processors = append(processors, normalMericFilters)
+					processors = append(processors, normalMetricFilters)
 				case config.VerbosityLevelDetailed:
 					// No filters needed.
 				}
@@ -1776,91 +1776,91 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 						},
-						noneMericFilters: map[string]any{
-							"metric_statements": []any{
+						noneMetricFilters: map[string]any{
+							"metric_conditions": []any{
 								map[string]any{
 									"context": "metric",
-									"statements": []any{
+									"conditions": []any{
 										`1==1`,
 									},
 								},
 							},
 						},
-						basicMericFilters: map[string]any{
-							"metric_statements": []any{
+						basicMetricFilters: map[string]any{
+							"metric_conditions": []any{
 								map[string]any{
 									"context": "metric",
-									"statements": []any{
+									"conditions": []any{
 										`metric.name == "my.metric" and resource.attributes["my_label"] == "abc123"`,
 									},
 								},
 							},
 						},
-						normalMericFilters: map[string]any{
-							"metric_statements": []any{
+						normalMetricFilters: map[string]any{
+							"metric_conditions": []any{
 								map[string]any{
 									"context": "metric",
-									"statements": []any{
+									"conditions": []any{
 										`metric.name == "my.metric" and resource.attributes["my_label"] == "abc123"`,
 									},
 								},
 							},
 						},
 						noneLogFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`1==1`,
 									},
 								},
 							},
 						},
 						basicLogFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`log.severity_number < SEVERITY_NUMBER_WARN`,
 									},
 								},
 							},
 						},
 						normalLogFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`log.severity_number < SEVERITY_NUMBER_INFO`,
 									},
 								},
 							},
 						},
 						noneEventFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`1==1`,
 									},
 								},
 							},
 						},
 						basicEventFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`log.severity_number < SEVERITY_NUMBER_WARN`,
 									},
 								},
 							},
 						},
 						normalEventFilters: map[string]any{
-							"log_statements": []any{
+							"log_conditions": []any{
 								map[string]any{
 									"context": "log",
-									"statements": []any{
+									"conditions": []any{
 										`log.severity_number < SEVERITY_NUMBER_INFO`,
 									},
 								},
