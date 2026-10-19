@@ -33,9 +33,9 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-	"go.opentelemetry.io/collector/confmap"
 	otelv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.yaml.in/yaml/v4"
@@ -127,6 +127,24 @@ const (
 	// transformEventsProcessorName is the name of the transform processor for
 	// the k8sobjects/events pipeline.
 	transformEventsProcessorName = "transform/events"
+	// noneMericFilters is the name of the filter processor that acceptes no metrics.
+	noneMericFilters = "filters/none_metric_filters"
+	// basicMericFilters is the name of the filter processor that acceptes core metrics.
+	basicMericFilters = "filters/basic_metric_filters"
+	// normalMericFilters is the name of the filter processor that acceptes low-overhead metrics.
+	normalMericFilters = "filters/normal_metric_filters"
+	// noneLogFilters is the name of the filter processor that acceptes no logs.
+	noneLogFilters = "filters/none_log_filters"
+	// basicLogFilters is the name of the filter processor that acceptes core logs.
+	basicLogFilters = "filters/basic_log_filters"
+	// normalLogFilters is the name of the filter processor that acceptes low-overhead logs.
+	normalLogFilters = "filters/normal_log_filters"
+	// noneEventFilters is the name of the filter processor that acceptes no events.
+	noneEventFilters = "filters/none_event_filters"
+	// basicEventFilters is the name of the filter processor that acceptes core events.
+	basicEventFilters = "filters/basic_event_filters"
+	// normalEventFilters is the name of the filter processor that acceptes low-overhead events.
+	normalEventFilters = "filters/normal_event_filters"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8sobjects/events receiver to authenticate to the shoot cluster.
@@ -1508,9 +1526,50 @@ func buildPipelines(
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
 			}
+
+			if sig == config.SignalMetrics {
+				switch target.Verbosity {
+				case config.VerbosityLevelNone:
+					processors = append(processors, noneMericFilters)
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicMericFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalMericFilters)
+				case config.VerbosityLevelDetailed:
+					// No filters needed.
+				}
+			}
+
+			if sig == config.SignalLogs {
+				switch target.Verbosity {
+				case config.VerbosityLevelNone:
+					processors = append(processors, noneLogFilters)
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicLogFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalLogFilters)
+				case config.VerbosityLevelDetailed:
+					// No filters needed.
+				}
+			}
+
+			if sig == config.SignalEvents {
+				switch target.Verbosity {
+				case config.VerbosityLevelNone:
+					processors = append(processors, noneEventFilters)
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicEventFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalEventFilters)
+				case config.VerbosityLevelDetailed:
+					// No filters needed.
+				}
+			}
+
 			if _, ok := filterCfgs[sig]; ok {
 				processors = append(processors, signalFilterName(sig, i))
 			}
+
 			processors = append(processors, batchProcessorName)
 
 			pipelines[signalPipelineName(sig, i)] = &otelv1beta1.Pipeline{
@@ -1713,6 +1772,96 @@ func (a *Actuator) getOtelCollector(
 									"context": "log",
 									"statements": []any{
 										`delete_key(body["object"]["metadata"], "managedFields")`,
+									},
+								},
+							},
+						},
+						noneMericFilters: map[string]any{
+							"metric_statements": []any{
+								map[string]any{
+									"context": "metric",
+									"statements": []any{
+										`1==1`,
+									},
+								},
+							},
+						},
+						basicMericFilters: map[string]any{
+							"metric_statements": []any{
+								map[string]any{
+									"context": "metric",
+									"statements": []any{
+										`metric.name == "my.metric" and resource.attributes["my_label"] == "abc123"`,
+									},
+								},
+							},
+						},
+						normalMericFilters: map[string]any{
+							"metric_statements": []any{
+								map[string]any{
+									"context": "metric",
+									"statements": []any{
+										`metric.name == "my.metric" and resource.attributes["my_label"] == "abc123"`,
+									},
+								},
+							},
+						},
+						noneLogFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`1==1`,
+									},
+								},
+							},
+						},
+						basicLogFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`log.severity_number < SEVERITY_NUMBER_WARN`,
+									},
+								},
+							},
+						},
+						normalLogFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
+									},
+								},
+							},
+						},
+						noneEventFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`1==1`,
+									},
+								},
+							},
+						},
+						basicEventFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`log.severity_number < SEVERITY_NUMBER_WARN`,
+									},
+								},
+							},
+						},
+						normalEventFilters: map[string]any{
+							"log_statements": []any{
+								map[string]any{
+									"context": "log",
+									"statements": []any{
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
 									},
 								},
 							},
