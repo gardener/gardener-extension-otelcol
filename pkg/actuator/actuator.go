@@ -127,23 +127,23 @@ const (
 	// transformEventsProcessorName is the name of the transform processor for
 	// the k8sobjects/events pipeline.
 	transformEventsProcessorName = "transform/events"
-	// noneMetricFilters is the name of the filter processor that acceptes no metrics.
+	// noneMetricFilters is the name of the filter processor that accepts no metrics.
 	noneMetricFilters = "filter/none_metric_filters"
-	// basicMetricFilters is the name of the filter processor that acceptes core metrics.
+	// basicMetricFilters is the name of the filter processor that accepts core metrics.
 	basicMetricFilters = "filter/basic_metric_filters"
-	// normalMetricFilters is the name of the filter processor that acceptes low-overhead metrics.
+	// normalMetricFilters is the name of the filter processor that accepts low-overhead metrics.
 	normalMetricFilters = "filter/normal_metric_filters"
-	// noneLogFilters is the name of the filter processor that acceptes no logs.
+	// noneLogFilters is the name of the filter processor that accepts no logs.
 	noneLogFilters = "filter/none_log_filters"
-	// basicLogFilters is the name of the filter processor that acceptes core logs.
+	// basicLogFilters is the name of the filter processor that accepts core logs.
 	basicLogFilters = "filter/basic_log_filters"
-	// normalLogFilters is the name of the filter processor that acceptes low-overhead logs.
+	// normalLogFilters is the name of the filter processor that accepts low-overhead logs.
 	normalLogFilters = "filter/normal_log_filters"
-	// noneEventFilters is the name of the filter processor that acceptes no events.
+	// noneEventFilters is the name of the filter processor that accepts no events.
 	noneEventFilters = "filter/none_event_filters"
-	// basicEventFilters is the name of the filter processor that acceptes core events.
+	// basicEventFilters is the name of the filter processor that accepts core events.
 	basicEventFilters = "filter/basic_event_filters"
-	// normalEventFilters is the name of the filter processor that acceptes low-overhead events.
+	// normalEventFilters is the name of the filter processor that accepts low-overhead events.
 	normalEventFilters = "filter/normal_event_filters"
 
 	// shootAccessSecretName is the name of the shoot access secret used by the
@@ -1541,8 +1541,8 @@ func buildPipelines(
 					processors = append(processors, basicMetricFilters)
 				case config.VerbosityLevelNormal:
 					processors = append(processors, normalMetricFilters)
-				case config.VerbosityLevelDetailed:
-					// No filters needed.
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
 				}
 			}
 
@@ -1554,8 +1554,8 @@ func buildPipelines(
 					processors = append(processors, basicLogFilters)
 				case config.VerbosityLevelNormal:
 					processors = append(processors, normalLogFilters)
-				case config.VerbosityLevelDetailed:
-					// No filters needed.
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
 				}
 			}
 
@@ -1567,8 +1567,8 @@ func buildPipelines(
 					processors = append(processors, basicEventFilters)
 				case config.VerbosityLevelNormal:
 					processors = append(processors, normalEventFilters)
-				case config.VerbosityLevelDetailed:
-					// No filters needed.
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
 				}
 			}
 

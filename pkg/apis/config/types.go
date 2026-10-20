@@ -53,13 +53,13 @@ const (
 type VerbosityLevel string
 
 const (
-	// LevelNone indicates that no telemetry should be collected.
+	// VerbosityLevelNone indicates that no telemetry should be collected.
 	VerbosityLevelNone VerbosityLevel = "none"
-	// LevelBasic indicates that only core telemetry should be collected.
+	// VerbosityLevelBasic indicates that only core telemetry should be collected.
 	VerbosityLevelBasic = "basic"
-	// LevelNormal indicates that all low-overhead telemetry should be collected.
+	// VerbosityLevelNormal indicates that all low-overhead telemetry should be collected.
 	VerbosityLevelNormal = "normal"
-	// LevelDetailed indicates that all available telemetry should be collected.
+	// VerbosityLevelDetailed indicates that all available telemetry should be collected.
 	VerbosityLevelDetailed = "detailed"
 )
 
