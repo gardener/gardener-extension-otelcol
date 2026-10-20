@@ -203,6 +203,7 @@ const (
 	// value should be the name of the TargetAllocator.
 	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
 
+	// prefixBasicMetrix contains all prefixes of the core metrics, separated by '|'.
 	prefixBasicMetrix = "apiserver|cluster_autoscaler|etcd|vpa|hpa|certwatcher|mcm"
 	// prefixNormalMetrix contains all prefixes of the low-overhead metrics, separated by '|'.
 	prefixNormalMetrix = prefixBasicMetrix + "|" + "otelcol|prom|vl|vm|vali"
