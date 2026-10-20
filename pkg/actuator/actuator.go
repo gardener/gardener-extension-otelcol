@@ -131,6 +131,9 @@ const (
 	// TLS volume mounts for the exporters.
 	baseVolumeMountPathTLS = "/etc/ssl/tls"
 
+	// k8sLeaderElectorExtensionName is the name of extension that is used by the k8s_events
+	// receiver to ensure only one replica processes events.
+	k8sLeaderElectorExtensionName = "k8s_leader_elector"
 	// transformEventsProcessorName is the name of the transform processor for
 	// the k8sobjects/events pipeline.
 	transformEventsProcessorName = "transform/events"
@@ -1454,7 +1457,7 @@ func (a *Actuator) getOtelCollector(
 			Config: otelv1beta1.Config{
 				Extensions: &otelv1beta1.AnyConfig{
 					Object: map[string]any{
-						k8sLeaderElectorName: map[string]any{
+						k8sLeaderElectorExtensionName: map[string]any{
 							"auth_type":       "kubeConfig",
 							"lease_name":      baseResourceName,
 							"lease_namespace": metav1.NamespaceSystem,
@@ -1475,7 +1478,7 @@ func (a *Actuator) getOtelCollector(
 						},
 						eventsReceiverName: map[string]any{
 							"auth_type":          "kubeConfig",
-							"k8s_leader_elector": k8sLeaderElectorName,
+							"k8s_leader_elector": k8sLeaderElectorExtensionName,
 						},
 					},
 				},
@@ -1516,7 +1519,7 @@ func (a *Actuator) getOtelCollector(
 					Object: exporters,
 				},
 				Service: otelv1beta1.Service{
-					Extensions: []string{k8sLeaderElectorName},
+					Extensions: []string{k8sLeaderElectorExtensionName},
 					Telemetry: &otelv1beta1.AnyConfig{
 						Object: map[string]any{
 							telemetryMetricsKey: map[string]any{
