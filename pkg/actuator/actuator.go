@@ -1791,7 +1791,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`IsMatch(metric.name, "^etcd.*")`,
+										`!IsMatch(metric.name, "^etcd.*")`,
 									},
 								},
 							},
@@ -1801,7 +1801,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`IsMatch(metric.name, "^etcd.*")`,
+										`!IsMatch(metric.name, "^etcd.*")`,
 									},
 								},
 							},
