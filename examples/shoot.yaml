@@ -68,7 +68,7 @@ spec:
                 debug:
                   verbosity: basic  # basic, normal or detailed
               signals: [logs]
-              verbosity: basic # none, basic, normal or detailed
+              verbosity: basic # basic, normal or detailed
 
             # Third destination: ship Kubernetes events over gRPC.
             - exporter:

@@ -115,20 +115,14 @@ const (
 	// resource for the Target Allocator.
 	targetAllocatorRoleName = baseResourceName + "-targetallocator"
 
-	// noneMetricFilters is the name of the filter processor that accepts no metrics.
-	noneMetricFilters = "filter/none_metric_filters"
 	// basicMetricFilters is the name of the filter processor that accepts core metrics.
 	basicMetricFilters = "filter/basic_metric_filters"
 	// normalMetricFilters is the name of the filter processor that accepts low-overhead metrics.
 	normalMetricFilters = "filter/normal_metric_filters"
-	// noneLogFilters is the name of the filter processor that accepts no logs.
-	noneLogFilters = "filter/none_log_filters"
 	// basicLogFilters is the name of the filter processor that accepts core logs.
 	basicLogFilters = "filter/basic_log_filters"
 	// normalLogFilters is the name of the filter processor that accepts low-overhead logs.
 	normalLogFilters = "filter/normal_log_filters"
-	// noneEventFilters is the name of the filter processor that accepts no events.
-	noneEventFilters = "filter/none_event_filters"
 	// basicEventFilters is the name of the filter processor that accepts core events.
 	basicEventFilters = "filter/basic_event_filters"
 	// normalEventFilters is the name of the filter processor that accepts low-overhead events.
@@ -1378,8 +1372,6 @@ func buildPipelines(
 
 			if sig == config.SignalMetrics {
 				switch target.Verbosity {
-				case config.VerbosityLevelNone:
-					processors = append(processors, noneMetricFilters)
 				case config.VerbosityLevelBasic:
 					processors = append(processors, basicMetricFilters)
 				case config.VerbosityLevelNormal:
@@ -1391,8 +1383,6 @@ func buildPipelines(
 
 			if sig == config.SignalLogs {
 				switch target.Verbosity {
-				case config.VerbosityLevelNone:
-					processors = append(processors, noneLogFilters)
 				case config.VerbosityLevelBasic:
 					processors = append(processors, basicLogFilters)
 				case config.VerbosityLevelNormal:
@@ -1404,8 +1394,6 @@ func buildPipelines(
 
 			if sig == config.SignalEvents {
 				switch target.Verbosity {
-				case config.VerbosityLevelNone:
-					processors = append(processors, noneEventFilters)
 				case config.VerbosityLevelBasic:
 					processors = append(processors, basicEventFilters)
 				case config.VerbosityLevelNormal:
@@ -1567,16 +1555,6 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 						},
-						noneMetricFilters: map[string]any{
-							"metric_conditions": []any{
-								map[string]any{
-									"context": "metric",
-									"conditions": []any{
-										`1==1`,
-									},
-								},
-							},
-						},
 						basicMetricFilters: map[string]any{
 							"metric_conditions": []any{
 								map[string]any{
@@ -1597,16 +1575,6 @@ func (a *Actuator) getOtelCollector(
 								},
 							},
 						},
-						noneLogFilters: map[string]any{
-							"log_conditions": []any{
-								map[string]any{
-									"context": "log",
-									"conditions": []any{
-										`1==1`,
-									},
-								},
-							},
-						},
 						basicLogFilters: map[string]any{
 							"log_conditions": []any{
 								map[string]any{
@@ -1623,16 +1591,6 @@ func (a *Actuator) getOtelCollector(
 									"context": "log",
 									"conditions": []any{
 										`log.severity_number < SEVERITY_NUMBER_DEBUG`,
-									},
-								},
-							},
-						},
-						noneEventFilters: map[string]any{
-							"log_conditions": []any{
-								map[string]any{
-									"context": "log",
-									"conditions": []any{
-										`1==1`,
 									},
 								},
 							},

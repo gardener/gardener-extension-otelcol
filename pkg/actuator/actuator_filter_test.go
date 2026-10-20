@@ -440,13 +440,6 @@ var _ = Describe("verbosity filter wiring", func() {
 					processors: []string{"resource", "memory_limiter", "batch"},
 				},
 			),
-			Entry("none metrics: none_metric_filters",
-				verbosityCase{
-					verbosity:  config.VerbosityLevelNone,
-					signal:     config.SignalMetrics,
-					processors: []string{"resource", "memory_limiter", noneMetricFilters, "batch"},
-				},
-			),
 			Entry("basic metrics: basic_metric_filters",
 				verbosityCase{
 					verbosity:  config.VerbosityLevelBasic,
@@ -459,13 +452,6 @@ var _ = Describe("verbosity filter wiring", func() {
 					verbosity:  config.VerbosityLevelNormal,
 					signal:     config.SignalMetrics,
 					processors: []string{"resource", "memory_limiter", normalMetricFilters, "batch"},
-				},
-			),
-			Entry("none logs: none_log_filters",
-				verbosityCase{
-					verbosity:  config.VerbosityLevelNone,
-					signal:     config.SignalLogs,
-					processors: []string{"resource", "memory_limiter", noneLogFilters, "batch"},
 				},
 			),
 			Entry("basic logs: basic_log_filters",
@@ -487,13 +473,6 @@ var _ = Describe("verbosity filter wiring", func() {
 					verbosity:  config.VerbosityLevelDetailed,
 					signal:     config.SignalLogs,
 					processors: []string{"resource", "memory_limiter", "batch"},
-				},
-			),
-			Entry("none events: none_event_filters",
-				verbosityCase{
-					verbosity:  config.VerbosityLevelNone,
-					signal:     config.SignalEvents,
-					processors: []string{"resource", "memory_limiter", "transform/events", noneEventFilters, "batch"},
 				},
 			),
 			Entry("basic events: basic_event_filters",
@@ -542,13 +521,13 @@ var _ = Describe("verbosity filter wiring", func() {
 		})
 
 		It("wires verbosity filters independently per target", func() {
-			// Two targets: one with basic verbosity and one with none, each
-			// should get its own verbosity filter without bleeding into the other.
+			// Two targets with different verbosity levels should each get their
+			// own verbosity filter without bleeding into the other.
 			cfg := config.CollectorConfig{
 				Spec: config.CollectorConfigSpec{
 					Targets: []config.Target{
 						verbosityTarget(config.VerbosityLevelBasic, config.SignalMetrics),
-						verbosityTarget(config.VerbosityLevelNone, config.SignalMetrics),
+						verbosityTarget(config.VerbosityLevelNormal, config.SignalMetrics),
 					},
 				},
 			}
@@ -559,7 +538,7 @@ var _ = Describe("verbosity filter wiring", func() {
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
 				To(Equal([]string{"resource", "memory_limiter", basicMetricFilters, "batch"}))
 			Expect(pipelines[signalPipelineName(config.SignalMetrics, 1)].Processors).
-				To(Equal([]string{"resource", "memory_limiter", noneMetricFilters, "batch"}))
+				To(Equal([]string{"resource", "memory_limiter", normalMetricFilters, "batch"}))
 		})
 
 		It("wires verbosity filters per signal for a multi-signal target", func() {
