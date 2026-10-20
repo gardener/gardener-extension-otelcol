@@ -229,6 +229,12 @@ const (
 	// labelValuePrometheusShoot is the value used for the `prometheus` label on
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
+
+	// prefixBasicMetrics contains all prefixes of the core metrics, separated by '|'.
+	prefixBasicMetrix = "apiserver|cluster_autoscaler|etcd|vpa|hpa|certwatcher|mcm"
+
+	// prefixNormalMetrix contains all prefixes of the low-overhead metrics, separated by '|'.
+	prefixNormalMetrix = prefixBasicMetrix + "|" + "otelcol|prom|vl|vm|vali"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
@@ -1791,7 +1797,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^(etcd|api).*")`,
+										`not IsMatch(metric.name, "^(` + prefixBasicMetrix + `).*")`,
 									},
 								},
 							},
@@ -1801,7 +1807,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^(etcd|api).*")`,
+										`not IsMatch(metric.name, "^(` + prefixNormalMetrix + `).*")`,
 									},
 								},
 							},
