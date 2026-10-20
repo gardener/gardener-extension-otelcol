@@ -135,7 +135,7 @@ const (
 	// receiver to ensure only one replica processes events.
 	k8sLeaderElectorExtensionName = "k8s_leader_elector"
 	// transformEventsProcessorName is the name of the transform processor for
-	// the k8sobjects/events pipeline.
+	// the k8s_events/events pipeline.
 	transformEventsProcessorName = "transform/events"
 	// batchProcessorName is the name of the OpenTelemetry Batch processor.
 	batchProcessorName = "batch"
@@ -148,8 +148,8 @@ const (
 	filterProcessorBaseName = "filter"
 	// otlpReceiverName is the name of the OTLP receiver.
 	otlpReceiverName = "otlp"
-	// eventsReceiverName is the name of the k8sobjects receiver for events.
-	eventsReceiverName = "k8sobjects/events"
+	// eventsReceiverName is the name of the k8s_events receiver for events.
+	eventsReceiverName = "k8s_events"
 	// prometheusReceiverName is the name of the Prometheus receiver.
 	prometheusReceiverName = "prometheus"
 
