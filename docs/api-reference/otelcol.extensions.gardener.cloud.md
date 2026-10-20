@@ -412,8 +412,5 @@ lack of a community standard for this use case.
 _Appears in:_
 - [Target](#target)
 
-| Field | Description |
-| --- | --- |
-| `none` | VerbosityLevelNone indicates that no telemetry should be collected.<br /> |
 
 
