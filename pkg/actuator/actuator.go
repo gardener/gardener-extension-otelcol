@@ -1635,8 +1635,7 @@ func (a *Actuator) configureExporterVolumes(
 
 // getEventsClusterRole returns the [rbacv1.ClusterRole] granting the OTel
 // Collector's service account in the shoot cluster permission to list and watch
-// events from both the core ("") and events.k8s.io API groups. Both are needed
-// because the k8sevents receiver watches /v1/events (core) at the cluster scope.
+// events from the core API group.
 func (a *Actuator) getEventsClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
