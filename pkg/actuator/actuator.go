@@ -203,10 +203,10 @@ const (
 	// value should be the name of the TargetAllocator.
 	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
 
-	// prefixBasicMetrix contains all prefixes of the core metrics, separated by '|'.
-	prefixBasicMetrix = "apiserver|cluster_autoscaler|etcd|vpa|hpa|certwatcher|mcm"
-	// prefixNormalMetrix contains all prefixes of the low-overhead metrics, separated by '|'.
-	prefixNormalMetrix = prefixBasicMetrix + "|" + "otelcol|prom|vl|vm|vali"
+	// prefixBasicMetrics contains all prefixes of the core metrics, separated by '|'.
+	prefixBasicMetrics = "apiserver|cluster_autoscaler|etcd|vpa|hpa|certwatcher|mcm"
+	// prefixNormalMetrics contains all prefixes of the low-overhead metrics, separated by '|'.
+	prefixNormalMetrics = prefixBasicMetrics + "|" + "otelcol|prom|vl|vm|vali"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
@@ -1582,7 +1582,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^(` + prefixBasicMetrix + `).*")`,
+										`not IsMatch(metric.name, "^(` + prefixBasicMetrics + `).*")`,
 									},
 								},
 							},
@@ -1592,7 +1592,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^(` + prefixNormalMetrix + `).*")`,
+										`not IsMatch(metric.name, "^(` + prefixNormalMetrics + `).*")`,
 									},
 								},
 							},
