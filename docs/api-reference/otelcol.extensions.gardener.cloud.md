@@ -414,6 +414,6 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `none` | LevelNone indicates that no telemetry should be collected.<br /> |
+| `none` | VerbosityLevelNone indicates that no telemetry should be collected.<br /> |
 
 
