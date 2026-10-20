@@ -182,6 +182,14 @@ const (
 	// service monitors that should be scraped in the shoot.
 	labelValuePrometheusShoot = "shoot"
 
+	// otelCollectorEventsRoleName is the name of the Role and RoleBinding
+	// resource for the Collector to work with events.
+	otelCollectorEventsRoleName = baseResourceName + "-collector-events"
+
+	// otelCollectorLeasesRoleName is the name of the Role and RoleBinding
+	// resource for the Collector to work with events.
+	otelCollectorLeasesRoleName = baseResourceName + "-collector-leases"
+
 	// labelKeyTargetAllocator is the label key used by the OpenTelemetry Operator
 	// to associate an OpenTelemetryCollector CR with its TargetAllocator. The label
 	// value should be the name of the TargetAllocator.
