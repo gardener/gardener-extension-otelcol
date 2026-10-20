@@ -118,9 +118,6 @@ const (
 	// Target Allocator.
 	targetAllocatorConfigMapName = baseResourceName + "-targetallocator-config"
 
-	// transformEventsProcessorName is the name of the transform processor for
-	// the k8sobjects/events pipeline.
-	transformEventsProcessorName = "transform/events"
 	// noneMetricFilters is the name of the filter processor that accepts no metrics.
 	noneMetricFilters = "filter/none_metric_filters"
 	// basicMetricFilters is the name of the filter processor that accepts core metrics.
