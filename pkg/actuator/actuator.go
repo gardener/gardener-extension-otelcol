@@ -1791,8 +1791,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^etcd.*")`,
-										`not IsMatch(metric.name, "^api.*")`,
+										`not IsMatch(metric.name, "^(etcd|api).*")`,
 									},
 								},
 							},
@@ -1802,8 +1801,7 @@ func (a *Actuator) getOtelCollector(
 								map[string]any{
 									"context": "metric",
 									"conditions": []any{
-										`not IsMatch(metric.name, "^etcd.*")`,
-										`not IsMatch(metric.name, "^api.*")`,
+										`not IsMatch(metric.name, "^(etcd|api).*")`,
 									},
 								},
 							},
