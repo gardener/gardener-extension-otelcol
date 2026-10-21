@@ -6,6 +6,7 @@ package mgr_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,7 +29,13 @@ import (
 
 var _ = Describe("Manager", Ordered, func() {
 	It("should fail to create manager without rest.Config, because running out-of-cluster", func() {
-		opts := []mgr.Option{}
+		// if 'make test' is run while there is a running cluster we must
+		// ensure that the kubeconfig will not be discovered by accident
+		opts := []mgr.Option{
+			mgr.WithGetConfigFunc(func() (*rest.Config, error) {
+				return nil, errors.New("failed to get rest config: no kubeconfig")
+			}),
+		}
 		m, err := mgr.New(opts...)
 
 		Expect(err).Should(HaveOccurred())
