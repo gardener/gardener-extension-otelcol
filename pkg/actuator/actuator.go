@@ -198,7 +198,7 @@ const (
 	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
 
 	// prefixBasicMetrics contains all prefixes of the core metrics, separated by '|'.
-	prefixBasicMetrics = "apiserver|cluster_autoscaler|etcd|vpa|hpa|certwatcher|mcm"
+	prefixBasicMetrics = "apiserver|cluster|etcd|vpa|hpa|certwatcher|mcm"
 	// prefixNormalMetrics contains all prefixes of the low-overhead metrics, separated by '|'.
 	prefixNormalMetrics = prefixBasicMetrics + "|" + "otelcol|prom|vl|vm|vali"
 )
