@@ -411,20 +411,20 @@ var _ = Describe("verbosity filter wiring", func() {
 		}
 
 		DescribeTable("wires the correct verbosity filter per level and signal",
-			func(tc verbosityCase) {
+			func(vc verbosityCase) {
 				cfg := config.CollectorConfig{
 					Spec: config.CollectorConfigSpec{
 						Targets: []config.Target{
-							verbosityTarget(tc.verbosity, tc.signal),
+							verbosityTarget(vc.verbosity, vc.signal),
 						},
 					},
 				}
 				pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
-					tc.signal: {0},
+					vc.signal: {0},
 				}))
 
-				Expect(pipelines[signalPipelineName(tc.signal, 0)].Processors).
-					To(Equal(tc.processors))
+				Expect(pipelines[signalPipelineName(vc.signal, 0)].Processors).
+					To(Equal(vc.processors))
 			},
 			Entry("detailed metrics: no verbosity filter",
 				verbosityCase{
