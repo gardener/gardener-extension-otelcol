@@ -54,11 +54,11 @@ type VerbosityLevel string
 
 const (
 	// VerbosityLevelBasic indicates that only core telemetry should be collected.
-	VerbosityLevelBasic = "basic"
+	VerbosityLevelBasic VerbosityLevel = "basic"
 	// VerbosityLevelNormal indicates that all low-overhead telemetry should be collected.
-	VerbosityLevelNormal = "normal"
+	VerbosityLevelNormal VerbosityLevel = "normal"
 	// VerbosityLevelDetailed indicates that all available telemetry should be collected.
-	VerbosityLevelDetailed = "detailed"
+	VerbosityLevelDetailed VerbosityLevel = "detailed"
 )
 
 // LogLevel specifies the minimum enabled logging level for the collector.
