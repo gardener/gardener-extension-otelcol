@@ -34,6 +34,14 @@ func filterTarget(body string, signals ...config.SignalType) config.Target {
 	}
 }
 
+// verbosityTarget returns a Target serving the given signals with the given verbosity level.
+func verbosityTarget(verbosity config.VerbosityLevel, signals ...config.SignalType) config.Target {
+	return config.Target{
+		Signals:   signals,
+		Verbosity: verbosity,
+	}
+}
+
 // exporterNamesFor builds the exporter-name map keyed by signal and target
 // index for the given (signal -> target indices) mapping, using the default
 // HTTP transport.
@@ -391,5 +399,171 @@ var _ = Describe("filterProcessorConfigsPerSignals", func() {
 	It("returns an error for a malformed body", func() {
 		_, err := filterProcessorConfigsPerSignals(filterTarget(`{not json`), allSignals)
 		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("verbosity filter wiring", func() {
+	Describe("buildPipelines verbosity processor injection", func() {
+		type verbosityCase struct {
+			verbosity  config.VerbosityLevel
+			signal     config.SignalType
+			processors []string
+		}
+
+		DescribeTable("wires the correct verbosity filter per level and signal",
+			func(vc verbosityCase) {
+				cfg := config.CollectorConfig{
+					Spec: config.CollectorConfigSpec{
+						Targets: []config.Target{
+							verbosityTarget(vc.verbosity, vc.signal),
+						},
+					},
+				}
+				pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
+					vc.signal: {0},
+				}))
+
+				Expect(pipelines[signalPipelineName(vc.signal, 0)].Processors).
+					To(Equal(vc.processors))
+			},
+			Entry("detailed metrics: no verbosity filter",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelDetailed,
+					signal:     config.SignalMetrics,
+					processors: []string{"resource", "memory_limiter", "batch"},
+				},
+			),
+			Entry("empty (default) metrics: no verbosity filter",
+				verbosityCase{
+					verbosity:  "",
+					signal:     config.SignalMetrics,
+					processors: []string{"resource", "memory_limiter", "batch"},
+				},
+			),
+			Entry("basic metrics: basic_metric_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelBasic,
+					signal:     config.SignalMetrics,
+					processors: []string{"resource", "memory_limiter", basicMetricFilters, "batch"},
+				},
+			),
+			Entry("normal metrics: normal_metric_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelNormal,
+					signal:     config.SignalMetrics,
+					processors: []string{"resource", "memory_limiter", normalMetricFilters, "batch"},
+				},
+			),
+			Entry("basic logs: basic_log_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelBasic,
+					signal:     config.SignalLogs,
+					processors: []string{"resource", "memory_limiter", basicLogFilters, "batch"},
+				},
+			),
+			Entry("normal logs: normal_log_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelNormal,
+					signal:     config.SignalLogs,
+					processors: []string{"resource", "memory_limiter", normalLogFilters, "batch"},
+				},
+			),
+			Entry("detailed logs: no verbosity filter",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelDetailed,
+					signal:     config.SignalLogs,
+					processors: []string{"resource", "memory_limiter", "batch"},
+				},
+			),
+			Entry("basic events: basic_event_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelBasic,
+					signal:     config.SignalEvents,
+					processors: []string{"resource", "memory_limiter", "transform/events", basicEventFilters, "batch"},
+				},
+			),
+			Entry("normal events: normal_event_filters",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelNormal,
+					signal:     config.SignalEvents,
+					processors: []string{"resource", "memory_limiter", "transform/events", normalEventFilters, "batch"},
+				},
+			),
+			Entry("detailed events: no verbosity filter",
+				verbosityCase{
+					verbosity:  config.VerbosityLevelDetailed,
+					signal:     config.SignalEvents,
+					processors: []string{"resource", "memory_limiter", "transform/events", "batch"},
+				},
+			),
+		)
+
+		It("wires verbosity filter before the user-defined filter processor", func() {
+			// When both a verbosity preset and a user-defined filter are configured,
+			// the verbosity filter must come before the per-target filter.
+			cfg := config.CollectorConfig{
+				Spec: config.CollectorConfigSpec{
+					Targets: []config.Target{
+						{
+							Signals:   []config.SignalType{config.SignalMetrics},
+							Verbosity: config.VerbosityLevelBasic,
+							Filters:   runtime.RawExtension{Raw: []byte(metricFilterBody)},
+						},
+					},
+				},
+			}
+			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
+				config.SignalMetrics: {0},
+			}))
+
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", basicMetricFilters, "filter/metrics_0", "batch"}))
+		})
+
+		It("wires verbosity filters independently per target", func() {
+			// Two targets with different verbosity levels should each get their
+			// own verbosity filter without bleeding into the other.
+			cfg := config.CollectorConfig{
+				Spec: config.CollectorConfigSpec{
+					Targets: []config.Target{
+						verbosityTarget(config.VerbosityLevelBasic, config.SignalMetrics),
+						verbosityTarget(config.VerbosityLevelNormal, config.SignalMetrics),
+					},
+				},
+			}
+			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
+				config.SignalMetrics: {0, 1},
+			}))
+
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", basicMetricFilters, "batch"}))
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 1)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", normalMetricFilters, "batch"}))
+		})
+
+		It("wires verbosity filters per signal for a multi-signal target", func() {
+			// A single target serving all three signals with the same verbosity
+			// level gets the right filter wired per signal.
+			cfg := config.CollectorConfig{
+				Spec: config.CollectorConfigSpec{
+					Targets: []config.Target{
+						verbosityTarget(config.VerbosityLevelBasic,
+							config.SignalMetrics, config.SignalLogs, config.SignalEvents),
+					},
+				},
+			}
+			pipelines := buildPipelines(cfg, exporterNamesFor(map[config.SignalType][]int{
+				config.SignalMetrics: {0},
+				config.SignalLogs:    {0},
+				config.SignalEvents:  {0},
+			}))
+
+			Expect(pipelines[signalPipelineName(config.SignalMetrics, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", basicMetricFilters, "batch"}))
+			Expect(pipelines[signalPipelineName(config.SignalLogs, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", basicLogFilters, "batch"}))
+			Expect(pipelines[signalPipelineName(config.SignalEvents, 0)].Processors).
+				To(Equal([]string{"resource", "memory_limiter", "transform/events", basicEventFilters, "batch"}))
+		})
 	})
 })

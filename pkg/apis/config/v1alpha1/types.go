@@ -51,6 +51,22 @@ const (
 	SignalMetrics SignalType = "metrics"
 )
 
+// VerbosityLevel defines the detail level of exported telemetry across all signals,
+// similar to [MetricsVerbosityLevel] for internal collector metrics, due to a
+// lack of a community standard for this use case.
+//
+// +k8s:enum
+type VerbosityLevel string
+
+const (
+	// VerbosityLevelBasic indicates that only core telemetry should be collected.
+	VerbosityLevelBasic = "basic"
+	// VerbosityLevelNormal indicates that all low-overhead telemetry should be collected.
+	VerbosityLevelNormal = "normal"
+	// VerbosityLevelDetailed indicates that all available telemetry should be collected.
+	VerbosityLevelDetailed = "detailed"
+)
+
 // LogLevel specifies the minimum enabled logging level for the collector.
 //
 // See the link below for more details.
@@ -490,6 +506,13 @@ type Target struct {
 	//
 	// +k8s:optional
 	Signals []SignalType `json:"signals,omitempty"`
+
+	// Verbosity specifies the verbosity level of exported telemetry using predefined
+	// OTTL filtering statements added to the relevant Collector pipelines.
+	//
+	// +k8s:optional
+	// +default=ref(VerbosityLevelDetailed)
+	Verbosity VerbosityLevel `json:"verbosity,omitempty"`
 
 	// Filters mirrors the filterprocessor configuration.
 	//

@@ -115,6 +115,19 @@ const (
 	// resource for the Target Allocator.
 	targetAllocatorRoleName = baseResourceName + "-targetallocator"
 
+	// basicMetricFilters is the name of the filter processor that accepts core metrics.
+	basicMetricFilters = "filter/basic_metric_filters"
+	// normalMetricFilters is the name of the filter processor that accepts low-overhead metrics.
+	normalMetricFilters = "filter/normal_metric_filters"
+	// basicLogFilters is the name of the filter processor that accepts core logs.
+	basicLogFilters = "filter/basic_log_filters"
+	// normalLogFilters is the name of the filter processor that accepts low-overhead logs.
+	normalLogFilters = "filter/normal_log_filters"
+	// basicEventFilters is the name of the filter processor that accepts core events.
+	basicEventFilters = "filter/basic_event_filters"
+	// normalEventFilters is the name of the filter processor that accepts low-overhead events.
+	normalEventFilters = "filter/normal_event_filters"
+
 	// shootAccessSecretName is the name of the shoot access secret used by the
 	// k8s_events receiver to authenticate to the shoot cluster.
 	shootAccessSecretName = "shoot-access-" + otelCollectorName // #nosec: G101
@@ -194,6 +207,11 @@ const (
 	// to associate an OpenTelemetryCollector CR with its TargetAllocator. The label
 	// value should be the name of the TargetAllocator.
 	labelKeyTargetAllocator = "opentelemetry.io/target-allocator"
+
+	// prefixBasicMetrics contains all prefixes of the core metrics, separated by '|'.
+	prefixBasicMetrics = "apiserver|cluster|etcd|scheduler|vpa|hpa|certwatcher|mcm"
+	// prefixNormalMetrics contains all prefixes of the low-overhead metrics, separated by '|'.
+	prefixNormalMetrics = prefixBasicMetrics + "|" + "otelcol|prom|vl|vm|vali"
 )
 
 // readVerbs is the canonical RBAC verb set for read-only access to a resource.
@@ -1367,9 +1385,44 @@ func buildPipelines(
 			if sig == config.SignalEvents {
 				processors = append(processors, transformEventsProcessorName)
 			}
+
+			if sig == config.SignalMetrics {
+				switch target.Verbosity {
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicMetricFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalMetricFilters)
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
+				}
+			}
+
+			if sig == config.SignalLogs {
+				switch target.Verbosity {
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicLogFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalLogFilters)
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
+				}
+			}
+
+			if sig == config.SignalEvents {
+				switch target.Verbosity {
+				case config.VerbosityLevelBasic:
+					processors = append(processors, basicEventFilters)
+				case config.VerbosityLevelNormal:
+					processors = append(processors, normalEventFilters)
+				default:
+					// No filters needed for config.VerbosityLevelDetailed or unset verbosity.
+				}
+			}
+
 			if _, ok := filterCfgs[sig]; ok {
 				processors = append(processors, signalFilterName(sig, i))
 			}
+
 			processors = append(processors, batchProcessorName)
 
 			pipelines[signalPipelineName(sig, i)] = &otelv1beta1.Pipeline{
@@ -1517,6 +1570,66 @@ func (a *Actuator) getOtelCollector(
 									"context": "log",
 									"statements": []any{
 										`delete_key(body["object"]["metadata"], "managedFields") where IsMap(body)`,
+									},
+								},
+							},
+						},
+						basicMetricFilters: map[string]any{
+							"metric_conditions": []any{
+								map[string]any{
+									"context": "metric",
+									"conditions": []any{
+										`not IsMatch(metric.name, "^(` + prefixBasicMetrics + `).*")`,
+									},
+								},
+							},
+						},
+						normalMetricFilters: map[string]any{
+							"metric_conditions": []any{
+								map[string]any{
+									"context": "metric",
+									"conditions": []any{
+										`not IsMatch(metric.name, "^(` + prefixNormalMetrics + `).*")`,
+									},
+								},
+							},
+						},
+						basicLogFilters: map[string]any{
+							"log_conditions": []any{
+								map[string]any{
+									"context": "log",
+									"conditions": []any{
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
+									},
+								},
+							},
+						},
+						normalLogFilters: map[string]any{
+							"log_conditions": []any{
+								map[string]any{
+									"context": "log",
+									"conditions": []any{
+										`log.severity_number < SEVERITY_NUMBER_DEBUG`,
+									},
+								},
+							},
+						},
+						basicEventFilters: map[string]any{
+							"log_conditions": []any{
+								map[string]any{
+									"context": "log",
+									"conditions": []any{
+										`log.severity_number < SEVERITY_NUMBER_INFO`,
+									},
+								},
+							},
+						},
+						normalEventFilters: map[string]any{
+							"log_conditions": []any{
+								map[string]any{
+									"context": "log",
+									"conditions": []any{
+										`log.severity_number < SEVERITY_NUMBER_DEBUG`,
 									},
 								},
 							},

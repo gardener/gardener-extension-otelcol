@@ -340,6 +340,49 @@ spec:
                     - value_int == 0
 ```
 
+### Limit telemetry volume with verbosity presets
+
+Each target accepts an optional `verbosity` field that wires a pre-built filter
+into its pipelines, reducing the volume of telemetry sent to that destination
+without writing custom OTTL expressions. Three levels are available:
+
+| Level | Metrics | Logs / Events |
+|---|---|---|
+| `basic` | Core metrics only: `apiserver`, `cluster`, `etcd`, `vpa`, `hpa`, `certwatcher`, `mcm` | WARN and above |
+| `normal` | Low-overhead metrics: all `basic` prefixes plus `otelcol`, `prom`, `vl`, `vm`, `vali` | INFO and above |
+| `detailed` (default) | All metrics - no filtering | All logs - no filtering |
+
+When `verbosity` is omitted or set to `detailed`, no filter is added and the
+full telemetry stream passes through. Verbosity is applied per target, so
+different destinations can receive different amounts of data.
+
+The verbosity filter is inserted before any user-defined `filters`, so both can
+be combined: `verbosity` coarsely trims the stream and `filters` applies
+fine-grained rules on top.
+
+``` yaml
+spec:
+  extensions:
+    - type: otelcol
+      providerConfig:
+        apiVersion: otelcol.extensions.gardener.cloud/v1alpha1
+        kind: CollectorConfig
+        spec:
+          targets:
+            # Primary destination: core metrics and WARN+ logs only.
+            - exporter:
+                otlp_http:
+                  endpoint: "https://opentelemetry-receiver.example.org"
+              signals: [metrics, logs]
+              verbosity: basic
+            # Secondary destination: full telemetry.
+            - exporter:
+                debug:
+                  verbosity: detailed
+              signals: [metrics, logs, events]
+              verbosity: detailed # Can be skipped, because it is default value.
+```
+
 # Development
 
 In order to build a binary of the extension, you can use the following command.

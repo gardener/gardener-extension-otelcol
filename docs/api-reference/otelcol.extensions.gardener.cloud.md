@@ -395,6 +395,22 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `exporter` _[CollectorExportersConfig](#collectorexportersconfig)_ | Exporters specifies the exporters configuration of the collector. |  | Required: \{\} <br /> |
 | `signals` _[SignalType](#signaltype) array_ | Signals lists the telemetry signals the collector should collect and<br />export. Valid values are "logs", "events" and "metrics". If empty, all<br />signals are enabled. |  | Optional: \{\} <br /> |
+| `verbosity` _[VerbosityLevel](#verbositylevel)_ | Verbosity specifies the verbosity level of exported telemetry using predefined<br />OTTL filtering statements added to the relevant Collector pipelines. | <nil> | Optional: \{\} <br /> |
 | `filters` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#rawextension-runtime-pkg)_ | Filters mirrors the filterprocessor configuration.<br />See [Filter processor] for more details.<br />[Filter Processor]: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor |  | Optional: \{\} <br /> |
+
+
+#### VerbosityLevel
+
+_Underlying type:_ _string_
+
+VerbosityLevel defines the detail level of exported telemetry across all signals,
+similar to [MetricsVerbosityLevel] for internal collector metrics, due to a
+lack of a community standard for this use case.
+
+
+
+_Appears in:_
+- [Target](#target)
+
 
 

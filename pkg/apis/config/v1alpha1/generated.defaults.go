@@ -108,6 +108,9 @@ func SetObjectDefaults_CollectorConfig(in *CollectorConfig) {
 				a.Exporter.DebugExporter.Verbosity = DebugExporterVerbosity(DebugExporterVerbosityBasic)
 			}
 		}
+		if a.Verbosity == "" {
+			a.Verbosity = VerbosityLevel(VerbosityLevelDetailed)
+		}
 	}
 	if in.Spec.Logs.Level == "" {
 		in.Spec.Logs.Level = LogLevel(LogLevelInfo)
