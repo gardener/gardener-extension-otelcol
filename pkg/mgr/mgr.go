@@ -53,6 +53,7 @@ type mgr struct {
 	clientOpts              client.Options
 	cacheOpts               cache.Options
 	clientConnConfig        *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+	getConfigFunc           func() (*rest.Config, error)
 }
 
 // New creates a new [manager.Manager] with the given options.
@@ -72,6 +73,7 @@ func New(opts ...Option) (manager.Manager, error) {
 		extraMetricsHandlers: make(map[string]http.Handler),
 		healthzChecks:        make(map[string]healthz.Checker),
 		readyzChecks:         make(map[string]healthz.Checker),
+		getConfigFunc:        config.GetConfig,
 	}
 
 	for _, opt := range opts {
@@ -93,7 +95,7 @@ func New(opts ...Option) (manager.Manager, error) {
 
 	// Get rest.Config, unless we have one already
 	if m.restConfig == nil {
-		restConfig, err := config.GetConfig()
+		restConfig, err := m.getConfigFunc()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get rest config: %w", err)
 		}
@@ -456,6 +458,18 @@ func WithCacheOptions(opts cache.Options) Option {
 func WithConnectionConfiguration(cfg *componentbaseconfigv1alpha1.ClientConnectionConfiguration) Option {
 	opt := func(m *mgr) error {
 		m.clientConnConfig = cfg
+
+		return nil
+	}
+
+	return opt
+}
+
+// WithGetConfigFunc is an [Option], which overrides the function used to discover
+// the [rest.Config] when no explicit config is provided via [WithConfig]
+func WithGetConfigFunc(fn func() (*rest.Config, error)) Option {
+	opt := func(m *mgr) error {
+		m.getConfigFunc = fn
 
 		return nil
 	}
