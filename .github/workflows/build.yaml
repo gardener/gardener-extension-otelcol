@@ -1,0 +1,132 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the mode to use. either `snapshot` or `release`. Will affect effective version, as well
+          as target-oci-registry.
+
+jobs:
+  prepare:
+    uses: gardener/cc-utils/.github/workflows/prepare.yaml@v1
+    with:
+      mode: ${{ inputs.mode }}
+      version-commit-callback-action-path: .github/actions/prepare-release
+    permissions:
+      id-token: write
+
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
+        with:
+          remove-trusted-label: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@v1
+      - name: Run 'make verify-extended'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p /tmp/blobs.d
+
+          # For non-release runs, make verify-extended is executed in Prow.
+          # Execute make verify-extended only for release runs.
+          if [ '${{ inputs.mode }}' == 'release' ]; then
+            make verify-extended |& tee /tmp/blobs.d/verify-log.txt
+            tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
+            tar czf /tmp/blobs.d/verify-log.tar.gz -C /tmp/blobs.d verify-log.txt
+          else
+            echo "dummy" > /tmp/blobs.d/gosec-report.tar.gz
+            echo "dummy" > /tmp/blobs.d/verify-log.tar.gz
+          fi
+      - name: Add results to component descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@v1
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            - name: gosec-report
+              relation: local
+              access:
+                type: localBlob
+                localReference: gosec-report.tar.gz
+              labels:
+                - name: gardener.cloud/purposes
+                  value:
+                    - lint
+                    - sast
+                    - gosec
+                - name: gardener.cloud/comment
+                  value: |
+                    we use gosec (linter) for SAST scans
+                    see: https://github.com/securego/gosec
+            - name: test-results
+              relation: local
+              access:
+                type: localBlob
+                localReference: verify-log.tar.gz
+              labels:
+                - name: gardener.cloud/purposes
+                  value:
+                    - test
+
+  oci-images:
+    name: Build OCI-Images
+    needs:
+      - prepare
+      - verify
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    secrets: inherit
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@v1
+    with:
+      name: gardener-extension-otelcol
+      version: ${{ needs.prepare.outputs.version }}
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
+      oci-repository: gardener/extensions/otelcol
+      oci-platforms: linux/amd64,linux/arm64
+
+  helmcharts:
+    name: Build Helmcharts
+    needs:
+      - prepare
+      - oci-images
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@v1
+    strategy:
+      matrix:
+        args:
+          - name: gardener-extension-otelcol
+            dir: charts/controller
+            oci-repository: charts/gardener/extensions
+            ocm-mappings:
+              - ref: ocm-resource:gardener-extension-otelcol.repository
+                attribute: image.repository
+              - ref: ocm-resource:gardener-extension-otelcol.tag
+                attribute: image.tag
+          - name: gardener-extension-otelcol-admission-runtime
+            dir: charts/admission-runtime
+            oci-repository: charts/gardener/extensions
+          - name: gardener-extension-otelcol-admission-virtual
+            dir: charts/admission-virtual
+            oci-repository: charts/gardener/extensions
+    with:
+      name: ${{ matrix.args.name }}
+      dir: ${{ matrix.args.dir }}
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
+      oci-repository: ${{ matrix.args.oci-repository }}
+      ocm-mappings: ${{ toJSON(matrix.args.ocm-mappings) }}
