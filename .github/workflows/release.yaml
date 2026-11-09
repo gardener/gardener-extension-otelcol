@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      next-version:
+        type: choice
+        options:
+          - bump-minor
+          - bump-patch
+
+jobs:
+  build:
+    if: ${{ github.repository == 'gardener/gardener-extension-otelcol' }}
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    with:
+      mode: release
+
+  release-to-github-and-bump:
+    if: ${{ github.repository == 'gardener/gardener-extension-otelcol' }}
+    uses: gardener/cc-utils/.github/workflows/release.yaml@v1
+    needs:
+      - build
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    with:
+      release-commit-target: branch
+      next-version: ${{ inputs.next-version }}
+      next-version-callback-action-path: .github/actions/prepare-release
