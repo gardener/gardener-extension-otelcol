@@ -217,12 +217,11 @@ fluentbit:
   name: fluent-bit-extension-otelcol
   # Fluent Bit image
   image:
-    name: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit:v4.2.3
+    name: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit:v5.1.5
     pullPolicy: IfNotPresent
   # Fluent Bit Plugins image
-  # europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.3.0
   pluginImage:
-    name: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.4.0
+    name: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-plugin:v1.7.1
     pullPolicy: IfNotPresent
   labels:
   annotations:
