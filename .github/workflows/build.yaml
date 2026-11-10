@@ -121,9 +121,11 @@ jobs:
           - name: gardener-extension-otelcol-admission-runtime
             dir: charts/admission-runtime
             oci-repository: charts/gardener/extensions
+            ocm-mappings: []
           - name: gardener-extension-otelcol-admission-virtual
             dir: charts/admission-virtual
             oci-repository: charts/gardener/extensions
+            ocm-mappings: []
     with:
       name: ${{ matrix.args.name }}
       dir: ${{ matrix.args.dir }}
