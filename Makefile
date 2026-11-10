@@ -193,7 +193,7 @@ test:  ## Start envtest and run the unit tests.
 
 .PHONY: verify-extended
 verify-extended: goimports-reviser lint test  ## Run extended verification (used in release CI).
-	@$(GO_TOOL) golangci-lint run --config=$(SRC_ROOT)/.golangci.yaml --output.formats="sarif:gosec-report.sarif" ./...
+	@$(GO_TOOL) golangci-lint run --config=$(SRC_ROOT)/.golangci.yaml --output.sarif.path=gosec-report.sarif ./...
 
 .PHONY: docker-build
 docker-build:  ## Build the extension Docker image.
