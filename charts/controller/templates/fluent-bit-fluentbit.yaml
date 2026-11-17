@@ -70,6 +70,11 @@ spec:
       resources:
         - opentelemetrycollectors
       verbs: [ "get", "list", "watch" ]
+    - apiGroups:
+        - apiextensions.k8s.io
+      resources:
+        - customresourcedefinitions
+      verbs: [ "get", "list", "watch" ]
   {{- with .Values.fluentbit.readinessProbe }}
   readinessProbe:
     {{- toYaml . | nindent 4 }}
